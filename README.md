@@ -4,8 +4,9 @@
 
 [![npm-version](https://img.shields.io/npm/v/simple-mind-map)](https://www.npmjs.com/package/simple-mind-map)
 ![npm download](https://img.shields.io/npm/dm/simple-mind-map)
-[![GitHub issues](https://img.shields.io/github/issues/wanglin2/mind-map)](https://github.com/wanglin2/mind-map/issues)
+[![GitHub issues](https://img.shields.io/github/issues/Leif-xing/mind-map)](https://github.com/Leif-xing/mind-map/issues)
 ![license](https://img.shields.io/npm/l/express.svg)
+[![GitHub stars](https://img.shields.io/github/stars/Leif-xing/mind-map)](https://github.com/Leif-xing/mind-map/stargazers)
 
 ## 🚀 快速开始
 
@@ -17,7 +18,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/mind-map.git
+git clone https://github.com/Leif-xing/mind-map.git
 cd mind-map
 
 # 安装依赖
@@ -108,6 +109,10 @@ npm run format
 3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 打开一个 Pull Request
+
+## 🙏 致谢
+
+本项目基于 [wanglin2/mind-map](https://github.com/wanglin2/mind-map) 开发，感谢原作者的优秀工作！
 
 ## 📄 许可证
 
