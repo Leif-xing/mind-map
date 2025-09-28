@@ -924,7 +924,7 @@ export default {
     ...data5,
     // ...rootData,
     "theme": {
-        "template": "classic4",
+        "template": "darkNightLceBlade",
         "config": {
             // 自定义配置...
         }

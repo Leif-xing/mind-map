@@ -9,7 +9,8 @@
     "buildLibrary": "node ./scripts/updateVersion.js && vue-cli-service build --mode library --target lib --name simpleMindMap ../simple-mind-map/full.js --dest ../simple-mind-map/dist && esbuild ../simple-mind-map/full.js --bundle --external:buffer --format=esm --outfile=../simple-mind-map/dist/simpleMindMap.esm.js && esbuild ../simple-mind-map/full.js --bundle --minify --external:buffer --format=esm --outfile=../simple-mind-map/dist/simpleMindMap.esm.min.js",
     "format": "prettier --write src/* src/*/* src/*/*/* src/*/*/*/*",
     "createNodeImageList": "node ./scripts/createNodeImageList.js",
-    "ai:serve": "node ./scripts/ai.js"
+    "ai:serve": "node ./scripts/ai.js",
+    "dev:all": "concurrently \"npm run serve\" \"npm run ai:serve\""
   },
   "dependencies": {
     "@toast-ui/editor": "^3.1.5",
@@ -19,6 +20,7 @@
     "element-ui": "^2.15.1",
     "highlight.js": "^10.7.3",
     "katex": "^0.16.9",
+    "simple-mind-map": "^0.14.0-fix.1",
     "simple-mind-map-plugin-themes": "^1.0.0",
     "v-viewer": "^1.6.4",
     "vue": "^2.6.11",
@@ -30,9 +32,11 @@
   "devDependencies": {
     "@vue/cli-plugin-babel": "^4.5.0",
     "@vue/cli-plugin-eslint": "^4.5.0",
-    "@vue/cli-service": "^4.5.0",
+    "@vue/cli-service": "^4.5.19",
     "babel-eslint": "^10.1.0",
     "chokidar": "^3.5.3",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.0.0",
     "esbuild": "^0.17.15",
     "eslint": "^6.7.2",
     "eslint-plugin-vue": "^6.2.2",

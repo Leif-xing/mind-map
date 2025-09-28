@@ -37,6 +37,9 @@ module.exports = {
       alias: {
         '@': path.resolve(__dirname, './src/')
       }
+    },
+    optimization: {
+      minimize: false
     }
   },
   devServer: {

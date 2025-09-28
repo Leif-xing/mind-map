@@ -26,12 +26,22 @@ class Ai {
   }
 
   async request(data, progress = () => {}, end = () => {}, err = () => {}) {
+    // 添加超时机制
+    const timeout = setTimeout(() => {
+      if (this.controller) {
+        this.controller.abort()
+        err(new Error('请求超时'))
+      }
+    }, 60000) // 60秒超时
+
     try {
       const res = await this.postMsg(data)
       const decoder = new TextDecoder()
       while (1) {
         const { done, value } = await res.read()
         if (done) {
+          clearTimeout(timeout)
+          end(this.content)
           return
         }
         // 拿到当前切片的数据
@@ -41,28 +51,43 @@ class Ai {
         // 判断是否有不完整切片，如果有，合并下一次处理，没有则获取数据
         if (this.currentChunk) continue
         let isEnd = false
-        const list = chunk
-          .split('\n')
-          .filter(item => {
-            isEnd = item.includes('[DONE]')
-            return !!item && !isEnd
-          })
-          .map(item => {
-            return JSON.parse(item.replace(/^data:/, ''))
-          })
-        list.forEach(item => {
-          this.content += item.choices
-            .map(item2 => {
-              return item2.delta.content
+        let list = []
+        try {
+          list = chunk
+            .split('\n')
+            .filter(item => {
+              isEnd = item.includes('[DONE]')
+              return !!item && !isEnd
             })
-            .join('')
+            .map(item => {
+              return JSON.parse(item.replace(/^data:/, ''))
+            })
+        } catch (e) {
+          console.error('解析AI响应数据出错:', e, chunk)
+          // 如果解析出错，继续处理其他数据
+        }
+        list.forEach(item => {
+          try {
+            if (item.choices) {
+              this.content += item.choices
+                .map(item2 => {
+                  return item2.delta && item2.delta.content ? item2.delta.content : ''
+                })
+                .join('')
+            }
+          } catch (e) {
+            console.error('处理AI响应数据出错:', e, item)
+          }
         })
         progress(this.content)
         if (isEnd) {
+          clearTimeout(timeout)
           end(this.content)
+          return
         }
       }
     } catch (error) {
+      clearTimeout(timeout)
       console.log(error)
       // 手动停止请求不需要触发错误回调
       if (!(error && error.name === 'AbortError')) {
