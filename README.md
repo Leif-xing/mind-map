@@ -8,6 +8,8 @@
 ![license](https://img.shields.io/npm/l/express.svg)
 [![GitHub stars](https://img.shields.io/github/stars/Leif-xing/mind-map)](https://github.com/Leif-xing/mind-map/stargazers)
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLeif-xing%2Fmind-map)
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -38,8 +40,11 @@ npm run serve
 cd web
 npm run build
 
-# 自动化 Cloudflare 部署
-node deploy.js
+# Vercel 部署
+node deploy-vercel.js
+
+# 或手动准备Vercel部署文件
+node build-for-vercel.js
 ```
 
 ## ✨ 功能特性
@@ -62,17 +67,17 @@ mind-map/
 │   └── package.json       # 依赖配置
 ├── simple-mind-map/       # 核心思维导图库
 ├── index.html            # 主页面
-├── build-for-cloudflare.js # Cloudflare 部署脚本
-└── deploy.js             # 自动化部署脚本
+├── build-for-vercel.js   # Vercel 部署脚本
+├── deploy-vercel.js      # 自动化 Vercel 部署脚本
 ```
 
 ## 🌐 部署指南
 
 支持多种部署方式：
 
-- **Cloudflare Pages** (推荐) - 详见 [部署文档](./CLOUDFLARE_DEPLOYMENT.md)
-- **Vercel**
-- **Netlify** 
+- **Vercel** (推荐) - 详见 [部署文档](./VERCEL_DEPLOYMENT.md)
+- **Cloudflare Pages** - 详见 [部署文档](./CLOUDFLARE_DEPLOYMENT.md)  
+- **Netlify**
 - **GitHub Pages**
 
 ## 🛠️ 开发命令
@@ -98,7 +103,8 @@ npm run format
 
 - [开发文档](https://wanglin2.github.io/mind-map-docs/)
 - [API 文档](https://wanglin2.github.io/mind-map-docs/zh/)
-- [部署指南](./CLOUDFLARE_DEPLOYMENT.md)
+- [Vercel 部署指南](./VERCEL_DEPLOYMENT.md)
+- [Cloudflare 部署指南](./CLOUDFLARE_DEPLOYMENT.md)
 
 ## 🤝 贡献
 

@@ -9,6 +9,8 @@ package-lock.json
 dist/
 dist_electron/
 cloudflare-build/
+vercel-build/
+.vercel/
 simple-mind-map/dist/
 simple-mind-map/types/
 utools/dist/
