@@ -306,6 +306,9 @@ export default {
         this.$message.warning(this.$t('ai.noInputTip'))
         return
       }
+      
+      console.log('开始AI生成，输入内容:', aiInputText)
+      
       this.closeAiCreateDialog()
       this.aiCreatingMaskVisible = true
       // 发起请求
@@ -314,8 +317,11 @@ export default {
         port: this.aiConfig.port
       })
       this.aiInstance.init('huoshan', this.aiConfig)
-      this.mindMap.renderer.setRootNodeCenter()
+      
+      // 先设置为空数据，但不调用setRootNodeCenter（因为此时没有节点）
       this.mindMap.setData(null)
+      
+      console.log('发起AI请求...')
       this.aiInstance.request(
         {
           messages: [
@@ -328,6 +334,7 @@ export default {
           ]
         },
         content => {
+          console.log('AI流式响应:', content)
           if (content) {
             const arr = content.split(/\n+/)
             this.aiCreatingContent = arr.splice(0, arr.length - 1).join('\n')
@@ -335,13 +342,15 @@ export default {
           this.loopRenderOnAiCreating()
         },
         content => {
+          console.log('AI响应完成，最终内容:', content)
           this.aiCreatingContent = content
           this.resetOnAiCreatingStop()
         },
-        () => {
+        (error) => {
+          console.error('AI生成失败:', error)
           this.resetOnAiCreatingStop()
           this.resetOnRenderEnd()
-          this.$message.error(this.$t('ai.generationFailed'))
+          this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
         }
       )
     },
@@ -373,48 +382,98 @@ export default {
     // 轮询进行渲染
     loopRenderOnAiCreating() {
       if (!this.aiCreatingContent.trim() || this.isLoopRendering) return
+      
+      console.log('开始渲染AI内容:', this.aiCreatingContent)
+      
       this.isLoopRendering = true
-      const treeData = transformMarkdownTo(this.aiCreatingContent)
-      this.addUid(treeData)
+      let treeData
+      
+      try {
+        treeData = transformMarkdownTo(this.aiCreatingContent)
+        console.log('转换后的树数据:', treeData)
+        
+        // 验证数据有效性
+        if (!treeData || typeof treeData !== 'object') {
+          console.error('转换后的数据无效:', treeData)
+          this.isLoopRendering = false
+          return
+        }
+        
+        this.addUid(treeData)
+      } catch (error) {
+        console.error('数据转换失败:', error)
+        this.isLoopRendering = false
+        this.$message.error('AI内容解析失败: ' + error.message)
+        return
+      }
+      
       let lastTreeData = JSON.stringify(treeData)
 
       // 在当前渲染完成时再进行下一次渲染
       const onRenderEnd = () => {
-        // 处理超出画布的节点
-        this.checkNodeOuter()
+        try {
+          // 处理超出画布的节点
+          this.checkNodeOuter()
 
-        // 如果生成结束数据渲染完毕，那么解绑事件
-        if (!this.isAiCreating && !this.aiCreatingContent) {
-          this.mindMap.off('node_tree_render_end', onRenderEnd)
-          this.latestUid = ''
-          return
-        }
-
-        const treeData = transformMarkdownTo(this.aiCreatingContent)
-        this.addUid(treeData)
-        // 正在生成中
-        if (this.isAiCreating) {
-          // 如果和上次数据一样则不触发重新渲染
-          const curTreeData = JSON.stringify(treeData)
-          if (curTreeData === lastTreeData) {
-            setTimeout(() => {
-              onRenderEnd()
-            }, 500)
+          // 如果生成结束数据渲染完毕，那么解绑事件
+          if (!this.isAiCreating && !this.aiCreatingContent) {
+            this.mindMap.off('node_tree_render_end', onRenderEnd)
+            this.latestUid = ''
             return
           }
-          lastTreeData = curTreeData
-          this.mindMap.updateData(treeData)
-        } else {
-          // 已经生成结束
-          // 还要触发一遍渲染，否则会丢失数据
-          this.mindMap.updateData(treeData)
+
+          const treeData = transformMarkdownTo(this.aiCreatingContent)
+          if (!treeData) {
+            console.warn('渲染中数据转换失败')
+            return
+          }
+          
+          this.addUid(treeData)
+          // 正在生成中
+          if (this.isAiCreating) {
+            // 如果和上次数据一样则不触发重新渲染
+            const curTreeData = JSON.stringify(treeData)
+            if (curTreeData === lastTreeData) {
+              setTimeout(() => {
+                onRenderEnd()
+              }, 500)
+              return
+            }
+            lastTreeData = curTreeData
+            this.mindMap.updateData(treeData)
+          } else {
+            // 已经生成结束
+            // 还要触发一遍渲染，否则会丢失数据
+            this.mindMap.updateData(treeData)
+            this.resetOnRenderEnd()
+            this.$message.success(this.$t('ai.aiGenerationSuccess'))
+          }
+        } catch (error) {
+          console.error('渲染过程出错:', error)
+          this.resetOnAiCreatingStop()
           this.resetOnRenderEnd()
-          this.$message.success(this.$t('ai.aiGenerationSuccess'))
         }
       }
+      
       this.mindMap.on('node_tree_render_end', onRenderEnd)
 
-      this.mindMap.setData(treeData)
+      try {
+        console.log('设置思维导图数据...')
+        this.mindMap.setData(treeData)
+        
+        // 确保根节点居中（在有数据后调用）
+        setTimeout(() => {
+          if (this.mindMap.renderer && this.mindMap.renderer.root) {
+            console.log('设置根节点居中...')
+            this.mindMap.renderer.setRootNodeCenter()
+          }
+        }, 100)
+      } catch (error) {
+        console.error('设置思维导图数据失败:', error)
+        this.isLoopRendering = false
+        this.resetOnAiCreatingStop()
+        this.resetOnRenderEnd()
+      }
     },
 
     // 处理超出画布的节点
