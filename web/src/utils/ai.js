@@ -98,20 +98,41 @@ class Ai {
 
   async postMsg(data) {
     this.controller = new AbortController()
-    const res = await fetch(`http://localhost:${this.options.port}/ai/chat`, {
-      signal: this.controller.signal,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ...this.baseData,
-        data: {
+    
+    // 检测是否为部署环境
+    const isDeployed = window.location.hostname !== 'localhost' && 
+                      window.location.hostname !== '127.0.0.1'
+    
+    let res
+    if (isDeployed) {
+      // 部署环境：直接调用AI API
+      res = await fetch(this.baseData.api, {
+        signal: this.controller.signal,
+        method: this.baseData.method || 'POST',
+        headers: this.baseData.headers,
+        body: JSON.stringify({
           ...this.baseData.data,
           ...data
-        }
+        })
       })
-    })
+    } else {
+      // 本地环境：使用代理服务
+      res = await fetch(`http://localhost:${this.options.port}/ai/chat`, {
+        signal: this.controller.signal,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...this.baseData,
+          data: {
+            ...this.baseData.data,
+            ...data
+          }
+        })
+      })
+    }
+    
     if (res.status && res.status !== 200) {
       throw new Error('请求失败')
     }

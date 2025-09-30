@@ -174,46 +174,90 @@ export default {
 
     // 客户端连接检测
     async testConnect() {
-      try {
-        await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
-          method: 'GET'
-        })
-        this.$message.success(this.$t('ai.connectSuccessful'))
-        this.clientTipDialogVisible = false
-        this.createDialogVisible = true
-      } catch (error) {
-        console.log(error)
-        this.$message.error(this.$t('ai.connectFailed'))
+      const isDeployed = window.location.hostname !== 'localhost' && 
+                        window.location.hostname !== '127.0.0.1'
+      
+      if (isDeployed) {
+        // 部署环境：直接测试AI API
+        try {
+          await fetch(this.aiConfig.api, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + this.aiConfig.key,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: this.aiConfig.model,
+              messages: [{ role: 'user', content: 'test' }],
+              max_tokens: 1,
+              stream: false
+            })
+          })
+          this.$message.success(this.$t('ai.connectSuccessful'))
+          this.clientTipDialogVisible = false
+          this.createDialogVisible = true
+        } catch (error) {
+          console.log(error)
+          this.$message.error(this.$t('ai.connectFailed'))
+        }
+      } else {
+        // 本地环境：测试代理服务
+        try {
+          await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
+            method: 'GET'
+          })
+          this.$message.success(this.$t('ai.connectSuccessful'))
+          this.clientTipDialogVisible = false
+          this.createDialogVisible = true
+        } catch (error) {
+          console.log(error)
+          this.$message.error(this.$t('ai.connectFailed'))
+        }
       }
     },
 
     // 检测ai是否可用
     async aiTest() {
+      const isDeployed = window.location.hostname !== 'localhost' && 
+                        window.location.hostname !== '127.0.0.1'
+      
       // 检查配置
-      if (
-        !(
-          this.aiConfig.api &&
-          this.aiConfig.key &&
-          this.aiConfig.model &&
-          this.aiConfig.port
-        )
-      ) {
-        this.showAiConfigDialog()
-        throw new Error(this.$t('ai.configurationMissing'))
-      }
-      // 检查连接
-      let isConnect = false
-      try {
-        await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
-          method: 'GET'
-        })
-        isConnect = true
-      } catch (error) {
-        console.log(error)
-        this.clientTipDialogVisible = true
-      }
-      if (!isConnect) {
-        throw new Error(this.$t('ai.connectFailed'))
+      if (isDeployed) {
+        // 部署环境：只检查基本配置，不检查port
+        if (!(this.aiConfig.api && this.aiConfig.key && this.aiConfig.model)) {
+          this.showAiConfigDialog()
+          throw new Error(this.$t('ai.configurationMissing'))
+        }
+        // 部署环境不需要检查本地连接，直接返回
+        return
+      } else {
+        // 本地环境：检查完整配置包括port
+        if (
+          !(
+            this.aiConfig.api &&
+            this.aiConfig.key &&
+            this.aiConfig.model &&
+            this.aiConfig.port
+          )
+        ) {
+          this.showAiConfigDialog()
+          throw new Error(this.$t('ai.configurationMissing'))
+        }
+        
+        // 检查本地连接
+        let isConnect = false
+        try {
+          await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
+            method: 'GET'
+          })
+          isConnect = true
+        } catch (error) {
+          console.log(error)
+          this.clientTipDialogVisible = true
+        }
+        if (!isConnect) {
+          throw new Error(this.$t('ai.connectFailed'))
+        }
       }
     },
 
