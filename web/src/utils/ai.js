@@ -114,8 +114,12 @@ class Ai {
       // 部署环境：尝试直接调用AI API，如果失败则使用代理
       console.log('部署环境 - 尝试直接调用AI API...')
       
+      // 确保使用HTTPS避免Mixed Content错误
+      const secureApi = this.baseData.api.replace(/^http:\/\//, 'https://')
+      console.log('使用安全API地址:', secureApi)
+      
       try {
-        res = await fetch(this.baseData.api, {
+        res = await fetch(secureApi, {
           signal: this.controller.signal,
           method: this.baseData.method || 'POST',
           headers: {
@@ -144,7 +148,7 @@ class Ai {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              api: this.baseData.api,
+              api: secureApi, // 使用HTTPS版本的API
               headers: this.baseData.headers,
               data: {
                 ...this.baseData.data,
@@ -153,6 +157,12 @@ class Ai {
             })
           })
           console.log('代理API响应状态:', res.status)
+          
+          if (!res.ok) {
+            const errorText = await res.text()
+            console.error('代理API错误详情:', errorText)
+            throw new Error(`代理API失败: ${res.status} - ${errorText}`)
+          }
         } catch (proxyError) {
           console.error('代理API也失败:', proxyError)
           throw new Error(`AI请求失败: ${directError.message} | 代理失败: ${proxyError.message}`)

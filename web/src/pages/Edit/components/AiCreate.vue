@@ -191,8 +191,13 @@ export default {
       if (isDeployed) {
         // 部署环境：直接测试AI API
         console.log('部署环境 - 测试AI API连接...')
+        
+        // 确保使用HTTPS
+        const secureApi = this.aiConfig.api.replace(/^http:\/\//, 'https://')
+        console.log('使用安全API地址进行测试:', secureApi)
+        
         try {
-          const response = await fetch(this.aiConfig.api, {
+          const response = await fetch(secureApi, {
             method: 'POST',
             headers: {
               'Authorization': 'Bearer ' + this.aiConfig.key,
@@ -212,8 +217,9 @@ export default {
             this.clientTipDialogVisible = false
             this.createDialogVisible = true
           } else {
-            console.error('AI API测试失败:', response.status)
-            this.$message.error(`${this.$t('ai.connectFailed')} (${response.status})`)
+            const errorText = await response.text()
+            console.error('AI API测试失败:', response.status, errorText)
+            this.$message.error(`${this.$t('ai.connectFailed')} (${response.status}): ${errorText}`)
           }
         } catch (error) {
           console.error('AI API测试异常:', error)
