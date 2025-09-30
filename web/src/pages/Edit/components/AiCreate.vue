@@ -177,10 +177,22 @@ export default {
       const isDeployed = window.location.hostname !== 'localhost' && 
                         window.location.hostname !== '127.0.0.1'
       
+      console.log('AI连接测试:', {
+        hostname: window.location.hostname,
+        isDeployed: isDeployed,
+        aiConfig: {
+          api: this.aiConfig.api,
+          model: this.aiConfig.model,
+          hasKey: !!this.aiConfig.key,
+          port: this.aiConfig.port
+        }
+      })
+      
       if (isDeployed) {
         // 部署环境：直接测试AI API
+        console.log('部署环境 - 测试AI API连接...')
         try {
-          await fetch(this.aiConfig.api, {
+          const response = await fetch(this.aiConfig.api, {
             method: 'POST',
             headers: {
               'Authorization': 'Bearer ' + this.aiConfig.key,
@@ -193,24 +205,34 @@ export default {
               stream: false
             })
           })
-          this.$message.success(this.$t('ai.connectSuccessful'))
-          this.clientTipDialogVisible = false
-          this.createDialogVisible = true
+          console.log('AI API测试响应:', response.status, response.statusText)
+          
+          if (response.ok) {
+            this.$message.success(this.$t('ai.connectSuccessful'))
+            this.clientTipDialogVisible = false
+            this.createDialogVisible = true
+          } else {
+            console.error('AI API测试失败:', response.status)
+            this.$message.error(`${this.$t('ai.connectFailed')} (${response.status})`)
+          }
         } catch (error) {
-          console.log(error)
-          this.$message.error(this.$t('ai.connectFailed'))
+          console.error('AI API测试异常:', error)
+          this.$message.error(`${this.$t('ai.connectFailed')}: ${error.message}`)
         }
       } else {
         // 本地环境：测试代理服务
+        console.log('本地环境 - 测试代理服务连接...')
         try {
-          await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
+          const response = await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
             method: 'GET'
           })
+          console.log('代理服务测试响应:', response.status)
+          
           this.$message.success(this.$t('ai.connectSuccessful'))
           this.clientTipDialogVisible = false
           this.createDialogVisible = true
         } catch (error) {
-          console.log(error)
+          console.error('代理服务测试失败:', error)
           this.$message.error(this.$t('ai.connectFailed'))
         }
       }

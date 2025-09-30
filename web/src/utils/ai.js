@@ -103,39 +103,96 @@ class Ai {
     const isDeployed = window.location.hostname !== 'localhost' && 
                       window.location.hostname !== '127.0.0.1'
     
+    console.log('AI请求环境检测:', {
+      hostname: window.location.hostname,
+      isDeployed: isDeployed,
+      baseData: this.baseData
+    })
+    
     let res
     if (isDeployed) {
-      // 部署环境：直接调用AI API
-      res = await fetch(this.baseData.api, {
-        signal: this.controller.signal,
-        method: this.baseData.method || 'POST',
-        headers: this.baseData.headers,
-        body: JSON.stringify({
-          ...this.baseData.data,
-          ...data
-        })
-      })
-    } else {
-      // 本地环境：使用代理服务
-      res = await fetch(`http://localhost:${this.options.port}/ai/chat`, {
-        signal: this.controller.signal,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...this.baseData,
-          data: {
+      // 部署环境：尝试直接调用AI API，如果失败则使用代理
+      console.log('部署环境 - 尝试直接调用AI API...')
+      
+      try {
+        res = await fetch(this.baseData.api, {
+          signal: this.controller.signal,
+          method: this.baseData.method || 'POST',
+          headers: {
+            ...this.baseData.headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
             ...this.baseData.data,
             ...data
-          }
+          })
         })
+        console.log('直接AI API响应状态:', res.status)
+        
+        if (!res.ok) {
+          throw new Error(`直接API调用失败: ${res.status}`)
+        }
+      } catch (directError) {
+        console.warn('直接API调用失败，尝试使用代理:', directError.message)
+        
+        // 使用Vercel代理
+        try {
+          res = await fetch('/api/ai-proxy', {
+            signal: this.controller.signal,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              api: this.baseData.api,
+              headers: this.baseData.headers,
+              data: {
+                ...this.baseData.data,
+                ...data
+              }
+            })
+          })
+          console.log('代理API响应状态:', res.status)
+        } catch (proxyError) {
+          console.error('代理API也失败:', proxyError)
+          throw new Error(`AI请求失败: ${directError.message} | 代理失败: ${proxyError.message}`)
+        }
+      }
+    } else {
+      // 本地环境：使用代理服务
+      console.log('本地环境 - 使用代理服务:', {
+        port: this.options.port,
+        url: `http://localhost:${this.options.port}/ai/chat`
       })
+      
+      try {
+        res = await fetch(`http://localhost:${this.options.port}/ai/chat`, {
+          signal: this.controller.signal,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.baseData,
+            data: {
+              ...this.baseData.data,
+              ...data
+            }
+          })
+        })
+        console.log('代理服务响应状态:', res.status)
+      } catch (error) {
+        console.error('代理服务请求失败:', error)
+        throw error
+      }
     }
     
     if (res.status && res.status !== 200) {
-      throw new Error('请求失败')
+      console.error('请求失败，状态码:', res.status)
+      throw new Error(`请求失败，状态码: ${res.status}`)
     }
+    
+    console.log('开始读取流式响应...')
     return res.body.getReader()
   }
 
