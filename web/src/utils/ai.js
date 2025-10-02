@@ -10,6 +10,8 @@ class Ai {
 
   init(providerType = 'huoshan', options = {}) {
     console.log('初始化AI提供商:', providerType, options)
+    // 记录提供商类型供路由使用
+    this.providerType = providerType
     
     // 火山方舟接口
     if (providerType === 'huoshan') {
@@ -188,31 +190,59 @@ class Ai {
         }
       }
     } else {
-      // 本地环境：使用代理服务
-      console.log('本地环境 - 使用代理服务:', {
-        port: this.options.port,
-        url: `http://localhost:${this.options.port}/ai/chat`
-      })
-      
-      try {
-        res = await fetch(`http://localhost:${this.options.port}/ai/chat`, {
-          signal: this.controller.signal,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ...this.baseData,
-            data: {
+      // 本地环境：优先使用本地代理；若未提供端口，则直接调用远端API（若目标域名支持CORS则可用）
+      const hasPort = !!this.options.port
+      if (hasPort) {
+        console.log('本地环境 - 使用代理服务:', {
+          port: this.options.port,
+          url: `http://localhost:${this.options.port}/ai/chat`
+        })
+        try {
+          res = await fetch(`http://localhost:${this.options.port}/ai/chat`, {
+            signal: this.controller.signal,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...this.baseData,
+              data: {
+                ...this.baseData.data,
+                ...data
+              }
+            })
+          })
+          console.log('代理服务响应状态:', res.status)
+        } catch (error) {
+          console.error('代理服务请求失败:', error)
+          throw error
+        }
+      } else {
+        // 无端口：直接调用远端API
+        console.log('本地环境 - 未配置本地端口，直接调用远端API')
+        const secureApi = this.baseData.api.replace(/^http:\/\//, 'https://')
+        try {
+          res = await fetch(secureApi, {
+            signal: this.controller.signal,
+            method: this.baseData.method || 'POST',
+            headers: {
+              ...this.baseData.headers,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
               ...this.baseData.data,
               ...data
-            }
+            })
           })
-        })
-        console.log('代理服务响应状态:', res.status)
-      } catch (error) {
-        console.error('代理服务请求失败:', error)
-        throw error
+          console.log('本地直连AI API响应状态:', res.status)
+          if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            throw new Error(`本地直连失败: ${res.status} ${text}`)
+          }
+        } catch (localDirectError) {
+          console.error('本地直连远端API失败:', localDirectError)
+          throw localDirectError
+        }
       }
     }
     

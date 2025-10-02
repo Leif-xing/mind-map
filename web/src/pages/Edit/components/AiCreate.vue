@@ -291,33 +291,34 @@ export default {
         // 部署环境不需要检查本地连接，直接返回
         return
       } else {
-        // 本地环境：检查完整配置包括port
-        if (
-          !(
-            currentProvider.api &&
-            config.key &&
-            config.model &&
-            config.port
-          )
-        ) {
+        // 本地环境：仅对需要本地代理的提供商（如火山方舟）检查端口与本地连接
+        const needsProxy = this.aiSystem.currentProvider === 'huoshan'
+        // 基础配置校验
+        if (!(currentProvider.api && config.key && config.model)) {
           this.showAiConfigDialog()
           throw new Error(this.$t('ai.configurationMissing'))
         }
-
-        // 检查本地连接
-        let isConnect = false
-        try {
-          await fetch(`http://localhost:${config.port}/ai/test`, {
-            method: 'GET'
-          })
-          isConnect = true
-        } catch (error) {
-          console.log(error)
-          this.clientTipDialogVisible = true
+        if (needsProxy) {
+          if (!config.port) {
+            this.showAiConfigDialog()
+            throw new Error(this.$t('ai.configurationMissing'))
+          }
+          // 检查本地连接
+          let isConnect = false
+          try {
+            await fetch(`http://localhost:${config.port}/ai/test`, {
+              method: 'GET'
+            })
+            isConnect = true
+          } catch (error) {
+            console.log(error)
+            this.clientTipDialogVisible = true
+          }
+          if (!isConnect) {
+            throw new Error(this.$t('ai.connectFailed'))
+          }
         }
-        if (!isConnect) {
-          throw new Error(this.$t('ai.connectFailed'))
-        }
+        // 对于不需要代理的提供商，跳过本地端口检测，直接通过
       }
     },
 
