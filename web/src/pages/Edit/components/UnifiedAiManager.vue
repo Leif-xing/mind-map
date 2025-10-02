@@ -9,7 +9,30 @@
     <UnifiedAiCreateDialog 
       v-model="createDialogVisible"
       :mindMap="mindMap"
+      ref="aiCreateDialog"
     ></UnifiedAiCreateDialog>
+    
+    <!-- 生成中的停止按钮提示 -->
+    <div v-if="isGenerating" class="generatingTip">
+      <el-alert
+        title="AI正在生成思维导图..."
+        type="info"
+        :closable="false"
+        show-icon
+      >
+        <template slot="default">
+          <span>请耐心等待生成完成</span>
+          <el-button 
+            type="text" 
+            size="mini" 
+            @click="stopGenerate"
+            style="margin-left: 10px; color: #f56c6c;"
+          >
+            停止生成
+          </el-button>
+        </template>
+      </el-alert>
+    </div>
   </div>
 </template>
 
@@ -33,7 +56,8 @@ export default {
   data() {
     return {
       configDialogVisible: false,
-      createDialogVisible: false
+      createDialogVisible: false,
+      isGenerating: false
     }
   },
   computed: {
@@ -43,11 +67,13 @@ export default {
     // 监听事件
     this.$bus.$on('open_ai_config', this.openConfig)
     this.$bus.$on('open_ai_create', this.openCreate)
+    this.$bus.$on('ai_generating_status', this.onGeneratingStatus)
   },
   beforeDestroy() {
     // 清理事件监听
     this.$bus.$off('open_ai_config', this.openConfig)
     this.$bus.$off('open_ai_create', this.openCreate)
+    this.$bus.$off('ai_generating_status', this.onGeneratingStatus)
   },
   methods: {
     openConfig() {
@@ -64,6 +90,17 @@ export default {
       }
       
       this.createDialogVisible = true
+    },
+
+    onGeneratingStatus(status) {
+      this.isGenerating = status
+    },
+
+    stopGenerate() {
+      if (this.$refs.aiCreateDialog) {
+        this.$refs.aiCreateDialog.stopGenerate()
+      }
+      this.isGenerating = false
     }
   }
 }
@@ -71,6 +108,22 @@ export default {
 
 <style lang="less" scoped>
 .unifiedAiManager {
-  // 容器样式
+  .generatingTip {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    max-width: 400px;
+    
+    /deep/ .el-alert {
+      padding: 12px 16px;
+      
+      .el-alert__content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+  }
 }
 </style>

@@ -147,7 +147,20 @@ export default {
     }
   },
   computed: {
-    ...mapState(['aiConfig'])
+    ...mapState(['aiSystem']),
+
+    // 为了向后兼容，提供aiConfig的计算属性
+    aiConfig() {
+      const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
+      if (!currentProvider) return {}
+      return {
+        api: currentProvider.api,
+        key: currentProvider.config.key,
+        model: currentProvider.config.model,
+        port: currentProvider.config.port,
+        method: currentProvider.config.method
+      }
+    }
   },
   created() {
     this.$bus.$on('ai_create_all', this.aiCrateAll)
@@ -174,44 +187,54 @@ export default {
 
     // 客户端连接检测
     async testConnect() {
-      const isDeployed = window.location.hostname !== 'localhost' && 
+      const isDeployed = window.location.hostname !== 'localhost' &&
                         window.location.hostname !== '127.0.0.1'
-      
+
+      // 获取当前提供商配置
+      const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
+      if (!currentProvider) {
+        this.$message.error('未配置AI提供商')
+        return
+      }
+
+      const config = currentProvider.config
+
       console.log('AI连接测试:', {
         hostname: window.location.hostname,
         isDeployed: isDeployed,
-        aiConfig: {
-          api: this.aiConfig.api,
-          model: this.aiConfig.model,
-          hasKey: !!this.aiConfig.key,
-          port: this.aiConfig.port
+        currentProvider: currentProvider.name,
+        config: {
+          api: currentProvider.api,
+          model: config.model,
+          hasKey: !!config.key,
+          port: config.port
         }
       })
-      
+
       if (isDeployed) {
         // 部署环境：直接测试AI API
         console.log('部署环境 - 测试AI API连接...')
-        
+
         // 确保使用HTTPS
-        const secureApi = this.aiConfig.api.replace(/^http:\/\//, 'https://')
+        const secureApi = currentProvider.api.replace(/^http:\/\//, 'https://')
         console.log('使用安全API地址进行测试:', secureApi)
-        
+
         try {
           const response = await fetch(secureApi, {
             method: 'POST',
             headers: {
-              'Authorization': 'Bearer ' + this.aiConfig.key,
+              'Authorization': 'Bearer ' + config.key,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              model: this.aiConfig.model,
+              model: config.model,
               messages: [{ role: 'user', content: 'test' }],
               max_tokens: 1,
               stream: false
             })
           })
           console.log('AI API测试响应:', response.status, response.statusText)
-          
+
           if (response.ok) {
             this.$message.success(this.$t('ai.connectSuccessful'))
             this.clientTipDialogVisible = false
@@ -229,11 +252,11 @@ export default {
         // 本地环境：测试代理服务
         console.log('本地环境 - 测试代理服务连接...')
         try {
-          const response = await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
+          const response = await fetch(`http://localhost:${config.port}/ai/test`, {
             method: 'GET'
           })
           console.log('代理服务测试响应:', response.status)
-          
+
           this.$message.success(this.$t('ai.connectSuccessful'))
           this.clientTipDialogVisible = false
           this.createDialogVisible = true
@@ -246,13 +269,22 @@ export default {
 
     // 检测ai是否可用
     async aiTest() {
-      const isDeployed = window.location.hostname !== 'localhost' && 
+      const isDeployed = window.location.hostname !== 'localhost' &&
                         window.location.hostname !== '127.0.0.1'
-      
+
+      // 获取当前提供商配置
+      const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
+      if (!currentProvider) {
+        this.showAiConfigDialog()
+        throw new Error(this.$t('ai.configurationMissing'))
+      }
+
+      const config = currentProvider.config
+
       // 检查配置
       if (isDeployed) {
         // 部署环境：只检查基本配置，不检查port
-        if (!(this.aiConfig.api && this.aiConfig.key && this.aiConfig.model)) {
+        if (!(currentProvider.api && config.key && config.model)) {
           this.showAiConfigDialog()
           throw new Error(this.$t('ai.configurationMissing'))
         }
@@ -262,20 +294,20 @@ export default {
         // 本地环境：检查完整配置包括port
         if (
           !(
-            this.aiConfig.api &&
-            this.aiConfig.key &&
-            this.aiConfig.model &&
-            this.aiConfig.port
+            currentProvider.api &&
+            config.key &&
+            config.model &&
+            config.port
           )
         ) {
           this.showAiConfigDialog()
           throw new Error(this.$t('ai.configurationMissing'))
         }
-        
+
         // 检查本地连接
         let isConnect = false
         try {
-          await fetch(`http://localhost:${this.aiConfig.port}/ai/test`, {
+          await fetch(`http://localhost:${config.port}/ai/test`, {
             method: 'GET'
           })
           isConnect = true
@@ -319,10 +351,14 @@ export default {
       this.aiCreatingMaskVisible = true
       // 发起请求
       this.isAiCreating = true
+      // 获取当前提供商配置
+      const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
+      const config = currentProvider.config
+
       this.aiInstance = new Ai({
-        port: this.aiConfig.port
+        port: config.port
       })
-      this.aiInstance.init('huoshan', this.aiConfig)
+      this.aiInstance.init(this.aiSystem.currentProvider, config)
       
       // 先设置为空数据，但不调用setRootNodeCenter（因为此时没有节点）
       this.mindMap.setData(null)
@@ -573,10 +609,14 @@ export default {
         this.aiCreatingMaskVisible = true
         // 发起请求
         this.isAiCreating = true
+        // 获取当前提供商配置
+        const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
+        const config = currentProvider.config
+
         this.aiInstance = new Ai({
-          port: this.aiConfig.port
+          port: config.port
         })
-        this.aiInstance.init('huoshan', this.aiConfig)
+        this.aiInstance.init(this.aiSystem.currentProvider, config)
         this.aiInstance.request(
           {
             messages: [
@@ -691,10 +731,14 @@ export default {
         await this.aiTest()
         // 发起请求
         this.isAiCreating = true
+        // 获取当前提供商配置
+        const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
+        const config = currentProvider.config
+
         this.aiInstance = new Ai({
-          port: this.aiConfig.port
+          port: config.port
         })
-        this.aiInstance.init('huoshan', this.aiConfig)
+        this.aiInstance.init(this.aiSystem.currentProvider, config)
         this.aiInstance.request(
           {
             messages: messageList.map(msg => {
