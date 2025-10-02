@@ -179,15 +179,26 @@
         <span class="text">{{ $t('toolbar.outerFrame') }}</span>
       </div>
       <div
-        v-if="item === 'ai'"
+        v-if="item === 'aiConfig'"
         class="toolbarBtn"
         :class="{
           disabled: hasGeneralization
         }"
-        @click="aiCrate"
+        @click="openAiConfig"
+      >
+        <span class="icon iconfont iconshezhi"></span>
+        <span class="text">AI配置</span>
+      </div>
+      <div
+        v-if="item === 'aiCreate'"
+        class="toolbarBtn"
+        :class="{
+          disabled: hasGeneralization
+        }"
+        @click="openAiCreate"
       >
         <span class="icon iconfont iconAIshengcheng"></span>
-        <span class="text">{{ $t('toolbar.ai') }}</span>
+        <span class="text">AI创建</span>
       </div>
     </template>
   </div>
@@ -309,9 +320,14 @@ export default {
       this.$bus.$emit('execCommand', 'SET_NOTATION', this.activeNodes, ...args)
     },
 
-    // AI生成整体
-    aiCrate() {
-      this.$bus.$emit('ai_create_all')
+    // 打开AI配置
+    openAiConfig() {
+      this.$bus.$emit('open_ai_config')
+    },
+
+    // 打开AI创建
+    openAiCreate() {
+      this.$bus.$emit('open_ai_create')
     }
   }
 }

@@ -27,12 +27,38 @@ const store = new Vuex.Store({
     isSourceCodeEdit: false, // 是否是源码编辑模式
     extraTextOnExport: '', // 导出时底部添加的文字
     isDragOutlineTreeNode: false, // 当前是否正在拖拽大纲树的节点
-    aiConfig: {
-      api: 'http://ark.cn-beijing.volces.com/api/v3/chat/completions',
-      key: '',
-      model: '',
-      port: 3456,
-      method: 'POST'
+    // 统一AI系统配置
+    aiSystem: {
+      currentProvider: 'huoshan', // 当前选择的提供商
+      providers: {
+        huoshan: {
+          name: '火山方舟',
+          api: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+          type: 'custom', // 自定义模型输入
+          config: {
+            key: '',
+            model: '',
+            port: 3456,
+            method: 'POST'
+          }
+        },
+        navy: {
+          name: 'Navy API',
+          api: 'https://api.navy/v1/chat/completions',
+          type: 'select', // 从预设列表选择
+          models: [
+            'deepseek-v3.2',
+            'gpt-5',
+            'gemini-2.5-pro',
+            'qwen3-235b-a22b-thinking-2507'
+          ],
+          config: {
+            key: '',
+            model: 'deepseek-v3.2',
+            method: 'POST'
+          }
+        }
+      }
     },
     // 扩展主题列表
     extendThemeGroupList: [],
@@ -47,17 +73,30 @@ const store = new Vuex.Store({
 
     // 设置本地配置
     setLocalConfig(state, data) {
-      const aiConfigKeys = Object.keys(state.aiConfig)
+      // 处理AI系统配置
+      if (data.aiSystem) {
+        state.aiSystem = { ...state.aiSystem, ...data.aiSystem }
+      }
+      
+      // 向后兼容：迁移旧的aiConfig到新格式
+      if (data.aiConfig && !data.aiSystem) {
+        state.aiSystem.providers.huoshan.config = {
+          ...state.aiSystem.providers.huoshan.config,
+          ...data.aiConfig
+        }
+        state.aiSystem.currentProvider = 'huoshan'
+      }
+      
+      // 处理其他配置
       Object.keys(data).forEach(key => {
-        if (aiConfigKeys.includes(key)) {
-          state.aiConfig[key] = data[key]
-        } else {
+        if (key !== 'aiSystem' && key !== 'aiConfig') {
           state.localConfig[key] = data[key]
         }
       })
+      
       storeLocalConfig({
         ...state.localConfig,
-        ...state.aiConfig
+        aiSystem: state.aiSystem
       })
     },
 

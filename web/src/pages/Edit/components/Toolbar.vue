@@ -177,7 +177,8 @@ const defaultBtnList = [
   // 'attachment',
   'outerFrame',
   'annotation',
-  'ai'
+  'aiConfig',
+  'aiCreate'
 ]
 
 export default {

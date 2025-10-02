@@ -8,12 +8,14 @@ class Ai {
     this.content = ''
   }
 
-  init(type = 'huoshan', options = {}) {
-    // 火山引擎接口
-    if (type === 'huoshan') {
+  init(providerType = 'huoshan', options = {}) {
+    console.log('初始化AI提供商:', providerType, options)
+    
+    // 火山方舟接口
+    if (providerType === 'huoshan') {
       this.baseData = {
-        api: options.api,
-        method: options.method,
+        api: options.api || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+        method: options.method || 'POST',
         headers: {
           Authorization: 'Bearer ' + options.key
         },
@@ -23,6 +25,23 @@ class Ai {
         }
       }
     }
+    // Navy API接口
+    else if (providerType === 'navy') {
+      this.baseData = {
+        api: options.api || 'https://api.navy/v1/chat/completions',
+        method: options.method || 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + options.key,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          model: options.model,
+          stream: true
+        }
+      }
+    }
+    
+    console.log('AI初始化完成:', this.baseData)
   }
 
   async request(data, progress = () => {}, end = () => {}, err = () => {}) {
