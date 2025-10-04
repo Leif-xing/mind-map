@@ -76,7 +76,8 @@ export default {
       generating: false,
       generatingContent: '',
       aiInstance: null,
-      isLoopRendering: false
+      isLoopRendering: false,
+      rootWaitCount: 0
     }
   },
   computed: {
@@ -143,8 +144,16 @@ export default {
         const providerType = this.aiSystem.currentProvider
         this.aiInstance.init(providerType, this.currentProvider.config)
         
-        // 清空当前思维导图
-        this.mindMap.setData(null)
+        // 清空当前思维导图 - 使用空的根节点结构而不是null
+        this.mindMap.setData({
+          data: {
+            text: '生成中...',
+            richText: false,
+            expand: true,
+            isActive: false
+          },
+          children: []
+        })
         
         // 构建提示词
         const prompt = this.buildPrompt(currentTopic)
@@ -164,7 +173,6 @@ export default {
           },
           // 流式响应回调
           (content) => {
-            console.log('AI流式响应:', content)
             if (content) {
               const arr = content.split(/\n+/)
               this.generatingContent = arr.splice(0, arr.length - 1).join('\n')
@@ -173,7 +181,6 @@ export default {
           },
           // 完成回调
           (content) => {
-            console.log('AI响应完成，最终内容:', content)
             this.generatingContent = content
             this.generating = false
             this.$bus.$emit('ai_generating_status', false)
@@ -220,12 +227,9 @@ export default {
     },
 
     renderMindMap() {
-      if (!this.generatingContent.trim() || this.isLoopRendering) return
-      
-      console.log('========== 开始渲染思维导图 ==========')
-      console.log('生成内容:', this.generatingContent)
-      console.log('mindMap实例:', this.mindMap)
-      console.log('mindMap可用性:', !!this.mindMap)
+      if (!this.generatingContent.trim() || this.isLoopRendering) {
+        return
+      }
       
       this.isLoopRendering = true
       let treeData
@@ -245,17 +249,12 @@ export default {
           }
         }
         
-        console.log('清理后的内容:', cleanContent)
         
         treeData = transformMarkdownTo(cleanContent)
-        console.log('转换后的树数据:', treeData)
-        console.log('数据类型:', typeof treeData)
-        console.log('数据结构:', JSON.stringify(treeData, null, 2))
         
         if (!treeData) {
-          console.error('转换结果为空')
           this.isLoopRendering = false
-          this.$message.error('思维导图转换失败：转换结果为空')
+          this.$message.error('思维导图转换失败')
           return
         }
         
@@ -267,8 +266,7 @@ export default {
         }
         
         // 验证数据结构
-        if (!treeData.data || !treeData.data.text) {
-          console.error('数据结构不完整:', treeData)
+        if (!treeData || !treeData.data || !treeData.data.text) {
           this.isLoopRendering = false
           this.$message.error('思维导图转换失败：数据结构不完整')
           return
@@ -302,8 +300,10 @@ export default {
 
           // 继续处理流式数据
           const newTreeData = transformMarkdownTo(this.generatingContent)
-          if (!newTreeData) {
-            console.warn('渲染中数据转换失败')
+          if (!newTreeData || !newTreeData.data || !newTreeData.data.text) {
+            setTimeout(() => {
+              onRenderEnd()
+            }, 500)
             return
           }
           
@@ -312,14 +312,23 @@ export default {
           // 如果和上次数据一样则不触发重新渲染
           const curTreeData = JSON.stringify(newTreeData)
           if (curTreeData === lastTreeData) {
+            console.log('🔄 增量渲染 - 数据未变化，等待下次检查')
+            console.log('🔄 增量渲染 - 当前生成状态:', this.generating)
+            console.log('🔄 增量渲染 - 当前内容长度:', this.generatingContent.length)
             setTimeout(() => {
               onRenderEnd()
             }, 500)
             return
           }
           lastTreeData = curTreeData
-          console.log('更新思维导图数据')
+          
+          // 记录数据变化
+          console.log('🔄 增量渲染 - 检测到数据变化')
+          console.log('🔄 增量渲染 - 新数据子节点数量:', newTreeData?.children?.length || 0)
+          console.log('🔄 增量渲染 - 更新思维导图数据')
+          console.log('🔄 增量渲染 - 更新前画布节点数:', (this.mindMap.renderer && this.mindMap.renderer.nodeList) ? this.mindMap.renderer.nodeList.length : 'N/A')
           this.mindMap.updateData(newTreeData)
+          console.log('🔄 增量渲染 - 更新后画布节点数:', (this.mindMap.renderer && this.mindMap.renderer.nodeList) ? this.mindMap.renderer.nodeList.length : 'N/A')
           
         } catch (error) {
           console.error('渲染过程出错:', error)
@@ -331,19 +340,21 @@ export default {
       this.mindMap.on('node_tree_render_end', onRenderEnd)
 
       try {
-        console.log('调用 mindMap.setData...')
         this.mindMap.setData(treeData)
-        console.log('mindMap.setData 调用成功')
         
-        // 确保根节点居中
-        setTimeout(() => {
-          if (this.mindMap.renderer && this.mindMap.renderer.root) {
-            console.log('设置根节点居中...')
+        // 等待根节点创建完成后再居中
+        const waitForRoot = () => {
+          if (this.mindMap && this.mindMap.renderer && this.mindMap.renderer.root) {
             this.mindMap.renderer.setRootNodeCenter()
           } else {
-            console.warn('renderer或root不可用')
+            // 继续等待，最多等待10次
+            if (this.rootWaitCount < 10) {
+              this.rootWaitCount = (this.rootWaitCount || 0) + 1
+              setTimeout(waitForRoot, 200)
+            }
           }
-        }, 100)
+        }
+        setTimeout(waitForRoot, 100)
       } catch (error) {
         console.error('设置思维导图数据失败:', error)
         console.error('错误堆栈:', error.stack)
@@ -353,17 +364,22 @@ export default {
       }
     },
 
+    // AI创建专用：添加UID（不处理内容重复，因为AI创建的内容通常结构清晰）
     addUid(treeData) {
       if (!treeData) return
       
       const walk = (node, uid = '') => {
-        if (!node.data) node.data = {}
-        if (!node.data.uid) {
-          node.data.uid = uid || Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+        if (!node || !node.data) {
+          return
         }
-        if (node.children && node.children.length > 0) {
+        if (!node.data.uid) {
+          node.data.uid = uid || 'create_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+        }
+        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
           node.children.forEach((child, index) => {
-            walk(child, node.data.uid + '_' + index)
+            if (child) {
+              walk(child, node.data.uid + '_' + index)
+            }
           })
         }
       }
@@ -392,6 +408,7 @@ export default {
       this.visible = false
       this.topic = ''
       this.generatingContent = ''
+      this.rootWaitCount = 0
     }
   }
 }

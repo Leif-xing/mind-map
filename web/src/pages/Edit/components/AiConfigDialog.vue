@@ -112,7 +112,22 @@ export default {
     }
   },
   computed: {
-    ...mapState(['aiConfig'])
+    ...mapState(['aiSystem']),
+    // 兼容旧aiConfig：从统一aiSystem映射出当前提供商配置
+    aiConfig() {
+      const sys = this.aiSystem || {}
+      const providers = sys.providers || {}
+      const curKey = sys.currentProvider || 'huoshan'
+      const provider = providers[curKey] || {}
+      const cfg = (provider && provider.config) || {}
+      return {
+        api: provider.api || cfg.api || '',
+        key: cfg.key || '',
+        model: cfg.model || '',
+        port: cfg.port || '',
+        method: cfg.method || ''
+      }
+    }
   },
   watch: {
     visible(val) {
@@ -135,8 +150,11 @@ export default {
     },
 
     initFormData() {
-      Object.keys(this.aiConfig).forEach(key => {
-        this.ruleForm[key] = this.aiConfig[key]
+      const src = this.aiConfig || {}
+      Object.keys(this.ruleForm).forEach(key => {
+        if (src[key] !== undefined && src[key] !== null) {
+          this.ruleForm[key] = src[key]
+        }
       })
     },
 
@@ -149,9 +167,29 @@ export default {
       this.$refs.ruleFormRef.validate(valid => {
         if (valid) {
           this.close()
-          this.setLocalConfig({
-            ...this.ruleForm
-          })
+          // 将当前表单写入统一AI系统配置
+          const sys = this.aiSystem || {}
+          const providers = sys.providers || {}
+          const curKey = sys.currentProvider || 'huoshan'
+          const provider = providers[curKey] || {}
+          const newAiSystem = {
+            ...sys,
+            providers: {
+              ...providers,
+              [curKey]: {
+                ...provider,
+                api: this.ruleForm.api || provider.api || '',
+                config: {
+                  ...(provider.config || {}),
+                  key: this.ruleForm.key,
+                  model: this.ruleForm.model,
+                  port: this.ruleForm.port || (provider.config && provider.config.port) || '',
+                  method: this.ruleForm.method || (provider.config && provider.config.method) || 'POST'
+                }
+              }
+            }
+          }
+          this.setLocalConfig({ aiSystem: newAiSystem })
           this.$message.success(this.$t('ai.configSaveSuccessTip'))
         }
       })

@@ -377,7 +377,6 @@ export default {
           ]
         },
         content => {
-          console.log('AI流式响应:', content)
           if (content) {
             const arr = content.split(/\n+/)
             this.aiCreatingContent = arr.splice(0, arr.length - 1).join('\n')
@@ -385,7 +384,6 @@ export default {
           this.loopRenderOnAiCreating()
         },
         content => {
-          console.log('AI响应完成，最终内容:', content)
           this.aiCreatingContent = content
           this.resetOnAiCreatingStop()
         },
@@ -537,7 +535,61 @@ export default {
       }
     },
 
-    // 给AI生成的数据添加uid
+    // AI续写专用：修复父子文本合并问题（AI续写时容易出现父节点包含子节点拼接的情况）
+    fixParentChildTextMerge(node) {
+      if (!node || !node.data || !node.children || node.children.length === 0) {
+        return
+      }
+      
+      // 获取纯文本
+      const getPlainText = (text) => {
+        if (!text) return ''
+        return text.replace(/<[^>]*>/g, '').trim()
+      }
+      
+      const parentText = getPlainText(node.data.text)
+      const childTexts = node.children.map(child => getPlainText(child.data.text)).filter(Boolean)
+      
+      // 检查父节点文本是否是子节点的简单拼接
+      if (childTexts.length > 0) {
+        const childrenJoined = childTexts.join('')
+        const parentWithoutSpaces = parentText.replace(/\s/g, '')
+        
+        // 如果父节点文本包含所有子节点文本的拼接，则提取主题词
+        if (parentWithoutSpaces.includes(childrenJoined) || childrenJoined.includes(parentWithoutSpaces)) {
+          // 从父节点文本中移除子节点文本，保留主题部分
+          let cleanedParent = parentText
+          childTexts.forEach(childText => {
+            cleanedParent = cleanedParent.replace(childText, '').trim()
+          })
+          
+          // 如果清理后还有内容，使用清理后的；否则尝试从原文提取主题
+          if (cleanedParent.length > 0) {
+            node.data.text = node.data.richText ? `<p>${cleanedParent}</p>` : cleanedParent
+          } else {
+            // 尝试从原始父文本开头提取主题词（到第一个子节点文本为止）
+            let theme = parentText
+            for (const childText of childTexts) {
+              const index = theme.indexOf(childText)
+              if (index > 0) {
+                theme = theme.substring(0, index).trim()
+                break
+              }
+            }
+            if (theme && theme !== parentText) {
+              node.data.text = node.data.richText ? `<p>${theme}</p>` : theme
+            }
+          }
+        }
+      }
+      
+      // 递归处理子节点
+      node.children.forEach(child => {
+        this.fixParentChildTextMerge(child)
+      })
+    },
+
+    // AI续写专用：添加UID（续写场景下需要处理重复内容）
     addUid(data) {
       const checkRepeatUidMap = {}
       const walk = (node, pUid = '') => {
@@ -679,6 +731,12 @@ export default {
       if (!this.aiCreatingContent.trim() || this.isLoopRendering) return
       this.isLoopRendering = true
       const partData = transformMarkdownTo(this.aiCreatingContent)
+      
+      // 修复transformMarkdownTo的父子文本合并问题
+      if (partData) {
+        this.fixParentChildTextMerge(partData)
+      }
+      
       this.addUid(partData)
       let lastPartData = JSON.stringify(partData)
       const treeData = this.addToTargetNode(partData.children || [])
@@ -696,6 +754,12 @@ export default {
         }
 
         const partData = transformMarkdownTo(this.aiCreatingContent)
+        
+        // 修复transformMarkdownTo的父子文本合并问题
+        if (partData) {
+          this.fixParentChildTextMerge(partData)
+        }
+        
         this.addUid(partData)
         const treeData = this.addToTargetNode(partData.children || [])
 

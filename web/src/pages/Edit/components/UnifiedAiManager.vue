@@ -12,26 +12,16 @@
       ref="aiCreateDialog"
     ></UnifiedAiCreateDialog>
     
-    <!-- 生成中的停止按钮提示 -->
+    <!-- 生成中的停止按钮 -->
     <div v-if="isGenerating" class="generatingTip">
-      <el-alert
-        title="AI正在生成思维导图..."
-        type="info"
-        :closable="false"
-        show-icon
+      <el-button 
+        type="danger" 
+        size="small" 
+        @click="stopGenerate"
+        icon="el-icon-close"
       >
-        <template slot="default">
-          <span>请耐心等待生成完成</span>
-          <el-button 
-            type="text" 
-            size="mini" 
-            @click="stopGenerate"
-            style="margin-left: 10px; color: #f56c6c;"
-          >
-            停止生成
-          </el-button>
-        </template>
-      </el-alert>
+        停止生成
+      </el-button>
     </div>
   </div>
 </template>
