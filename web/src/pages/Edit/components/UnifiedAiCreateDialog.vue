@@ -30,7 +30,7 @@
         <el-input
           type="textarea"
           v-model="topic"
-          :rows="4"
+          :rows="8"
           placeholder="例如：人工智能的发展历程、项目管理流程、学习计划等..."
           maxlength="500"
           show-word-limit
@@ -432,6 +432,32 @@ export default {
       color: #303133;
       font-size: 14px;
       font-weight: normal;
+    }
+  }
+}
+
+// 深色主题适配
+body.isDark {
+  .unifiedAiCreateDialog {
+    .currentConfig {
+      background: #363b3f;
+    }
+
+    .topicInput {
+      h4 {
+        color: hsla(0, 0%, 100%, 0.9);
+      }
+      
+      /deep/ .el-textarea__inner,
+      /deep/ .el-input__inner {
+        background-color: #363b3f;
+        border-color: hsla(0, 0%, 100%, 0.1);
+        color: hsla(0, 0%, 100%, 0.9);
+      }
+      
+      /deep/ .el-textarea__inner {
+        min-height: 200px; /* 专门针对textarea增加高度为原来的2倍以上，配合8行显示 */
+      }
     }
   }
 }
