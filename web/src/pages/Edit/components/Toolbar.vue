@@ -63,10 +63,17 @@
         <div
           class="toolbarBtn"
           @click="$bus.$emit('showExport')"
-          style="margin-right: 0;"
         >
           <span class="icon iconfont iconexport"></span>
           <span class="text">{{ $t('toolbar.export') }}</span>
+        </div>
+        <div
+          class="toolbarBtn"
+          @click="logout"
+          style="margin-right: 0;"
+        >
+          <span class="icon iconfont iconwithdraw"></span>
+          <span class="text">退出登录</span>
         </div>
         <!-- 本地文件树 -->
         <div
@@ -530,6 +537,11 @@ export default {
     onNodeNoteDblclick(node, e) {
       e.stopPropagation()
       this.$bus.$emit('showNodeNote', node)
+    },
+    
+    logout() {
+      // 触发退出登录事件
+      this.$bus.$emit('logout')
     }
   }
 }

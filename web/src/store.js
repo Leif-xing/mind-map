@@ -1,8 +1,22 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import { storeLocalConfig } from '@/api'
+import { storeLocalConfig, getUserData, storeUserData } from '@/api'
 
 Vue.use(Vuex)
+
+// 初始化用户数据
+const initialUserData = getUserData();
+const initialUsers = initialUserData ? initialUserData.users : [
+  // 预设一个管理员账号
+  {
+    id: 1,
+    username: 'admin',
+    password: 'admin123',
+    isAdmin: true,
+    createdAt: new Date().toISOString()
+  }
+];
+const initialUserIdCounter = initialUserData ? initialUserData.userIdCounter : 1;
 
 const store = new Vuex.Store({
   state: {
@@ -60,6 +74,10 @@ const store = new Vuex.Store({
         }
       }
     },
+    // 用户列表（从localStorage加载或使用默认值）
+    users: initialUsers,
+    // 用户ID计数器（从localStorage加载或使用默认值）
+    userIdCounter: initialUserIdCounter,
     // 扩展主题列表
     extendThemeGroupList: [],
     // 内置背景图片
@@ -138,6 +156,46 @@ const store = new Vuex.Store({
     // 设置背景图片列表
     setBgList(state, data) {
       state.bgList = data
+    },
+    
+    // 添加用户
+    addUser(state, user) {
+      // 为新用户分配递增ID
+      state.userIdCounter += 1;
+      const newUser = {
+        ...user,
+        id: state.userIdCounter
+      };
+      state.users.push(newUser);
+      // 保存到localStorage
+      storeUserData(state.users, state.userIdCounter)
+    },
+    
+    // 更新用户管理员状态
+    updateUserAdminStatus(state, { userId, isAdmin }) {
+      const user = state.users.find(u => u.id === userId)
+      if (user) {
+        user.isAdmin = isAdmin
+      }
+      // 保存到localStorage
+      storeUserData(state.users, state.userIdCounter)
+    },
+    
+    // 删除用户
+    deleteUser(state, userId) {
+      state.users = state.users.filter(u => u.id !== userId)
+      // 保存到localStorage
+      storeUserData(state.users, state.userIdCounter)
+    },
+    
+    // 更新用户密码
+    updateUserPassword(state, { userId, newPassword }) {
+      const user = state.users.find(u => u.id === userId)
+      if (user) {
+        user.password = newPassword
+      }
+      // 保存到localStorage
+      storeUserData(state.users, state.userIdCounter)
     }
   },
   actions: {}

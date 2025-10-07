@@ -40,19 +40,29 @@
           <!-- 模型配置 -->
           <el-form-item label="模型" prop="model">
             <!-- 预设模型选择 -->
-            <el-select 
-              v-if="selectedProvider.type === 'select'" 
-              v-model="config.model" 
-              placeholder="选择模型"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="model in selectedProvider.models"
-                :key="model"
-                :label="model"
-                :value="model"
-              ></el-option>
-            </el-select>
+            <div v-if="selectedProvider.type === 'select'" style="display: flex;">
+              <el-select 
+                v-model="config.model" 
+                placeholder="选择模型"
+                style="flex: 1; margin-right: 10px;"
+              >
+                <el-option
+                  v-for="model in selectedProvider.models"
+                  :key="model"
+                  :label="model"
+                  :value="model"
+                ></el-option>
+              </el-select>
+              <!-- 仅在选择Navy API时显示添加模型按钮 -->
+              <el-button 
+                v-if="currentProvider === 'navy'" 
+                type="primary" 
+                size="small" 
+                @click="addModelDialogVisible = true"
+              >
+                添加模型
+              </el-button>
+            </div>
             
             <!-- 自定义模型输入 -->
             <el-input 
@@ -99,6 +109,28 @@
       </div>
     </div>
 
+    <!-- 添加模型对话框 -->
+    <el-dialog
+      title="添加模型"
+      :visible.sync="addModelDialogVisible"
+      width="400px"
+      append-to-body
+    >
+      <el-form>
+        <el-form-item label="模型名称">
+          <el-input 
+            v-model="newModelName" 
+            placeholder="请输入模型名称，如: gpt-4-turbo"
+            @keyup.enter.native="addModel"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="addModelDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="addModel">添加</el-button>
+      </div>
+    </el-dialog>
+
     <div slot="footer" class="dialog-footer">
       <el-button @click="handleClose">取消</el-button>
       <el-button @click="testConnection" :loading="testing">测试连接</el-button>
@@ -130,6 +162,8 @@ export default {
       },
       testing: false,
       saving: false,
+      addModelDialogVisible: false, // 控制添加模型对话框的显示
+      newModelName: '', // 新模型名称
       rules: {
         key: [
           { required: true, message: '请输入API密钥', trigger: 'blur' }
@@ -211,6 +245,44 @@ export default {
       } finally {
         this.testing = false
       }
+    },
+
+    // 添加模型到Navy API
+    addModel() {
+      if (!this.newModelName.trim()) {
+        this.$message.warning('请输入模型名称')
+        return
+      }
+
+      // 检查模型是否已存在
+      if (this.selectedProvider.models.includes(this.newModelName.trim())) {
+        this.$message.warning('该模型已存在')
+        return
+      }
+
+      // 更新本地状态
+      const updatedAiSystem = {
+        ...this.aiSystem,
+        providers: {
+          ...this.aiSystem.providers,
+          [this.currentProvider]: {
+            ...this.aiSystem.providers[this.currentProvider],
+            models: [
+              ...this.aiSystem.providers[this.currentProvider].models,
+              this.newModelName.trim()
+            ]
+          }
+        }
+      }
+
+      // 更新store
+      this.setLocalConfig({ aiSystem: updatedAiSystem })
+      
+      // 重置输入并关闭对话框
+      this.newModelName = ''
+      this.addModelDialogVisible = false
+      
+      this.$message.success('模型添加成功！')
     },
 
     saveConfig() {

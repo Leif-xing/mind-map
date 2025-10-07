@@ -6,7 +6,23 @@
 
 <script>
 export default {
-  name: 'App'
+  name: 'App',
+  created() {
+    // 检查用户是否已登录，如果是，则验证其权限
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+    
+    if (currentUser) {
+      // 验证用户是否仍然存在于系统中
+      const userExists = this.$store.state.users.find(u => 
+        u.id === currentUser.id && u.username === currentUser.username
+      )
+      
+      if (!userExists) {
+        // 用户不存在了，清除登录状态
+        localStorage.removeItem('currentUser')
+      }
+    }
+  }
 }
 </script>
 

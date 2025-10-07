@@ -33,12 +33,19 @@ export default {
       activeSidebar: state => state.activeSidebar
     })
   },
-  watch: {
-    isDark() {
-      this.setBodyDark()
+  created() {
+    // 检查用户是否已登录，如果没有则重定向到登录页面
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+    if (!currentUser) {
+      this.$router.push('/login')
+      return
     }
-  },
-  async created() {
+    
+    // 如果是管理员访问思维导图页面，可以保留，但也可以添加提示
+    if (currentUser.isAdmin) {
+      console.log('管理员正在使用思维导图功能')
+    }
+    
     this.initLocalConfig()
     const loading = this.$loading({
       lock: true,
@@ -47,6 +54,9 @@ export default {
     this.show = true
     loading.close()
     this.setBodyDark()
+    
+    // 监听退出登录事件
+    this.$bus.$on('logout', this.handleLogout)
   },
   methods: {
     ...mapMutations(['setLocalConfig']),
@@ -66,7 +76,23 @@ export default {
       this.isDark
         ? document.body.classList.add('isDark')
         : document.body.classList.remove('isDark')
+    },
+    
+    handleLogout() {
+      // 清除用户登录信息
+      localStorage.removeItem('currentUser')
+      
+      // 跳转到登录页面
+      this.$router.push('/login')
+      
+      // 显示成功消息
+      this.$message.success('已退出登录')
     }
+  },
+  
+  beforeDestroy() {
+    // 移除退出登录事件监听
+    this.$bus.$off('logout', this.handleLogout)
   }
 }
 </script>
