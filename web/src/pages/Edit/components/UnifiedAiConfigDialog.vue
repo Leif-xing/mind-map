@@ -315,4 +315,34 @@ export default {
     }
   }
 }
+
+// 深色主题适配
+body.isDark {
+  .unifiedAiConfigDialog {
+    /deep/ .el-dialog__body {
+      color: hsla(0, 0%, 100%, 0.9);
+    }
+
+    .aiConfigContent {
+      .providerSelection {
+        h3 {
+          color: hsla(0, 0%, 100%, 0.9);
+        }
+
+        .providerRadio {
+          /deep/ .el-radio__label {
+            color: hsla(0, 0%, 100%, 0.9);
+          }
+        }
+      }
+
+      .providerConfig {
+        h3 {
+          color: hsla(0, 0%, 100%, 0.9);
+          border-bottom-color: hsla(0, 0%, 100%, 0.1);
+        }
+      }
+    }
+  }
+}
 </style>
