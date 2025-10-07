@@ -122,6 +122,7 @@ export default {
           username: this.registerForm.username,
           password: this.registerForm.password,
           isAdmin: false, // 注册的用户默认不是管理员
+          mindMapPermission: 0, // 导图权限，默认为0（不可用），需管理员设置
           createdAt: new Date().toISOString()
         }
         
@@ -131,10 +132,10 @@ export default {
         // 注册成功后自动登录（存储当前用户信息）
         localStorage.setItem('currentUser', JSON.stringify(newUser))
         
-        this.$message.success('注册成功，正在跳转到思维导图...')
+        this.$message.info('注册成功，请等待管理员设置权限后使用思维导图功能')
         
-        // 跳转到思维导图首页
-        this.$router.push('/')
+        // 跳转到登录页面
+        this.$router.push('/login')
       } catch (error) {
         console.error('注册错误:', error)
         this.$message.error('注册失败')

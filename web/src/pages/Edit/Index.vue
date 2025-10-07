@@ -41,6 +41,13 @@ export default {
       return
     }
     
+    // 检查用户导图权限
+    if (!currentUser.isAdmin && currentUser.mindMapPermission !== 1) {
+      this.$message.warning('您没有导图权限，请联系管理员开通')
+      this.$router.push('/login')
+      return
+    }
+    
     // 如果是管理员访问思维导图页面，可以保留，但也可以添加提示
     if (currentUser.isAdmin) {
       console.log('管理员正在使用思维导图功能')

@@ -85,9 +85,15 @@ export default {
           if (user.isAdmin) {
             // 管理员跳转到用户管理界面
             this.$router.push('/user-management')
-          } else {
-            // 普通用户跳转到思维导图首页
+          } else if (user.mindMapPermission === 1) {
+            // 普通用户有导图权限，跳转到思维导图首页
             this.$router.push('/')
+          } else {
+            // 普通用户没有导图权限，显示提示信息
+            this.$message.warning('您的导图权限尚未开通，请联系管理员设置权限')
+            // 可以选择留在登录页面或跳转到其他页面
+            // 这里我们保持在当前页面，用户可以重新登录
+            return
           }
           
           this.$message.success(`登录成功，欢迎 ${user.username}`)

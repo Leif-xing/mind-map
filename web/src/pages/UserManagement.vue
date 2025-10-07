@@ -1,5 +1,5 @@
 <template>
-  <div class="user-management-container" :class="{ 'is-dark': isDark }">
+  <div class="user-management-container">
     <div class="header">
       <h1>用户管理</h1>
       <div class="header-actions">
@@ -13,9 +13,6 @@
       <el-table 
         :data="users" 
         style="width: 100%" 
-        :header-cell-style="getTableHeaderStyle"
-        :row-style="getRowStyle"
-        :cell-style="getCellStyle"
       >
         <el-table-column prop="id" label="ID" width="80"></el-table-column>
         <el-table-column prop="username" label="用户名"></el-table-column>
@@ -26,8 +23,15 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="mindMapPermission" label="导图权限" width="100">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.mindMapPermission === 1 ? 'success' : 'warning'">
+              {{ scope.row.mindMapPermission === 1 ? '可用' : '不可用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="280">
+        <el-table-column label="操作" width="380">
           <template slot-scope="scope">
             <el-button 
               size="mini" 
@@ -43,6 +47,13 @@
               @click="toggleAdminStatus(scope.row)"
             >
               {{ scope.row.isAdmin ? '取消管理员' : '设为管理员' }}
+            </el-button>
+            <el-button 
+              size="mini" 
+              :type="scope.row.mindMapPermission === 1 ? 'info' : 'success'" 
+              @click="toggleMindMapPermission(scope.row)"
+            >
+              {{ scope.row.mindMapPermission === 1 ? '取消导图权限' : '设置导图权限' }}
             </el-button>
             <el-button 
               size="mini" 
@@ -110,7 +121,6 @@ export default {
 
     return {
       users: [],
-      isDark: false,
       showChangePasswordDialog: false,
       passwordForm: {
         currentPassword: '',
@@ -134,34 +144,11 @@ export default {
   },
   created() {
     this.loadUsers()
-    this.checkDarkMode()
   },
   methods: {
     loadUsers() {
       // 从store获取用户列表
       this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
-    },
-    checkDarkMode() {
-      // 检查是否为深色主题
-      this.isDark = document.body.classList.contains('isDark') || 
-                    this.$store.state.localConfig.isDark
-    },
-    getTableHeaderStyle() {
-      return this.isDark 
-        ? { background: '#1d1e1f', color: 'white', borderColor: '#444' } 
-        : { background: '#f5f7fa', color: '#606266' }
-    },
-    getRowStyle({ row, rowIndex }) {
-      if (this.isDark) {
-        return { background: '#2d2e2f', color: 'white', borderColor: '#444' }
-      }
-      return {}
-    },
-    getCellStyle({ row, column, rowIndex, columnIndex }) {
-      if (this.isDark) {
-        return { borderColor: '#444', color: 'white' }
-      }
-      return {}
     },
     toggleAdminStatus(user) {
       // 切换用户管理员状态
@@ -171,6 +158,18 @@ export default {
       })
       
       this.$message.success(`用户 ${user.username} 管理员权限已${user.isAdmin ? '取消' : '设置'}`)
+      this.loadUsers() // 重新加载用户列表
+    },
+    
+    toggleMindMapPermission(user) {
+      // 切换用户导图权限
+      this.$store.commit('updateUserMindMapPermission', {
+        userId: user.id,
+        mindMapPermission: user.mindMapPermission === 1 ? 0 : 1
+      })
+      
+      const permissionText = user.mindMapPermission === 1 ? '取消' : '设置';
+      this.$message.success(`用户 ${user.username} 导图权限已${permissionText}`);
       this.loadUsers() // 重新加载用户列表
     },
     deleteUser(user) {
@@ -194,6 +193,18 @@ export default {
         // 取消删除
       })
     },
+    toggleMindMapPermission(user) {
+      // 切换用户导图权限
+      this.$store.commit('updateUserMindMapPermission', {
+        userId: user.id,
+        mindMapPermission: user.mindMapPermission === 1 ? 0 : 1
+      })
+      
+      const permissionText = user.mindMapPermission === 1 ? '取消' : '设置';
+      this.$message.success(`用户 ${user.username} 导图权限已${permissionText}`);
+      this.loadUsers() // 重新加载用户列表
+    },
+    
     showChangePasswordDialogForUser(user) {
       this.passwordForm.userId = user.id;
       this.showChangePasswordDialog = true;
@@ -256,11 +267,7 @@ export default {
       this.$message.success('已退出登录')
     }
   },
-  watch: {
-    '$store.state.localConfig.isDark'() {
-      this.checkDarkMode()
-    }
-  }
+
 }
 </script>
 
@@ -269,21 +276,6 @@ export default {
   padding: 20px;
   min-height: 100vh;
   background: linear-gradient(to bottom, #f5f7fa 0%, #c3cfe2 100%);
-  
-  &.is-dark {
-    background: linear-gradient(to bottom, #1a1a1a 0%, #2d2d2d 100%);
-    
-    .header {
-      background: #2d2e2f;
-      h1 {
-        color: #fff;
-      }
-    }
-    
-    .content {
-      background: #2d2e2f;
-    }
-  }
   
   .header {
     display: flex;
@@ -329,42 +321,13 @@ export default {
           color: #606266;
           
           &:hover {
-            background-color: #f5f7fa !important;
+            background-color: #f5f7fa;
           }
         }
         
         td {
           border-color: #ebeef5;
           color: #606266;
-        }
-      }
-    }
-    
-    :deep(.el-table.is-dark) {
-      background-color: #2d2e2f;
-      color: white;
-      
-      .el-table__header {
-        th {
-          background-color: #1d1e1f;
-          color: white;
-          border-color: #444;
-        }
-      }
-      
-      .el-table__body {
-        tr {
-          background-color: #2d2e2f;
-          color: white;
-          
-          &:hover {
-            background-color: #3d3e3f !important;
-          }
-        }
-        
-        td {
-          border-color: #444;
-          color: white;
         }
       }
     }

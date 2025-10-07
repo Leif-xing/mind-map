@@ -53,6 +53,10 @@ router.beforeEach((to, from, next) => {
         path: '/login',
         query: { redirect: to.fullPath }
       })
+    } else if (to.path === '/' && !currentUser.isAdmin && currentUser.mindMapPermission !== 1) {
+      // 普通用户没有导图权限，不能访问思维导图页面
+      alert('您没有导图权限，请联系管理员开通')
+      next('/login')
     } else if (to.matched.some(record => record.meta.requiresAdmin) && !currentUser.isAdmin) {
       // 需要管理员权限但用户不是管理员
       next('/')

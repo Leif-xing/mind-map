@@ -13,6 +13,7 @@ const initialUsers = initialUserData ? initialUserData.users : [
     username: 'admin',
     password: 'admin123',
     isAdmin: true,
+    mindMapPermission: 1, // 导图权限，默认为1（可用）
     createdAt: new Date().toISOString()
   }
 ];
@@ -193,6 +194,16 @@ const store = new Vuex.Store({
       const user = state.users.find(u => u.id === userId)
       if (user) {
         user.password = newPassword
+      }
+      // 保存到localStorage
+      storeUserData(state.users, state.userIdCounter)
+    },
+    
+    // 更新用户导图权限
+    updateUserMindMapPermission(state, { userId, mindMapPermission }) {
+      const user = state.users.find(u => u.id === userId)
+      if (user) {
+        user.mindMapPermission = mindMapPermission
       }
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
