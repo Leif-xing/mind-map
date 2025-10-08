@@ -107,38 +107,60 @@ export default {
       try {
         this.loading = true
         
-        // 检查用户名是否已存在
-        const existingUser = this.$store.state.users.find(u => 
-          u.username === this.registerForm.username
-        )
+        // 调试信息
+        console.log('Supabase Enabled Status:', this.$store.state.supabaseEnabled);
+        console.log('Current Environment Variables:', {
+          NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          VUE_APP_SUPABASE_URL: process.env.VUE_APP_SUPABASE_URL,
+          VUE_APP_SUPABASE_ENABLED: process.env.VUE_APP_SUPABASE_ENABLED
+        });
         
-        if (existingUser) {
-          this.$message.error('用户名已存在')
-          return
+        if (this.$store.state.supabaseEnabled) {
+          // 使用Supabase进行注册
+          const user = await this.$store.dispatch('registerUser', {
+            username: this.registerForm.username,
+            password: this.registerForm.password
+          })
+          
+          this.$message.info('注册成功，请等待管理员设置权限后使用思维导图功能')
+          
+          // 跳转到登录页面
+          this.$router.push('/login')
+        } else {
+          // 使用本地存储进行注册（当前实现）
+          // 检查用户名是否已存在
+          const existingUser = this.$store.state.users.find(u => 
+            u.username === this.registerForm.username
+          )
+          
+          if (existingUser) {
+            this.$message.error('用户名已存在')
+            return
+          }
+          
+          // 创建新用户（普通用户）
+          const newUser = {
+            username: this.registerForm.username,
+            password: this.registerForm.password,
+            isAdmin: false, // 注册的用户默认不是管理员
+            mindMapPermission: 0, // 导图权限，默认为0（不可用），需管理员设置
+            createdAt: new Date().toISOString()
+          }
+          
+          // 将新用户添加到store中的用户数组
+          this.$store.commit('addUser', newUser)
+          
+          // 注册成功后自动登录（存储当前用户信息）
+          localStorage.setItem('currentUser', JSON.stringify(newUser))
+          
+          this.$message.info('注册成功，请等待管理员设置权限后使用思维导图功能')
+          
+          // 跳转到登录页面
+          this.$router.push('/login')
         }
-        
-        // 创建新用户（普通用户）
-        const newUser = {
-          username: this.registerForm.username,
-          password: this.registerForm.password,
-          isAdmin: false, // 注册的用户默认不是管理员
-          mindMapPermission: 0, // 导图权限，默认为0（不可用），需管理员设置
-          createdAt: new Date().toISOString()
-        }
-        
-        // 将新用户添加到store中的用户数组
-        this.$store.commit('addUser', newUser)
-        
-        // 注册成功后自动登录（存储当前用户信息）
-        localStorage.setItem('currentUser', JSON.stringify(newUser))
-        
-        this.$message.info('注册成功，请等待管理员设置权限后使用思维导图功能')
-        
-        // 跳转到登录页面
-        this.$router.push('/login')
       } catch (error) {
         console.error('注册错误:', error)
-        this.$message.error('注册失败')
+        this.$message.error('注册失败: ' + error.message)
       } finally {
         this.loading = false
       }

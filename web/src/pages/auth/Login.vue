@@ -72,37 +72,79 @@ export default {
       try {
         this.loading = true
         
-        // 模拟登录验证（实际应用中需要与后端API交互）
-        const user = this.$store.state.users.find(u => 
-          u.username === this.loginForm.username && 
-          u.password === this.loginForm.password
-        )
+        // 调试信息
+        console.log('Login - Supabase Enabled Status:', this.$store.state.supabaseEnabled);
+        console.log('Login - Current Environment Variables:', {
+          NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          VUE_APP_SUPABASE_URL: process.env.VUE_APP_SUPABASE_URL,
+          VUE_APP_SUPABASE_ENABLED: process.env.VUE_APP_SUPABASE_ENABLED
+        });
         
-        if (user) {
-          // 存储用户信息到本地
-          localStorage.setItem('currentUser', JSON.stringify(user))
+        if (this.$store.state.supabaseEnabled) {
+          // 使用Supabase进行登录
+          const user = await this.$store.dispatch('loginUser', {
+            username: this.loginForm.username,
+            password: this.loginForm.password
+          })
           
-          if (user.isAdmin) {
+          // 存储用户信息到本地（确保字段名一致）
+          const userForStorage = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            mindMapPermission: user.mindMapPermission,
+            createdAt: user.createdAt
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(userForStorage))
+          
+          if (userForStorage.isAdmin) {
             // 管理员跳转到用户管理界面
             this.$router.push('/user-management')
-          } else if (user.mindMapPermission === 1) {
+          } else if (userForStorage.mindMapPermission === 1) {
             // 普通用户有导图权限，跳转到思维导图首页
             this.$router.push('/')
           } else {
             // 普通用户没有导图权限，显示提示信息
             this.$message.warning('您的导图权限尚未开通，请联系管理员设置权限')
-            // 可以选择留在登录页面或跳转到其他页面
-            // 这里我们保持在当前页面，用户可以重新登录
             return
           }
           
-          this.$message.success(`登录成功，欢迎 ${user.username}`)
+          this.$message.success(`登录成功，欢迎 ${userForStorage.username}`)
         } else {
-          this.$message.error('用户名或密码错误')
+          // 使用本地存储进行登录（当前实现）
+          const user = this.$store.state.users.find(u => 
+            u.username === this.loginForm.username && 
+            u.password === this.loginForm.password
+          )
+          
+          if (user) {
+            // 存储用户信息到本地
+            localStorage.setItem('currentUser', JSON.stringify(user))
+            
+            if (user.isAdmin) {
+              // 管理员跳转到用户管理界面
+              this.$router.push('/user-management')
+            } else if (user.mindMapPermission === 1) {
+              // 普通用户有导图权限，跳转到思维导图首页
+              this.$router.push('/')
+            } else {
+              // 普通用户没有导图权限，显示提示信息
+              this.$message.warning('您的导图权限尚未开通，请联系管理员设置权限')
+              // 可以选择留在登录页面或跳转到其他页面
+              // 这里我们保持在当前页面，用户可以重新登录
+              return
+            }
+            
+            this.$message.success(`登录成功，欢迎 ${user.username}`)
+          } else {
+            this.$message.error('用户名或密码错误')
+          }
         }
       } catch (error) {
         console.error('登录错误:', error)
-        this.$message.error('登录失败')
+        this.$message.error('登录失败: ' + error.message)
       } finally {
         this.loading = false
       }

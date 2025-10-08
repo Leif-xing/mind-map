@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import { storeLocalConfig, getUserData, storeUserData } from '@/api'
+import { userApi, mindMapApi } from '@/api/supabase-api'
 
 Vue.use(Vuex)
 
@@ -79,6 +80,8 @@ const store = new Vuex.Store({
     users: initialUsers,
     // 用户ID计数器（从localStorage加载或使用默认值）
     userIdCounter: initialUserIdCounter,
+    // Supabase集成相关
+    supabaseEnabled: process.env.VUE_APP_SUPABASE_ENABLED !== 'false', // 默认启用Supabase后端
     // 扩展主题列表
     extendThemeGroupList: [],
     // 内置背景图片
@@ -207,9 +210,81 @@ const store = new Vuex.Store({
       }
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
+    },
+    
+    // 设置Supabase启用状态
+    setSupabaseEnabled(state, enabled) {
+      state.supabaseEnabled = enabled
     }
   },
-  actions: {}
+  actions: {
+    // 用户注册（使用Supabase）
+    async registerUser({ commit }, { username, password, email }) {
+      console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled);
+      if (this.state.supabaseEnabled) {
+        // 使用Supabase进行注册
+        const user = await userApi.register(username, password, email)
+        return user
+      } else {
+        // 使用本地存储（当前实现）
+        throw new Error('当前未启用Supabase，无法注册新用户')
+      }
+    },
+    
+    // 用户登录（使用Supabase）
+    async loginUser({ commit }, { username, password }) {
+      console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled);
+      if (this.state.supabaseEnabled) {
+        // 使用Supabase进行登录
+        const user = await userApi.login(username, password)
+        // 确保返回的用户对象字段名与本地存储一致
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          mindMapPermission: user.mindMapPermission,
+          createdAt: user.createdAt
+        };
+      } else {
+        // 使用本地存储（当前实现）
+        const localUsers = this.state.users
+        const user = localUsers.find(u => 
+          u.username === username && u.password === password
+        )
+        if (user && user.mindMapPermission === 1) {
+          return user
+        } else {
+          throw new Error('用户名或密码错误，或权限不足')
+        }
+      }
+    },
+    
+    // 获取用户思维导图列表
+    async getUserMindMaps({ commit }, userId) {
+      if (this.state.supabaseEnabled) {
+        return await mindMapApi.getUserMindMaps(userId)
+      } else {
+        // 返回本地存储的思维导图数据
+        return []
+      }
+    },
+    
+    // 保存思维导图
+    async saveMindMap({ commit }, { userId, title, content }) {
+      if (this.state.supabaseEnabled) {
+        return await mindMapApi.saveMindMap(userId, title, content)
+      } else {
+        // 本地保存逻辑
+        return null
+      }
+    },
+    
+    // 切换Supabase启用状态
+    toggleSupabase({ commit }, enabled) {
+      commit('setSupabaseEnabled', enabled)
+    }
+  }
 })
 
 export default store

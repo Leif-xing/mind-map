@@ -3,6 +3,15 @@
     <div class="header">
       <h1>用户管理</h1>
       <div class="header-actions">
+        <el-select 
+          v-model="supabaseEnabled" 
+          @change="toggleSupabaseMode" 
+          size="small"
+          style="width: 150px; margin-right: 15px;"
+        >
+          <el-option label="本地模式" :value="false"></el-option>
+          <el-option label="Supabase模式" :value="true"></el-option>
+        </el-select>
         <el-button type="success" @click="goToMindMap">跳转到思维导图</el-button>
         <el-button type="primary" @click="showChangePasswordDialog = true">修改密码</el-button>
         <el-button type="info" @click="logout">退出登录</el-button>
@@ -14,7 +23,7 @@
         :data="users" 
         style="width: 100%" 
       >
-        <el-table-column prop="id" label="ID" width="80"></el-table-column>
+        <el-table-column prop="displayId" label="ID" width="80"></el-table-column>
         <el-table-column prop="username" label="用户名"></el-table-column>
         <el-table-column prop="isAdmin" label="管理员" width="100">
           <template slot-scope="scope">
@@ -67,6 +76,8 @@
       </el-table>
     </div>
 
+    </el-dialog>
+    
     <!-- 修改密码对话框 -->
     <el-dialog
       title="修改密码"
@@ -105,6 +116,9 @@
 </template>
 
 <script>
+import { userApi } from '@/api/supabase-api'
+import supabase from '@/utils/supabase'
+
 export default {
   name: 'UserManagement',
   data() {
@@ -121,6 +135,7 @@ export default {
 
     return {
       users: [],
+      supabaseEnabled: true, // 默认设置为Supabase模式
       showChangePasswordDialog: false,
       passwordForm: {
         currentPassword: '',
@@ -143,12 +158,49 @@ export default {
     }
   },
   created() {
-    this.loadUsers()
+    // 从store获取Supabase启用状态，默认设置为true
+    this.supabaseEnabled = this.$store.state.supabaseEnabled !== false;
+    this.loadUsers();
+    console.log('UserManagement - Supabase Enabled:', this.supabaseEnabled);
   },
   methods: {
-    loadUsers() {
-      // 从store获取用户列表
-      this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
+    async loadUsers() {
+      if (this.$store.state.supabaseEnabled) {
+        // 使用Supabase获取所有用户
+        try {
+          // 从Supabase获取所有用户
+          const { data: users, error } = await supabase
+            .from('users')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+          if (error) {
+            console.error('获取用户列表失败:', error)
+            this.$message.error('获取用户列表失败: ' + error.message)
+            // 回退到本地存储
+            this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
+          } else {
+            // 转换字段名以匹配前端期望的格式，并添加显示ID
+            this.users = users.map((user, index) => ({
+              displayId: index + 1, // 显示ID为递增序号
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              isAdmin: user.is_admin,
+              mindMapPermission: user.mind_map_permission,
+              createdAt: user.created_at
+            })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          }
+        } catch (error) {
+          console.error('获取用户列表异常:', error)
+          this.$message.error('获取用户列表异常: ' + error.message)
+          // 回退到本地存储
+          this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
+        }
+      } else {
+        // 从store获取用户列表（本地存储）
+        this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
+      }
     },
     toggleAdminStatus(user) {
       // 切换用户管理员状态
@@ -161,48 +213,112 @@ export default {
       this.loadUsers() // 重新加载用户列表
     },
     
-    toggleMindMapPermission(user) {
-      // 切换用户导图权限
-      this.$store.commit('updateUserMindMapPermission', {
-        userId: user.id,
-        mindMapPermission: user.mindMapPermission === 1 ? 0 : 1
-      })
+    async toggleMindMapPermission(user) {
+      console.log('Toggle Mind Map Permission:', { user, currentPermission: user.mindMapPermission });
       
-      const permissionText = user.mindMapPermission === 1 ? '取消' : '设置';
-      this.$message.success(`用户 ${user.username} 导图权限已${permissionText}`);
-      this.loadUsers() // 重新加载用户列表
-    },
-    deleteUser(user) {
-      this.$confirm(`确定要删除用户 "${user.username}" 吗？`, '确认删除', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        if (user.isAdmin) {
-          const adminCount = this.users.filter(u => u.isAdmin).length
-          if (adminCount <= 1) {
-            this.$message.error('不能删除最后一个管理员账号')
-            return
-          }
+      if (this.$store.state.supabaseEnabled) {
+        // 使用Supabase API更新用户权限
+        try {
+          // 计算新的权限值
+          const newPermission = user.mindMapPermission === 1 ? 0 : 1;
+          console.log('Updating user permission:', { userId: user.id, oldPermission: user.mindMapPermission, newPermission });
+          
+          const updatedUser = await userApi.updateMindMapPermission(user.id, newPermission)
+          console.log('Updated user result:', updatedUser);
+          this.$message.success(`用户 ${user.username} 导图权限已更新`)
+          this.loadUsers() // 重新加载用户列表
+        } catch (error) {
+          console.error('更新用户权限失败:', error)
+          this.$message.error('更新用户权限失败: ' + error.message)
         }
+      } else {
+        // 使用本地存储更新用户权限
+        const newPermission = user.mindMapPermission === 1 ? 0 : 1;
+        console.log('Updating local user permission:', { userId: user.id, oldPermission: user.mindMapPermission, newPermission });
         
-        this.$store.commit('deleteUser', user.id)
-        this.$message.success('用户删除成功')
+        this.$store.commit('updateUserMindMapPermission', {
+          userId: user.id,
+          mindMapPermission: newPermission
+        })
+        
+        const permissionText = newPermission === 1 ? '设置' : '取消';
+        this.$message.success(`用户 ${user.username} 导图权限已${permissionText}`);
         this.loadUsers() // 重新加载用户列表
-      }).catch(() => {
-        // 取消删除
-      })
+      }
     },
-    toggleMindMapPermission(user) {
-      // 切换用户导图权限
-      this.$store.commit('updateUserMindMapPermission', {
-        userId: user.id,
-        mindMapPermission: user.mindMapPermission === 1 ? 0 : 1
-      })
-      
-      const permissionText = user.mindMapPermission === 1 ? '取消' : '设置';
-      this.$message.success(`用户 ${user.username} 导图权限已${permissionText}`);
-      this.loadUsers() // 重新加载用户列表
+    async deleteUser(user) {
+      if (this.$store.state.supabaseEnabled) {
+        // 使用Supabase删除用户
+        this.$confirm(`确定要删除用户 "${user.username}" 吗？`, '确认删除', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(async () => {
+          if (user.isAdmin) {
+            // 检查管理员数量
+            try {
+              const { count, error: countError } = await supabase
+                .from('users')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_admin', true)
+
+              if (countError) {
+                this.$message.error('检查管理员数量失败: ' + countError.message)
+                return
+              }
+
+              if (count <= 1) {
+                this.$message.error('不能删除最后一个管理员账号')
+                return
+              }
+            } catch (error) {
+              console.error('检查管理员数量异常:', error)
+              this.$message.error('检查管理员数量异常: ' + error.message)
+              return
+            }
+          }
+
+          try {
+            const { error } = await supabase
+              .from('users')
+              .delete()
+              .eq('id', user.id)
+
+            if (error) {
+              this.$message.error('删除用户失败: ' + error.message)
+            } else {
+              this.$message.success('用户删除成功')
+              this.loadUsers() // 重新加载用户列表
+            }
+          } catch (error) {
+            console.error('删除用户异常:', error)
+            this.$message.error('删除用户异常: ' + error.message)
+          }
+        }).catch(() => {
+          // 取消删除
+        })
+      } else {
+        // 使用本地存储删除用户（当前实现）
+        this.$confirm(`确定要删除用户 "${user.username}" 吗？`, '确认删除', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          if (user.isAdmin) {
+            const adminCount = this.users.filter(u => u.isAdmin).length
+            if (adminCount <= 1) {
+              this.$message.error('不能删除最后一个管理员账号')
+              return
+            }
+          }
+          
+          this.$store.commit('deleteUser', user.id)
+          this.$message.success('用户删除成功')
+          this.loadUsers() // 重新加载用户列表
+        }).catch(() => {
+          // 取消删除
+        })
+      }
     },
     
     showChangePasswordDialogForUser(user) {
@@ -258,13 +374,70 @@ export default {
         this.$message.error('密码修改失败')
       }
     },
+    async changePassword() {
+      const valid = await this.$refs.passwordForm.validate().catch(() => false)
+      if (!valid) return
+
+      try {
+        // 验证当前用户的密码
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+        
+        if (!this.passwordForm.userId) {
+          // 修改当前用户密码
+          if (currentUser.password !== this.passwordForm.currentPassword) {
+            this.$message.error('当前密码错误')
+            return
+          }
+          
+          // 更新当前用户密码
+          const updatedUser = { ...currentUser, password: this.passwordForm.newPassword }
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+          
+          // 更新store中的用户信息
+          this.$store.commit('updateUserPassword', {
+            userId: currentUser.id,
+            newPassword: this.passwordForm.newPassword
+          })
+        } else {
+          // 管理员为其他用户修改密码
+          if (currentUser && currentUser.isAdmin) {
+            // 管理员无需输入当前密码，直接修改其他用户的密码
+            this.$store.commit('updateUserPassword', {
+              userId: this.passwordForm.userId,
+              newPassword: this.passwordForm.newPassword
+            })
+          } else {
+            this.$message.error('无权限修改其他用户密码')
+            return
+          }
+        }
+        
+        this.$message.success('密码修改成功')
+        this.showChangePasswordDialog = false
+      } catch (error) {
+        console.error('修改密码错误:', error)
+        this.$message.error('密码修改失败')
+      }
+    },
     goToMindMap() {
       this.$router.push('/')
     },
     logout() {
       localStorage.removeItem('currentUser')
+      // 不应该在退出时关闭Supabase，保持全局设置
+      // this.$store.dispatch('toggleSupabase', false) // 退出时不应关闭Supabase
       this.$router.push('/login')
       this.$message.success('已退出登录')
+    },
+    
+    toggleSupabaseMode(enabled) {
+      this.$store.dispatch('toggleSupabase', enabled)
+      if (enabled) {
+        this.$message.info('已切换到Supabase模式')
+      } else {
+        this.$message.info('已切换到本地模式')
+      }
+      this.loadUsers() // 重新加载用户列表以反映当前模式
     }
   },
 
@@ -296,6 +469,7 @@ export default {
     
     .header-actions {
       display: flex;
+      align-items: center;
       gap: 10px;
     }
   }
@@ -330,6 +504,25 @@ export default {
           color: #606266;
         }
       }
+    }
+  }
+}
+
+// 下拉框样式优化
+:deep(.el-select) {
+  .el-input__inner {
+    border-radius: 4px;
+    border-color: #dcdfe6;
+    
+    &:focus {
+      border-color: #409eff;
+    }
+  }
+  
+  .el-select-dropdown__item {
+    &.selected {
+      color: #409eff;
+      font-weight: 700;
     }
   }
 }

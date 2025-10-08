@@ -12,6 +12,13 @@ import { getLang } from '@/api'
 // import VConsole from 'vconsole'
 // const vConsole = new VConsole()
 
+// 添加环境变量调试信息
+console.log('Environment Variables Debug Info:');
+console.log('process.env.NODE_ENV:', process.env.NODE_ENV);
+console.log('process.env.VUE_APP_SUPABASE_ENABLED:', process.env.VUE_APP_SUPABASE_ENABLED);
+console.log('process.env.NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log('process.env.VUE_APP_SUPABASE_URL:', process.env.VUE_APP_SUPABASE_URL);
+
 Vue.config.productionTip = false
 const bus = new Vue()
 Vue.prototype.$bus = bus
