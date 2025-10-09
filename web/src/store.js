@@ -263,7 +263,9 @@ const store = new Vuex.Store({
     // 获取用户思维导图列表
     async getUserMindMaps({ commit }, userId) {
       if (this.state.supabaseEnabled) {
-        return await mindMapApi.getUserMindMaps(userId)
+        const mindMaps = await mindMapApi.getUserMindMaps(userId)
+        console.log('从Supabase获取到的思维导图列表:', mindMaps);
+        return mindMaps
       } else {
         // 返回本地存储的思维导图数据
         return []
@@ -276,6 +278,26 @@ const store = new Vuex.Store({
         return await mindMapApi.saveMindMap(userId, title, content)
       } else {
         // 本地保存逻辑
+        return null
+      }
+    },
+    
+    // 更新思维导图标题
+    async updateMindMapTitle({ commit }, { mindMapId, userId, title }) {
+      if (this.state.supabaseEnabled) {
+        return await mindMapApi.updateMindMapTitle(mindMapId, userId, title)
+      } else {
+        // 本地更新逻辑
+        return null
+      }
+    },
+    
+    // 删除思维导图
+    async deleteMindMap({ commit }, { mindMapId, userId }) {
+      if (this.state.supabaseEnabled) {
+        return await mindMapApi.deleteMindMap(mindMapId, userId)
+      } else {
+        // 本地删除逻辑
         return null
       }
     },

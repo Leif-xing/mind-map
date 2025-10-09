@@ -162,6 +162,7 @@ export const mindMapApi = {
 
   // 获取用户的思维导图列表
   async getUserMindMaps(userId) {
+    console.log('API - 开始获取用户思维导图列表，用户ID:', userId);
     const { data: mindMaps, error } = await supabase
       .from('mind_maps')
       .select('*')
@@ -169,9 +170,19 @@ export const mindMapApi = {
       .order('updated_at', { ascending: false })
 
     if (error) {
+      console.error('API - 获取思维导图列表失败:', error);
       throw new Error(error.message || '获取思维导图列表失败')
     }
 
+    console.log('API - 获取到的思维导图列表:', mindMaps);
+    if (mindMaps && mindMaps.length > 0) {
+      mindMaps.forEach((map, index) => {
+        console.log(`API - 思维导图 ${index + 1}: ID=${map.id}, 标题=${map.title}, 内容类型=${typeof map.content}, 是否有内容=${!!map.content}`);
+        if (map.content) {
+          console.log(`API - 思维导图 ${index + 1} 内容预览:`, map.content.root ? map.content.root.data.text.substring(0, 50) + '...' : '无根节点');
+        }
+      });
+    }
     return mindMaps
   },
 
@@ -204,6 +215,26 @@ export const mindMapApi = {
     }
 
     return true
+  },
+  
+  // 更新思维导图标题
+  async updateMindMapTitle(mindMapId, userId, title) {
+    const { data: updatedMindMap, error } = await supabase
+      .from('mind_maps')
+      .update({ 
+        title,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', mindMapId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message || '更新思维导图标题失败')
+    }
+
+    return updatedMindMap
   }
 }
 

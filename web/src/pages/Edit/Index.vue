@@ -85,6 +85,21 @@ export default {
         : document.body.classList.remove('isDark')
     },
     
+    handleLoadMindMap(mindMap) {
+      // 检查当前思维导图是否有未保存的更改
+      this.$confirm('当前思维导图可能有未保存的更改，是否继续加载新思维导图？', '确认', {
+        confirmButtonText: '继续',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        // 用户确认加载新思维导图
+        this.$bus.$emit('loadMindMapData', mindMap)
+      }).catch(() => {
+        // 用户取消操作
+        console.log('用户取消加载思维导图')
+      })
+    },
+    
     handleLogout() {
       // 清除用户登录信息
       localStorage.removeItem('currentUser')
