@@ -198,7 +198,8 @@ export default {
       mindMapConfig: {},
       prevImg: '',
       storeConfigTimer: null,
-      showDragMask: false
+      showDragMask: false,
+      lastSavedData: null // 保存最后保存的数据，用于检测是否有修改
     }
   },
   computed: {
@@ -238,6 +239,8 @@ export default {
     this.$bus.$on('paddingChange', this.onPaddingChange)
     this.$bus.$on('export', this.export)
     this.$bus.$on('setData', this.setData)
+    this.$bus.$on('loadMindMapData', this.handleLoadMindMapData)
+    console.log('🔥 Edit.vue - 已注册 loadMindMapData 事件监听器:', this.handleLoadMindMapData);
     this.$bus.$on('startTextEdit', this.handleStartTextEdit)
     this.$bus.$on('endTextEdit', this.handleEndTextEdit)
     this.$bus.$on('createAssociativeLine', this.handleCreateLineFromActiveNode)
@@ -254,6 +257,7 @@ export default {
     this.$bus.$off('paddingChange', this.onPaddingChange)
     this.$bus.$off('export', this.export)
     this.$bus.$off('setData', this.setData)
+    this.$bus.$off('loadMindMapData', this.handleLoadMindMapData)
     this.$bus.$off('startTextEdit', this.handleStartTextEdit)
     this.$bus.$off('endTextEdit', this.handleEndTextEdit)
     this.$bus.$off('createAssociativeLine', this.handleCreateLineFromActiveNode)
@@ -333,6 +337,7 @@ export default {
     // 手动保存
     manualSave() {
       storeData(this.mindMap.getData(true))
+      this.updateLastSavedData() // 更新最后保存的数据
     },
 
     // 初始化
@@ -352,6 +357,14 @@ export default {
         theme = exampleData.theme
         view = null
       }
+      console.log('Edit.vue - 初始化MindMap实例，参数:', {
+        el: this.$refs.mindMapContainer,
+        data: root,
+        layout: layout,
+        theme: theme.template,
+        themeConfig: theme.config,
+        viewData: view
+      });
       this.mindMap = new MindMap({
         el: this.$refs.mindMapContainer,
         data: root,
@@ -390,7 +403,7 @@ export default {
               confirmButtonText: this.$t('edit.yes'),
               cancelButtonText: this.$t('edit.no'),
               type: 'warning'
-            }
+              }
           )
         },
         errorHandler: (code, err) => {
@@ -449,6 +462,7 @@ export default {
           })
         }
       })
+      console.log('Edit.vue - MindMap实例创建完成:', this.mindMap);
       this.loadPlugins()
       this.mindMap.keyCommand.addShortcut('Control+s', () => {
         this.manualSave()
@@ -520,25 +534,100 @@ export default {
 
     // 动态设置思维导图数据
     setData(data) {
-      this.handleShowLoading()
-      let rootNodeData = null
+      if (!this.mindMap) {
+        console.error('mindMap 实例不存在，无法设置数据');
+        return;
+      }
+      
+      // 简单直接的数据设置
       if (data.root) {
-        this.mindMap.setFullData(data)
-        rootNodeData = data.root
+        this.mindMap.setFullData(data);
       } else {
-        this.mindMap.setData(data)
-        rootNodeData = data
+        this.mindMap.setData(data);
       }
-      this.mindMap.view.reset()
-      this.manualSave()
-      // 如果导入的是富文本内容，那么自动开启富文本模式
-      if (rootNodeData.data.richText && !this.openNodeRichText) {
-        this.$bus.$emit('toggleOpenNodeRichText', true)
-        this.$notify.info({
-          title: this.$t('edit.tip'),
-          message: this.$t('edit.autoOpenNodeRichTextTip')
-        })
+      
+      // 重置视图
+      if (this.mindMap.view) {
+        this.mindMap.view.reset();
       }
+      
+      // 强制重新渲染
+      if (this.mindMap.renderer) {
+        this.mindMap.renderer.reRender && this.mindMap.renderer.reRender();
+      }
+    },
+    
+    // 强制重新渲染思维导图
+    forceReRender() {
+      console.log('Edit.vue - forceReRender方法被调用');
+      if (this.mindMap) {
+        try {
+          // 清除所有缓存
+          if (this.mindMap.renderer) {
+            console.log('Edit.vue - 清除渲染器缓存');
+            this.mindMap.renderer.clear();
+          }
+          // 重新渲染
+          console.log('Edit.vue - 重新渲染');
+          this.mindMap.reRender();
+          // 重置视图
+          if (this.mindMap.view) {
+            console.log('Edit.vue - 重置视图');
+            this.mindMap.view.reset();
+          }
+          console.log('Edit.vue - 强制重新渲染完成');
+        } catch (err) {
+          console.error('Edit.vue - 强制重新渲染出错:', err);
+        }
+      }
+    },
+    
+    // 处理加载思维导图数据
+    handleLoadMindMapData(mindMapDataObj) {
+      console.log('🔥 Edit.vue - handleLoadMindMapData 方法被调用!');
+      console.log('🔥 Edit.vue - 接收到 loadMindMapData 事件:', mindMapDataObj);
+      
+      if (!this.mindMap) {
+        console.error('Edit.vue - mindMap 实例不存在，无法加载数据');
+        return;
+      }
+      
+      try {
+        // 提取数据内容
+        const data = mindMapDataObj.content || mindMapDataObj;
+        console.log('Edit.vue - 准备加载的数据:', data);
+        
+        if (!data) {
+          console.error('Edit.vue - 没有有效的数据内容');
+          return;
+        }
+        
+        // 使用 setData 方法加载数据
+        this.setData(data);
+        
+        // 发送加载完成事件
+        this.$bus.$emit('mindMapLoaded');
+        console.log('Edit.vue - 思维导图数据加载完成，发送 mindMapLoaded 事件');
+        
+      } catch (error) {
+        console.error('Edit.vue - 加载思维导图数据失败:', error);
+      }
+    },
+    
+    // 更新最后保存的数据
+    updateLastSavedData() {
+      if (this.mindMap) {
+        this.lastSavedData = JSON.stringify(this.mindMap.getData(true));
+      }
+    },
+    
+    // 检测思维导图是否被修改
+    isMindMapModified() {
+      if (!this.mindMap || !this.lastSavedData) {
+        return false;
+      }
+      const currentData = JSON.stringify(this.mindMap.getData(true));
+      return currentData !== this.lastSavedData;
     },
 
     // 重新渲染
