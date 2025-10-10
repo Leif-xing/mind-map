@@ -87,6 +87,76 @@ export const userApi = {
     return user
   },
 
+  // 根据邮箱获取用户信息（用于会话恢复）
+  async getUserByEmail(email) {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single()
+
+    if (error) {
+      throw new Error(error.message || '获取用户信息失败')
+    }
+
+    // 转换字段名为前端使用的格式
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      isAdmin: user.is_admin,
+      mindMapPermission: user.mind_map_permission,
+      createdAt: user.created_at
+    }
+  },
+
+  // 验证用户是否存在且有效（用于会话验证）
+  async validateUser(userId, email) {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, username, email, is_admin, mind_map_permission, created_at')
+      .eq('id', userId)
+      .eq('email', email)
+      .single()
+
+    if (error) {
+      throw new Error('用户不存在或已被删除')
+    }
+
+    // 转换字段名为前端使用的格式
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      isAdmin: user.is_admin,
+      mindMapPermission: user.mind_map_permission,
+      createdAt: user.created_at
+    }
+  },
+
+  // 仅通过ID验证用户是否存在且有效
+  async validateUserById(userId) {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, username, email, is_admin, mind_map_permission, created_at')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      throw new Error('用户不存在或已被删除')
+    }
+
+    // 转换字段名为前端使用的格式
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      isAdmin: user.is_admin,
+      mindMapPermission: user.mind_map_permission,
+      createdAt: user.created_at
+    }
+  },
+
   // 更新用户权限
   // 更新用户导图权限
   async updateMindMapPermission(userId, permission) {

@@ -99,6 +99,17 @@ export default {
           
           localStorage.setItem('currentUser', JSON.stringify(userForStorage))
           
+          // 如果用户有邮箱，创建或恢复 Supabase 认证会话
+          if (user.email) {
+            try {
+              // 注意：在实际应用中，应该使用真正的 Supabase Auth
+              // 这里只是模拟会话，实际部署时需要正确的认证流程
+              console.log('用户登录成功，邮箱:', user.email)
+            } catch (authError) {
+              console.warn('创建认证会话失败，但本地登录成功:', authError)
+            }
+          }
+          
           if (userForStorage.isAdmin) {
             // 管理员跳转到用户管理界面
             this.$router.push('/user-management')

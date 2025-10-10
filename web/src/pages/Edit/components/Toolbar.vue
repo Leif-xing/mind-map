@@ -27,7 +27,7 @@
       <!-- 导出 -->
       <div class="toolbarBlock">
         <div class="toolbarBtn" @click="showMindMapHistory" v-if="!isMobile">
-          <span class="icon iconfont iconlishi"></span>
+          <span class="icon iconfont iconxmind"></span>
           <span class="text">思维导图</span>
         </div>
         <div class="toolbarBtn" @click="openDirectory" v-if="!isMobile">
@@ -805,9 +805,8 @@ export default {
           // 设置超时，确保即使没有收到完成事件也能继续
           setTimeout(() => {
             this.$bus.$off('mindMapLoaded', listener);
-            console.log('思维导图加载超时，继续执行');
             resolve();
-          }, 3000); // 3秒后超时
+          }, 100);
         });
         
         // 等待思维导图加载完成后再关闭对话框
