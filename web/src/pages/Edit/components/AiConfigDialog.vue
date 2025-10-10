@@ -13,21 +13,24 @@
         ref="ruleFormRef"
         label-width="100px"
       >
-        <p class="title">{{ $t('ai.VolcanoArkLargeModelConfiguration') }}</p>
+        <p class="title">{{ $t('ai.AIProviderConfiguration') }}</p>
         <p class="desc">
           {{ $t('ai.configTip') }}<a href="https://mp.weixin.qq.com/s/JNb7PH4sCjWzIZ9G8wStGQ" target="_blank">{{ $t('ai.course') }}</a
           >。
         </p>
+        <el-form-item label="供应商" prop="providerName">
+          <el-input v-model="ruleForm.providerName" placeholder="请输入AI服务提供商名称，如：OpenAI、火山方舟等"></el-input>
+        </el-form-item>
         <el-form-item label="API Key" prop="key">
-          <el-input v-model="ruleForm.key"></el-input>
+          <el-input v-model="ruleForm.key" show-password></el-input>
         </el-form-item>
-        <el-form-item :label="$t('ai.inferenceAccessPoint')" prop="model">
-          <el-input v-model="ruleForm.model"></el-input>
+        <el-form-item label="模型名称" prop="model">
+          <el-input v-model="ruleForm.model" placeholder="请输入模型名称，如：gpt-4, qwen-max等"></el-input>
         </el-form-item>
-        <!-- <el-form-item label="接口" prop="api">
-          <el-input v-model="ruleForm.api"></el-input>
+        <el-form-item label="API接口" prop="api">
+          <el-input v-model="ruleForm.api" placeholder="请输入API接口地址"></el-input>
         </el-form-item>
-        <el-form-item label="请求方式" prop="method">
+        <!-- <el-form-item label="请求方式" prop="method">
           <el-select v-model="ruleForm.method" placeholder="请选择">
             <el-option key="POST" label="POST" value="POST"></el-option>
             <el-option key="GET" label="GET" value="GET"></el-option>
@@ -66,6 +69,7 @@ export default {
     return {
       aiConfigDialogVisible: false,
       ruleForm: {
+        providerName: '',
         api: '',
         key: '',
         model: '',
@@ -73,6 +77,13 @@ export default {
         method: ''
       },
       rules: {
+        providerName: [
+          {
+            required: true,
+            message: '请输入供应商名称',
+            trigger: 'blur'
+          }
+        ],
         api: [
           {
             required: true,
@@ -90,7 +101,7 @@ export default {
         model: [
           {
             required: true,
-            message: this.$t('ai.modelValidateTip'),
+            message: '请输入模型名称',
             trigger: 'blur'
           }
         ],
@@ -121,6 +132,7 @@ export default {
       const provider = providers[curKey] || {}
       const cfg = (provider && provider.config) || {}
       return {
+        providerName: provider.name || '', // 映射供应商名称
         api: provider.api || cfg.api || '',
         key: cfg.key || '',
         model: cfg.model || '',
@@ -178,6 +190,7 @@ export default {
               ...providers,
               [curKey]: {
                 ...provider,
+                name: this.ruleForm.providerName || provider.name || this.ruleForm.providerName, // 更新供应商名称
                 api: this.ruleForm.api || provider.api || '',
                 config: {
                   ...(provider.config || {}),

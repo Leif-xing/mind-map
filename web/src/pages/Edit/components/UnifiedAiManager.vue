@@ -1,9 +1,14 @@
 <template>
   <div class="unifiedAiManager">
-    <!-- AI配置弹窗 -->
+    <!-- AI配置弹窗（仅管理员） -->
     <UnifiedAiConfigDialog 
       v-model="configDialogVisible"
     ></UnifiedAiConfigDialog>
+    
+    <!-- AI模型选择弹窗（普通用户） -->
+    <AiSelectionDialog
+      v-model="selectionDialogVisible"
+    ></AiSelectionDialog>
     
     <!-- AI创建弹窗 -->
     <UnifiedAiCreateDialog 
@@ -30,12 +35,14 @@
 import { mapState } from 'vuex'
 import UnifiedAiConfigDialog from './UnifiedAiConfigDialog.vue'
 import UnifiedAiCreateDialog from './UnifiedAiCreateDialog.vue'
+import AiSelectionDialog from './AiSelectionDialog.vue'
 
 export default {
   name: 'UnifiedAiManager',
   components: {
     UnifiedAiConfigDialog,
-    UnifiedAiCreateDialog
+    UnifiedAiCreateDialog,
+    AiSelectionDialog
   },
   props: {
     mindMap: {
@@ -46,12 +53,17 @@ export default {
   data() {
     return {
       configDialogVisible: false,
+      selectionDialogVisible: false,
       createDialogVisible: false,
       isGenerating: false
     }
   },
   computed: {
-    ...mapState(['aiSystem'])
+    ...mapState(['aiSystem', 'currentUser']),
+    
+    isCurrentUserAdmin() {
+      return this.currentUser && this.currentUser.isAdmin;
+    }
   },
   mounted() {
     // 监听事件
@@ -67,7 +79,20 @@ export default {
   },
   methods: {
     openConfig() {
-      this.configDialogVisible = true
+      // 检查用户是否已登录
+      if (!this.currentUser) {
+        this.$message.error('请先登录');
+        // 可以跳转到登录页面，或者不执行任何操作
+        return;
+      }
+      
+      if (this.isCurrentUserAdmin) {
+        // 管理员打开配置对话框
+        this.configDialogVisible = true
+      } else {
+        // 普通用户打开选择对话框
+        this.selectionDialogVisible = true
+      }
     },
 
     openCreate() {

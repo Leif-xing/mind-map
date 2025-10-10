@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import { storeLocalConfig, getUserData, storeUserData } from '@/api'
-import { userApi, mindMapApi } from '@/api/supabase-api'
+import { userApi, mindMapApi, aiConfigApi } from '@/api/supabase-api'
 
 Vue.use(Vuex)
 
@@ -80,6 +80,8 @@ const store = new Vuex.Store({
     users: initialUsers,
     // 用户ID计数器（从localStorage加载或使用默认值）
     userIdCounter: initialUserIdCounter,
+    // 当前登录用户
+    currentUser: null,
     // Supabase集成相关
     supabaseEnabled: process.env.VUE_APP_SUPABASE_ENABLED !== 'false', // 默认启用Supabase后端
     // 扩展主题列表
@@ -215,6 +217,11 @@ const store = new Vuex.Store({
     // 设置Supabase启用状态
     setSupabaseEnabled(state, enabled) {
       state.supabaseEnabled = enabled
+    },
+    
+    // 设置当前用户
+    setCurrentUser(state, user) {
+      state.currentUser = user
     }
   },
   actions: {
@@ -234,30 +241,34 @@ const store = new Vuex.Store({
     // 用户登录（使用Supabase）
     async loginUser({ commit }, { username, password }) {
       console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled);
+      let user;
       if (this.state.supabaseEnabled) {
         // 使用Supabase进行登录
-        const user = await userApi.login(username, password)
+        const supabaseUser = await userApi.login(username, password)
         // 确保返回的用户对象字段名与本地存储一致
-        return {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          isAdmin: user.isAdmin,
-          mindMapPermission: user.mindMapPermission,
-          createdAt: user.createdAt
+        user = {
+          id: supabaseUser.id,
+          username: supabaseUser.username,
+          email: supabaseUser.email,
+          isAdmin: supabaseUser.isAdmin,
+          mindMapPermission: supabaseUser.mindMapPermission,
+          createdAt: supabaseUser.createdAt
         };
       } else {
         // 使用本地存储（当前实现）
         const localUsers = this.state.users
-        const user = localUsers.find(u => 
+        user = localUsers.find(u => 
           u.username === username && u.password === password
         )
-        if (user && user.mindMapPermission === 1) {
-          return user
-        } else {
+        if (!user || user.mindMapPermission !== 1) {
           throw new Error('用户名或密码错误，或权限不足')
         }
       }
+      
+      // 在store中设置当前用户
+      commit('setCurrentUser', user);
+      
+      return user;
     },
     
     // 获取用户思维导图列表
@@ -305,6 +316,109 @@ const store = new Vuex.Store({
     // 切换Supabase启用状态
     toggleSupabase({ commit }, enabled) {
       commit('setSupabaseEnabled', enabled)
+    },
+    
+    // 用户登出
+    logout({ commit }) {
+      commit('setCurrentUser', null);
+    },
+    
+    // 获取用户可用的AI配置
+    async fetchAvailableAiConfigs({ commit, state }, userId) {
+      try {
+        const configs = await aiConfigApi.getUserAvailableAiConfigs(userId)
+        
+        // 更新state中的AI系统配置，但不包含敏感信息
+        const updatedProviders = {}
+        configs.forEach(config => {
+          updatedProviders[config.id] = {
+            name: config.provider_name || config.providerName,
+            api: config.api_endpoint || config.apiEndpoint,
+            type: 'custom', // 默认类型，可以根据实际配置调整
+            config: {
+              model: config.model_name || config.modelName,
+              // 不包含API密钥等敏感信息
+            }
+          }
+        })
+        
+        const newAiSystem = {
+          ...state.aiSystem,
+          providers: {
+            ...state.aiSystem.providers,
+            ...updatedProviders
+          }
+        }
+        
+        commit('setLocalConfig', { aiSystem: newAiSystem })
+        return configs
+      } catch (error) {
+        console.error('获取AI配置失败:', error)
+        throw error
+      }
+    },
+    
+    // 用户选择AI配置
+    async selectAiConfig({ commit, state }, { userId, configId }) {
+      try {
+        const success = await aiConfigApi.selectAiConfig(userId, configId)
+        if (success) {
+          // 更新本地状态
+          const newAiSystem = {
+            ...state.aiSystem,
+            currentProvider: configId
+          }
+          commit('setLocalConfig', { aiSystem: newAiSystem })
+          return success
+        }
+      } catch (error) {
+        console.error('选择AI配置失败:', error)
+        throw error
+      }
+    },
+    
+    // 获取用户当前AI配置
+    async fetchUserCurrentAiConfig({ commit, state }, userId) {
+      try {
+        const config = await aiConfigApi.getUserCurrentAiConfig(userId)
+        if (config) {
+          // 更新本地AI系统配置
+          const updatedProviders = {
+            ...state.aiSystem.providers,
+            [config.id]: {
+              name: config.provider_name || config.providerName,
+              api: config.api_endpoint || config.apiEndpoint,
+              type: 'custom',
+              config: {
+                model: config.model_name || config.modelName,
+              }
+            }
+          }
+          
+          const newAiSystem = {
+            ...state.aiSystem,
+            currentProvider: config.id,
+            providers: updatedProviders
+          }
+          
+          commit('setLocalConfig', { aiSystem: newAiSystem })
+          return config
+        }
+        return null
+      } catch (error) {
+        console.error('获取用户当前AI配置失败:', error)
+        throw error
+      }
+    },
+    
+    // 通过代理调用AI服务
+    async callAiThroughProxy({ state }, { userId, aiPayload }) {
+      try {
+        return await aiConfigApi.callAiService(userId, aiPayload)
+      } catch (error) {
+        console.error('AI服务调用失败:', error)
+        throw error
+      }
     }
   }
 })

@@ -308,6 +308,304 @@ export const mindMapApi = {
   }
 }
 
+// AI配置相关API
+export const aiConfigApi = {
+  // 管理员创建AI提供商配置
+  async createAiProviderConfig(configData) {
+    const { data: aiConfig, error } = await supabase
+      .from('ai_provider_configs')
+      .insert([{
+        provider_name: configData.providerName,
+        api_endpoint: configData.apiEndpoint,
+        model_name: configData.modelName,
+        api_key_encrypted: await encryptApiKey(configData.apiKey), // 加密存储
+        is_active: configData.isActive !== undefined ? configData.isActive : true,
+        created_by: configData.createdBy
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('创建AI提供商配置失败:', error);
+      throw new Error(error.message || '创建AI配置失败')
+    }
+    
+    return transformAiConfigForFrontend(aiConfig)
+  },
+  
+  // 管理员更新AI提供商配置
+  async updateAiProviderConfig(configId, configData) {
+    const updateData = {
+      provider_name: configData.providerName,
+      api_endpoint: configData.apiEndpoint,
+      model_name: configData.modelName,
+      is_active: configData.isActive
+    }
+    
+    // 只有在提供了新API密钥时才更新
+    if (configData.apiKey) {
+      updateData.api_key_encrypted = await encryptApiKey(configData.apiKey)
+    }
+    
+    const { data: aiConfig, error } = await supabase
+      .from('ai_provider_configs')
+      .update(updateData)
+      .eq('id', configId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('更新AI提供商配置失败:', error);
+      throw new Error(error.message || '更新AI配置失败')
+    }
+    
+    return transformAiConfigForFrontend(aiConfig)
+  },
+  
+  // 管理员删除AI提供商配置
+  async deleteAiProviderConfig(configId) {
+    const { error } = await supabase
+      .from('ai_provider_configs')
+      .delete()
+      .eq('id', configId)
+
+    if (error) {
+      console.error('删除AI提供商配置失败:', error);
+      throw new Error(error.message || '删除AI配置失败')
+    }
+    
+    return true
+  },
+  
+  // 获取所有AI提供商配置（仅管理员）
+  async getAllAiProviderConfigs() {
+    const { data, error } = await supabase
+      .from('ai_provider_configs')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('获取AI提供商配置失败:', error);
+      throw new Error(error.message || '获取AI配置失败')
+    }
+    
+    // 转换数据格式以适配前端使用
+    return data.map(config => transformAiConfigForFrontend(config))
+  },
+  
+  // 获取用户可用的AI配置（普通用户只能看到基本信息）
+  async getUserAvailableAiConfigs(userId) {
+    // 首先验证用户权限
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('is_admin, mind_map_permission')
+      .eq('id', userId)
+      .single()
+    
+    if (userError) {
+      console.error('验证用户权限失败:', userError);
+      throw new Error('验证用户权限失败')
+    }
+    
+    if (!user) {
+      throw new Error('用户不存在')
+    }
+    
+    // 检查AI使用权限：只要有思维导图权限，就具有AI权限
+    if (!user.is_admin && user.mind_map_permission !== 1) {
+      throw new Error('无AI使用权限')
+    }
+    
+    let query = supabase
+      .from('ai_provider_configs')
+      .select('id, provider_name, api_endpoint, model_name, is_active, created_at, updated_at')
+      .eq('is_active', true)  // 只返回激活的配置
+    
+    if (!user.is_admin) {
+      // 普通用户只能看到激活的配置
+      query = query.eq('is_active', true)
+    }
+    
+    const { data, error } = await query
+    
+    if (error) {
+      console.error('获取可用AI配置失败:', error);
+      throw new Error(error.message || '获取AI配置失败')
+    }
+    
+    return data
+  },
+  
+  // 用户选择AI配置
+  async selectAiConfig(userId, configId) {
+    // 首先验证用户权限
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('is_admin, mind_map_permission')
+      .eq('id', userId)
+      .single()
+    
+    if (userError || !user) {
+      throw new Error('验证用户权限失败')
+    }
+    
+    // 检查AI使用权限：只要有思维导图权限，就具有AI权限
+    if (!user.is_admin && user.mind_map_permission !== 1) {
+      throw new Error('无AI使用权限')
+    }
+    
+    // 验证配置是否存在且激活
+    const { data: config, error: configError } = await supabase
+      .from('ai_provider_configs')
+      .select('id')
+      .eq('id', configId)
+      .eq('is_active', true)
+      .single()
+    
+    if (configError || !config) {
+      throw new Error('指定的AI配置不存在或不可用')
+    }
+    
+    // 更新用户当前选择的AI配置
+    const { error } = await supabase
+      .from('users')
+      .update({ current_ai_config_id: configId })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('更新用户AI配置选择失败:', error);
+      throw new Error(error.message || '更新AI配置选择失败')
+    }
+    
+    return true
+  },
+  
+  // 获取用户当前选择的AI配置信息（不包含密钥）
+  async getUserCurrentAiConfig(userId) {
+    const { data: userInfo, error: userError } = await supabase
+      .from('users')
+      .select('current_ai_config_id, is_admin, mind_map_permission')
+      .eq('id', userId)
+      .single()
+    
+    if (userError || !userInfo) {
+      throw new Error('获取用户信息失败')
+    }
+    
+    // 检查AI使用权限：只要有思维导图权限，就具有AI权限
+    if (!userInfo.is_admin && userInfo.mind_map_permission !== 1) {
+      throw new Error('无AI使用权限')
+    }
+    
+    if (!userInfo.current_ai_config_id) {
+      return null
+    }
+    
+    const { data: config, error: configError } = await supabase
+      .from('ai_provider_configs')
+      .select('id, provider_name, api_endpoint, model_name')
+      .eq('id', userInfo.current_ai_config_id)
+      .eq('is_active', true)
+      .single()
+    
+    if (configError || !config) {
+      return null
+    }
+    
+    return config
+  },
+  
+  // 通过后端代理调用AI服务（保护API密钥）
+  async callAiService(userId, aiPayload) {
+    // 验证用户权限和配置
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, mind_map_permission, current_ai_config_id')
+      .eq('id', userId)
+      .single()
+      
+    if (userError || !user) {
+      throw new Error('用户验证失败')
+    }
+    
+    // 检查AI使用权限：只要有思维导图权限，就具有AI权限
+    if (user.mind_map_permission !== 1) {
+      throw new Error('无AI使用权限')
+    }
+    
+    if (!user.current_ai_config_id) {
+      throw new Error('未选择AI配置，请先选择AI服务')
+    }
+    
+    // 获取AI配置（包含加密的API密钥）
+    const { data: config, error: configError } = await supabase
+      .from('ai_provider_configs')
+      .select('api_endpoint, api_key_encrypted, model_name')
+      .eq('id', user.current_ai_config_id)
+      .eq('is_active', true)
+      .single()
+    
+    if (configError || !config) {
+      throw new Error('AI配置无效或不可用')
+    }
+    
+    // 解密API密钥（实际应用中应在后端完成）
+    const apiKey = await decryptApiKey(config.api_key_encrypted)
+    
+    // 通过后端代理调用AI服务
+    // 注意：在实际部署中，您需要在后端设置一个API端点来处理AI请求
+    // 以避免在前端暴露API密钥
+    const proxyResponse = await fetch('/api/ai/proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 在实际应用中应使用更安全的身份验证方式
+        'X-User-Id': userId,
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        ...aiPayload,
+        model: aiPayload.model || config.model_name,
+        endpoint: config.api_endpoint
+      })
+    })
+    
+    if (!proxyResponse.ok) {
+      const errorData = await proxyResponse.json().catch(() => ({}))
+      throw new Error(errorData.error || `AI服务调用失败: ${proxyResponse.status}`)
+    }
+    
+    return await proxyResponse.json()
+  }
+}
+
+// 简单加密函数（实际应用中需要更安全的加密）
+async function encryptApiKey(key) {
+  // 在实际应用中，敏感数据加密应在后端完成
+  // 这里仅作演示，实际部署时应移除或加强加密算法
+  return btoa(unescape(encodeURIComponent(key)))
+}
+
+async function decryptApiKey(encryptedKey) {
+  // 在实际应用中，敏感数据解密应在后端完成
+  // 这里仅作演示，实际部署时应移除或加强加密算法
+  return decodeURIComponent(escape(atob(encryptedKey)))
+}
+
+// 将数据库格式的AI配置转换为前端可用格式
+function transformAiConfigForFrontend(config) {
+  return {
+    id: config.id,
+    providerName: config.provider_name,
+    apiEndpoint: config.api_endpoint,
+    modelName: config.model_name,
+    isActive: config.is_active,
+    createdAt: config.created_at,
+    updatedAt: config.updated_at,
+    // 不包含api_key_encrypted字段
+  }
+}
+
 // 简单的密码哈希函数，实际应用中应使用更安全的方法
 async function hashPassword(password) {
   // 在实际应用中，密码哈希应在后端完成

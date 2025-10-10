@@ -53,8 +53,8 @@
         </div>
         <div class="tip">
           {{ $t('ai.wantModifyAiConfigTip')
-          }}<el-button size="small" @click="showAiConfigDialog">{{
-            $t('ai.modifyAIConfiguration')
+          }}<el-button size="small" @click="showAiSelectionDialog">{{
+            isCurrentUserAdmin ? $t('ai.manageAIConfiguration') : $t('ai.selectAIConfiguration')
           }}</el-button>
         </div>
       </div>
@@ -78,6 +78,7 @@
       }}</el-button>
     </div>
     <AiConfigDialog v-model="aiConfigDialogVisible"></AiConfigDialog>
+    <AiSelectionDialog v-model="aiSelectionDialogVisible"></AiSelectionDialog>
     <!-- AI续写 -->
     <el-dialog
       class="createDialog"
@@ -112,10 +113,12 @@ import {
 } from 'simple-mind-map/src/utils'
 import { mapState } from 'vuex'
 import AiConfigDialog from './AiConfigDialog.vue'
+import AiSelectionDialog from './AiSelectionDialog.vue'
 
 export default {
   components: {
-    AiConfigDialog
+    AiConfigDialog,
+    AiSelectionDialog
   },
   props: {
     mindMap: {
@@ -137,6 +140,7 @@ export default {
       aiInput: '',
       aiCreatingMaskVisible: false,
       aiConfigDialogVisible: false,
+      aiSelectionDialogVisible: false,
 
       mindMapDataCache: '',
       beingAiCreateNodeUid: '',
@@ -147,7 +151,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(['aiSystem']),
+    ...mapState(['aiSystem', 'currentUser']),
 
     // 为了向后兼容，提供aiConfig的计算属性
     aiConfig() {
@@ -160,6 +164,10 @@ export default {
         port: currentProvider.config.port,
         method: currentProvider.config.method
       }
+    },
+    
+    isCurrentUserAdmin() {
+      return this.currentUser && this.currentUser.isAdmin;
     }
   },
   created() {
@@ -167,7 +175,7 @@ export default {
     this.$bus.$on('ai_create_part', this.showAiCreatePartDialog)
     this.$bus.$on('ai_chat', this.aiChat)
     this.$bus.$on('ai_chat_stop', this.aiChatStop)
-    this.$bus.$on('showAiConfigDialog', this.showAiConfigDialog)
+    this.$bus.$on('showAiConfigDialog', this.showAiSelectionDialog) // 改为调用新的AI选择对话框
   },
   mounted() {
     document.body.appendChild(this.$refs.aiCreatingMaskRef)
@@ -177,12 +185,17 @@ export default {
     this.$bus.$off('ai_create_part', this.showAiCreatePartDialog)
     this.$bus.$off('ai_chat', this.aiChat)
     this.$bus.$off('ai_chat_stop', this.aiChatStop)
-    this.$bus.$off('showAiConfigDialog', this.showAiConfigDialog)
+    this.$bus.$off('showAiConfigDialog', this.showAiSelectionDialog) // 改为取消监听新对话框
   },
   methods: {
     // 显示AI配置修改弹窗
     showAiConfigDialog() {
       this.aiConfigDialogVisible = true
+    },
+
+    // 显示AI选择弹窗
+    showAiSelectionDialog() {
+      this.aiSelectionDialogVisible = true
     },
 
     // 客户端连接检测
@@ -275,7 +288,7 @@ export default {
       // 获取当前提供商配置
       const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
       if (!currentProvider) {
-        this.showAiConfigDialog()
+        this.showAiSelectionDialog()
         throw new Error(this.$t('ai.configurationMissing'))
       }
 
@@ -285,7 +298,7 @@ export default {
       if (isDeployed) {
         // 部署环境：只检查基本配置，不检查port
         if (!(currentProvider.api && config.key && config.model)) {
-          this.showAiConfigDialog()
+          this.showAiSelectionDialog()
           throw new Error(this.$t('ai.configurationMissing'))
         }
         // 部署环境不需要检查本地连接，直接返回
@@ -295,12 +308,12 @@ export default {
         const needsProxy = this.aiSystem.currentProvider === 'huoshan'
         // 基础配置校验
         if (!(currentProvider.api && config.key && config.model)) {
-          this.showAiConfigDialog()
+          this.showAiSelectionDialog()
           throw new Error(this.$t('ai.configurationMissing'))
         }
         if (needsProxy) {
           if (!config.port) {
-            this.showAiConfigDialog()
+            this.showAiSelectionDialog()
             throw new Error(this.$t('ai.configurationMissing'))
           }
           // 检查本地连接
@@ -339,7 +352,7 @@ export default {
     },
 
     // 确认生成
-    doAiCreate() {
+    async doAiCreate() {
       const aiInputText = this.aiInput.trim()
       if (!aiInputText) {
         this.$message.warning(this.$t('ai.noInputTip'))
@@ -352,21 +365,21 @@ export default {
       this.aiCreatingMaskVisible = true
       // 发起请求
       this.isAiCreating = true
-      // 获取当前提供商配置
-      const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
-      const config = currentProvider.config
-
-      this.aiInstance = new Ai({
-        port: config.port
-      })
-      this.aiInstance.init(this.aiSystem.currentProvider, config)
       
-      // 先设置为空数据，但不调用setRootNodeCenter（因为此时没有节点）
-      this.mindMap.setData(null)
-      
-      console.log('发起AI请求...')
-      this.aiInstance.request(
-        {
+      try {
+        // 检查用户是否有AI权限和有效的AI配置
+        const currentUserId = this.$store.state.currentUser?.id
+        if (!currentUserId) {
+          throw new Error('用户未登录')
+        }
+        
+        const currentConfig = await this.$store.dispatch('fetchUserCurrentAiConfig', currentUserId)
+        if (!currentConfig) {
+          throw new Error('未选择AI配置，请先选择AI服务')
+        }
+        
+        // 使用安全代理发起AI请求
+        const aiPayload = {
           messages: [
             {
               role: 'user',
@@ -375,25 +388,30 @@ export default {
               )}${aiInputText}${this.$t('ai.aiCreateMsgPostfix')}`
             }
           ]
-        },
-        content => {
-          if (content) {
-            const arr = content.split(/\n+/)
-            this.aiCreatingContent = arr.splice(0, arr.length - 1).join('\n')
-          }
-          this.loopRenderOnAiCreating()
-        },
-        content => {
-          this.aiCreatingContent = content
-          this.resetOnAiCreatingStop()
-        },
-        (error) => {
-          console.error('AI生成失败:', error)
-          this.resetOnAiCreatingStop()
-          this.resetOnRenderEnd()
-          this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
         }
-      )
+        
+        // 先设置为空数据，但不调用setRootNodeCenter（因为此时没有节点）
+        this.mindMap.setData(null)
+        
+        console.log('发起安全AI请求...')
+        
+        // 调用后端代理进行AI请求
+        const response = await this.$store.dispatch('callAiThroughProxy', {
+          userId: currentUserId,
+          aiPayload: aiPayload
+        })
+        
+        // 成功获取AI响应后，开始渲染
+        this.aiCreatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+        this.loopRenderOnAiCreating()
+        this.resetOnAiCreatingStop()
+        this.$message.success(this.$t('ai.aiGenerationSuccess'))
+      } catch (error) {
+        console.error('AI生成失败:', error)
+        this.resetOnAiCreatingStop()
+        this.resetOnRenderEnd()
+        this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
+      }
     },
 
     // AI请求完成或出错后需要复位的数据
@@ -662,44 +680,48 @@ export default {
         this.aiCreatingMaskVisible = true
         // 发起请求
         this.isAiCreating = true
-        // 获取当前提供商配置
-        const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
-        const config = currentProvider.config
+        
+        try {
+          // 检查用户是否有AI权限和有效的AI配置
+          const currentUserId = this.$store.state.currentUser?.id
+          if (!currentUserId) {
+            throw new Error('用户未登录')
+          }
+          
+          const currentConfig = await this.$store.dispatch('fetchUserCurrentAiConfig', currentUserId)
+          if (!currentConfig) {
+            throw new Error('未选择AI配置，请先选择AI服务')
+          }
 
-        this.aiInstance = new Ai({
-          port: config.port
-        })
-        this.aiInstance.init(this.aiSystem.currentProvider, config)
-        this.aiInstance.request(
-          {
+          // 使用安全代理发起AI请求
+          const aiPayload = {
             messages: [
               {
                 role: 'user',
-                content:
-                  this.aiPartInput.trim() + this.$t('ai.aiCreatePartMsgHelp')
+                content: this.aiPartInput.trim() + this.$t('ai.aiCreatePartMsgHelp')
               }
             ]
-          },
-          content => {
-            if (content) {
-              const arr = content.split(/\n+/)
-              this.aiCreatingContent = arr.splice(0, arr.length - 1).join('\n')
-            }
-
-            this.loopRenderOnAiCreatingPart()
-          },
-          content => {
-            this.aiCreatingContent = content
-            this.resetOnAiCreatingStop()
-            this.resetAiCreatePartDialog()
-          },
-          () => {
-            this.resetOnAiCreatingStop()
-            this.resetAiCreatePartDialog()
-            this.resetOnRenderEnd()
-            this.$message.error(this.$t('ai.generationFailed'))
           }
-        )
+          
+          // 调用后端代理进行AI请求
+          const response = await this.$store.dispatch('callAiThroughProxy', {
+            userId: currentUserId,
+            aiPayload: aiPayload
+          })
+          
+          // 成功获取AI响应后，开始渲染
+          this.aiCreatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+          this.loopRenderOnAiCreatingPart()
+          this.resetOnAiCreatingStop()
+          this.resetAiCreatePartDialog()
+          this.$message.success(this.$t('ai.aiGenerationSuccess'))
+        } catch (error) {
+          console.error('AI续写失败:', error)
+          this.resetOnAiCreatingStop()
+          this.resetAiCreatePartDialog()
+          this.resetOnRenderEnd()
+          this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
+        }
       } catch (error) {
         console.log(error)
       }
@@ -794,37 +816,48 @@ export default {
     ) {
       try {
         await this.aiTest()
-        // 发起请求
-        this.isAiCreating = true
-        // 获取当前提供商配置
-        const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
-        const config = currentProvider.config
+        
+        // 检查用户是否有AI权限和有效的AI配置
+        const currentUserId = this.$store.state.currentUser?.id
+        if (!currentUserId) {
+          throw new Error('用户未登录')
+        }
+        
+        const currentConfig = await this.$store.dispatch('fetchUserCurrentAiConfig', currentUserId)
+        if (!currentConfig) {
+          throw new Error('未选择AI配置，请先选择AI服务')
+        }
 
-        this.aiInstance = new Ai({
-          port: config.port
-        })
-        this.aiInstance.init(this.aiSystem.currentProvider, config)
-        this.aiInstance.request(
-          {
-            messages: messageList.map(msg => {
-              return {
-                role: 'user',
-                content: msg
-              }
-            })
-          },
-          content => {
-            progress(content)
-          },
-          content => {
-            end(content)
-          },
-          error => {
-            err(error)
-          }
-        )
+        // 使用安全代理发起AI请求
+        const aiPayload = {
+          messages: messageList.map(msg => {
+            return {
+              role: 'user',
+              content: msg
+            }
+          })
+        }
+        
+        try {
+          // 发起安全AI请求
+          this.isAiCreating = true
+          const response = await this.$store.dispatch('callAiThroughProxy', {
+            userId: currentUserId,
+            aiPayload: aiPayload
+          })
+          
+          const content = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+          progress(content)
+          end(content)
+        } catch (error) {
+          console.error('AI对话失败:', error)
+          err(error)
+        } finally {
+          this.isAiCreating = false
+        }
       } catch (error) {
         console.log(error)
+        err(error)
       }
     },
 

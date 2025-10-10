@@ -6,11 +6,12 @@
           <span class="el-icon-delete"></span>
           {{ $t('ai.clearRecords') }}
         </el-button>
-        <el-button size="mini" @click="modifyAiConfig">
+        <el-button size="mini" @click="showAiSelectionDialog">
           <span class="el-icon-edit"></span>
-          {{ $t('ai.modifyAIConfiguration') }}
+          {{ isCurrentUserAdmin ? $t('ai.manageAIConfiguration') : $t('ai.selectAIConfiguration') }}
         </el-button>
       </div>
+      <AiSelectionDialog v-model="aiSelectionDialogVisible"></AiSelectionDialog>
       <div class="chatResBox customScrollbar" ref="chatResBoxRef">
         <div
           class="chatItem"
@@ -62,25 +63,32 @@ import Sidebar from './Sidebar.vue'
 import { mapState } from 'vuex'
 import { createUid } from 'simple-mind-map/src/utils'
 import MarkdownIt from 'markdown-it'
+import AiSelectionDialog from './AiSelectionDialog.vue'
 
 let md = null
 
 export default {
   components: {
-    Sidebar
+    Sidebar,
+    AiSelectionDialog
   },
   data() {
     return {
       text: '',
       chatList: [],
-      isCreating: false
+      isCreating: false,
+      aiSelectionDialogVisible: false
     }
   },
   computed: {
     ...mapState({
       isDark: state => state.localConfig.isDark,
-      activeSidebar: state => state.activeSidebar
-    })
+      activeSidebar: state => state.activeSidebar,
+      currentUser: state => state.currentUser
+    }),
+    isCurrentUserAdmin() {
+      return this.currentUser && this.currentUser.isAdmin;
+    }
   },
   watch: {
     activeSidebar(val) {
@@ -160,7 +168,11 @@ export default {
     },
 
     modifyAiConfig() {
-      this.$bus.$emit('showAiConfigDialog')
+      this.aiSelectionDialogVisible = true
+    },
+    
+    showAiSelectionDialog() {
+      this.aiSelectionDialogVisible = true
     }
   }
 }

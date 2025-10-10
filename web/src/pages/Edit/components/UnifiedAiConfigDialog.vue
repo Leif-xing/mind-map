@@ -1,32 +1,24 @@
 <template>
   <el-dialog
     class="unifiedAiConfigDialog"
-    title="AI配置"
+    title="AI大模型配置"
     :visible.sync="visible"
     width="600px"
     append-to-body
     @close="handleClose"
   >
     <div class="aiConfigContent">
-      <!-- 提供商选择 -->
-      <div class="providerSelection">
-        <h3>选择AI提供商</h3>
-        <el-radio-group v-model="currentProvider" @change="onProviderChange">
-          <el-radio 
-            v-for="(provider, key) in providers" 
-            :key="key" 
-            :label="key"
-            class="providerRadio"
-          >
-            {{ provider.name }}
-          </el-radio>
-        </el-radio-group>
-      </div>
-
       <!-- 当前提供商配置 -->
-      <div class="providerConfig" v-if="selectedProvider">
-        <h3>{{ selectedProvider.name }} 配置</h3>
+      <div class="providerConfig">
         <el-form :model="config" :rules="rules" ref="configForm" label-width="100px">
+
+          <!-- 供应商名称 -->
+          <el-form-item label="供应商" prop="providerName">
+            <el-input 
+              v-model="config.providerName" 
+              placeholder="请输入AI服务提供商名称，如：OpenAI、火山方舟等"
+            ></el-input>
+          </el-form-item>
           
           <!-- API密钥 -->
           <el-form-item label="API密钥" prop="key">
@@ -38,62 +30,23 @@
           </el-form-item>
 
           <!-- 模型配置 -->
-          <el-form-item label="模型" prop="model">
-            <!-- 预设模型选择 -->
-            <div v-if="selectedProvider.type === 'select'" style="display: flex;">
-              <el-select 
-                v-model="config.model" 
-                placeholder="选择模型"
-                style="flex: 1; margin-right: 10px;"
-              >
-                <el-option
-                  v-for="model in selectedProvider.models"
-                  :key="model"
-                  :label="model"
-                  :value="model"
-                ></el-option>
-              </el-select>
-              <!-- 仅在选择Navy API时显示添加模型按钮 -->
-              <el-button 
-                v-if="currentProvider === 'navy'" 
-                type="primary" 
-                size="small" 
-                @click="addModelDialogVisible = true"
-              >
-                添加模型
-              </el-button>
-            </div>
-            
-            <!-- 自定义模型输入 -->
+          <el-form-item label="模型名称" prop="model">
+            <!-- 统一使用文本输入框 -->
             <el-input 
-              v-else 
               v-model="config.model" 
-              placeholder="请输入模型ID (如: ep-xxxxx)"
+              placeholder="请输入模型名称，如：gpt-4, qwen-max等"
             ></el-input>
           </el-form-item>
 
-          <!-- 火山方舟特有的端口配置 -->
-          <el-form-item 
-            v-if="currentProvider === 'huoshan'" 
-            label="本地端口" 
-            prop="port"
-          >
-            <el-input-number 
-              v-model="config.port" 
-              :min="1000" 
-              :max="65535"
-              placeholder="本地代理端口"
-            ></el-input-number>
-          </el-form-item>
-
-          <!-- API接口地址 (只读显示) -->
-          <el-form-item label="API接口">
+          <!-- API接口地址 (可编辑) -->
+          <el-form-item label="API接口" prop="api">
             <el-input 
-              :value="selectedProvider.api" 
-              readonly 
-              disabled
+              v-model="config.api" 
+              placeholder="请输入API接口地址"
             ></el-input>
           </el-form-item>
+
+
         </el-form>
       </div>
 
@@ -140,7 +93,8 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapActions } from 'vuex'
+import { aiConfigApi } from '@/api/supabase-api'
 
 export default {
   name: 'UnifiedAiConfigDialog',
@@ -153,34 +107,40 @@ export default {
   data() {
     return {
       visible: false,
-      currentProvider: 'huoshan',
+      existingConfigId: null, // 用于标识是否为编辑现有配置
       config: {
+        providerName: '',
         key: '',
         model: '',
-        port: 3456,
+        api: '',
         method: 'POST'
       },
       testing: false,
       saving: false,
-      addModelDialogVisible: false, // 控制添加模型对话框的显示
-      newModelName: '', // 新模型名称
+      addModelDialogVisible: false, // 已移除添加模型功能
+      newModelName: '', // 已移除添加模型功能
       rules: {
+        providerName: [
+          { required: true, message: '请输入供应商名称', trigger: 'blur' }
+        ],
         key: [
           { required: true, message: '请输入API密钥', trigger: 'blur' }
         ],
         model: [
-          { required: true, message: '请选择或输入模型', trigger: 'blur' }
+          { required: true, message: '请输入模型名称', trigger: 'blur' }
+        ],
+        api: [
+          { required: true, message: '请输入API接口', trigger: 'blur' }
         ]
       }
     }
   },
   computed: {
     ...mapState(['aiSystem']),
-    providers() {
-      return this.aiSystem.providers
-    },
+    // 为了向后兼容，提供当前提供商配置
     selectedProvider() {
-      return this.providers[this.currentProvider]
+      const currentProviderKey = this.aiSystem.currentProvider
+      return this.aiSystem.providers[currentProviderKey] || {}
     }
   },
   watch: {
@@ -196,25 +156,55 @@ export default {
   },
   methods: {
     ...mapMutations(['setLocalConfig']),
+    ...mapActions(['selectAiConfig']),
     
-    initConfig() {
-      // 初始化当前提供商和配置
-      this.currentProvider = this.aiSystem.currentProvider
-      this.config = { ...this.aiSystem.providers[this.currentProvider].config }
-    },
-
-    onProviderChange(provider) {
-      // 切换提供商时加载对应配置
-      this.config = { ...this.aiSystem.providers[provider].config }
+    async initConfig() {
+      // 首先尝试从数据库获取配置列表
+      try {
+        const currentUser = this.$store.state.currentUser;
+        console.log('initConfig - 当前用户信息:', currentUser);
+        
+        if (currentUser && currentUser.isAdmin) {
+          const configs = await aiConfigApi.getAllAiProviderConfigs();
+          if (configs && configs.length > 0) {
+            // 如果数据库中有配置，使用第一个配置进行初始化
+            const latestConfig = configs[0]; // 使用最新的配置
+            this.existingConfigId = latestConfig.id;
+            this.config = {
+              providerName: latestConfig.providerName || '',
+              key: '', // 不从数据库加载密钥，出于安全考虑
+              model: latestConfig.modelName || '',
+              api: latestConfig.apiEndpoint || '',
+              method: 'POST'
+            };
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('获取数据库配置失败:', error);
+      }
+      
+      // 如果没有从数据库获取到配置，使用本地配置
+      const currentProviderKey = this.aiSystem.currentProvider
+      const currentProvider = this.aiSystem.providers[currentProviderKey] || {}
+      const config = currentProvider.config || {}
+      
+      this.config = {
+        providerName: currentProvider.name || '',
+        key: config.key || '',
+        model: config.model || '',
+        api: currentProvider.api || config.api || '',
+        method: config.method || 'POST'
+      }
     },
 
     async testConnection() {
       this.testing = true
       try {
-        const provider = this.selectedProvider
-        const testUrl = provider.api
+        // 使用配置中的API接口进行测试
+        const testUrl = this.config.api
         
-        // 根据不同提供商进行测试
+        // 进行测试
         const testPayload = {
           model: this.config.model,
           messages: [{ role: 'user', content: 'test' }],
@@ -247,71 +237,100 @@ export default {
       }
     },
 
-    // 添加模型到Navy API
-    addModel() {
-      if (!this.newModelName.trim()) {
-        this.$message.warning('请输入模型名称')
-        return
-      }
 
-      // 检查模型是否已存在
-      if (this.selectedProvider.models.includes(this.newModelName.trim())) {
-        this.$message.warning('该模型已存在')
-        return
-      }
 
-      // 更新本地状态
-      const updatedAiSystem = {
-        ...this.aiSystem,
-        providers: {
-          ...this.aiSystem.providers,
-          [this.currentProvider]: {
-            ...this.aiSystem.providers[this.currentProvider],
-            models: [
-              ...this.aiSystem.providers[this.currentProvider].models,
-              this.newModelName.trim()
-            ]
-          }
-        }
-      }
-
-      // 更新store
-      this.setLocalConfig({ aiSystem: updatedAiSystem })
-      
-      // 重置输入并关闭对话框
-      this.newModelName = ''
-      this.addModelDialogVisible = false
-      
-      this.$message.success('模型添加成功！')
-    },
-
-    saveConfig() {
-      this.$refs.configForm.validate((valid) => {
+    async saveConfig() {
+      this.$refs.configForm.validate(async (valid) => {
         if (valid) {
           this.saving = true
-          
-          // 保存配置
-          const newAiSystem = {
-            ...this.aiSystem,
-            currentProvider: this.currentProvider,
-            providers: {
-              ...this.aiSystem.providers,
-              [this.currentProvider]: {
-                ...this.aiSystem.providers[this.currentProvider],
-                config: { ...this.config }
+          try {
+            // 获取当前用户信息并进行调试
+            const currentUser = this.$store.state.currentUser;
+            console.log('SaveConfig - 当前用户信息:', currentUser);
+            
+            if (!currentUser) {
+              this.$message.error('请先登录');
+              return;
+            }
+            
+            // 检查用户是否为管理员
+            if (!currentUser.isAdmin) {
+              this.$message.error('只有管理员可以配置AI服务');
+              return;
+            }
+            
+            const userId = currentUser.id;
+            if (!userId) {
+              this.$message.error('用户ID缺失');
+              return;
+            }
+            
+            // 准备配置数据
+            const configData = {
+              providerName: this.config.providerName,
+              apiEndpoint: this.config.api,
+              modelName: this.config.model,
+              apiKey: this.config.key,
+              isActive: true,
+              createdBy: userId
+            };
+            
+            // 保存到数据库
+            let result;
+            if (this.existingConfigId) {
+              // 如果是编辑现有配置
+              result = await aiConfigApi.updateAiProviderConfig(this.existingConfigId, configData);
+            } else {
+              // 如果是新增配置
+              result = await aiConfigApi.createAiProviderConfig(configData);
+            }
+            
+            this.$message.success('AI配置保存成功！');
+            
+            // 对于新保存的配置，更新本地AI系统以包含此配置
+            const configId = result.id;
+            const newAiSystem = {
+              ...this.aiSystem,
+              providers: {
+                ...this.aiSystem.providers,
+                [configId]: {
+                  name: this.config.providerName,
+                  api: this.config.api,
+                  type: 'custom',
+                  config: { 
+                    model: this.config.model, // 注意：不存储密钥到本地
+                    method: this.config.method
+                  }
+                }
+              }
+            };
+
+            this.setLocalConfig({ aiSystem: newAiSystem });
+            
+            // 尝试选择该配置作为当前配置（仅对管理员）
+            if (currentUser.isAdmin) {
+              try {
+                await this.selectAiConfig({
+                  userId: userId,
+                  configId: configId
+                });
+                this.$message.success('已设置为当前AI配置！');
+              } catch (selectError) {
+                console.error('设置当前AI配置失败:', selectError);
               }
             }
+            
+            this.saving = false;
+            this.handleClose();
+          } catch (error) {
+            console.error('保存AI配置失败:', error);
+            this.$message.error('保存AI配置失败: ' + error.message);
+            this.saving = false;
           }
-
-          this.setLocalConfig({ aiSystem: newAiSystem })
-          
-          this.$message.success('AI配置保存成功！')
-          this.saving = false
-          this.handleClose()
         } else {
-          this.$message.error('请检查配置项')
+          this.$message.error('请检查配置项');
         }
-      })
+      });
     },
 
     handleClose() {
@@ -320,19 +339,21 @@ export default {
     },
 
     getStatusTitle() {
-      const hasConfig = this.config.key && this.config.model
+      const hasConfig = this.config.key && this.config.model && this.config.api
       return hasConfig ? '配置已完成' : '配置未完成'
     },
 
     getStatusType() {
-      const hasConfig = this.config.key && this.config.model
+      const hasConfig = this.config.key && this.config.model && this.config.api
       return hasConfig ? 'success' : 'warning'
     },
 
     getStatusDescription() {
+      if (!this.config.providerName) return '请配置供应商名称'
       if (!this.config.key) return '请配置API密钥'
-      if (!this.config.model) return '请选择或输入模型'
-      return `当前配置: ${this.selectedProvider.name} - ${this.config.model}`
+      if (!this.config.model) return '请配置模型名称'
+      if (!this.config.api) return '请配置API接口'
+      return `当前配置: ${this.config.providerName} - ${this.config.model}`
     }
   }
 }

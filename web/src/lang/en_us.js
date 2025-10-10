@@ -493,6 +493,9 @@ export default {
     wantModifyAiConfigTip:
       'Do you want to modify the AI configuration? Please click on:',
     modifyAIConfiguration: 'Modify AI configuration',
+    selectAIConfiguration: 'Select AI Service',
+    manageAIConfiguration: 'Manage AI Configuration',
+    AIProviderConfiguration: 'AI Provider Configuration',
     chatInputPlaceholder: 'Enter to send, Shift+Enter to wrap.',
     send: 'Send',
     stopGenerating: 'Stop generating',
@@ -513,7 +516,7 @@ export default {
     configSaveSuccessTip: 'Configuration saved successfully',
     apiValidateTip: 'Please enter the interface',
     keyValidateTip: 'Please enter the API Key',
-    modelValidateTip: 'Please enter the inference access point',
+    modelValidateTip: 'Please enter the model name',
     portValidateTip: 'Please enter the port',
     methodValidateTip: 'Please select the request method',
     noInputTip: 'Please enter the content',
