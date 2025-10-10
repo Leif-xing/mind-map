@@ -62,6 +62,9 @@ export default {
     loading.close()
     this.setBodyDark()
     
+    // 监听键盘事件来处理快捷键
+    window.addEventListener('keydown', this.handleKeyDown)
+    
     // 监听退出登录事件
     this.$bus.$on('logout', this.handleLogout)
   },
@@ -83,6 +86,16 @@ export default {
       this.isDark
         ? document.body.classList.add('isDark')
         : document.body.classList.remove('isDark')
+    },
+    
+    // 处理键盘快捷键
+    handleKeyDown(event) {
+      // 检查是否按下 Ctrl+G (或 Cmd+G on Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
+        event.preventDefault() // 阻止默认的Ctrl+G浏览器行为
+        // 触发AI创建事件
+        this.$bus.$emit('open_ai_create')
+      }
     },
     
     handleLoadMindMap(mindMap) {
@@ -113,6 +126,9 @@ export default {
   },
   
   beforeDestroy() {
+    // 移除键盘事件监听
+    window.removeEventListener('keydown', this.handleKeyDown)
+    
     // 移除退出登录事件监听
     this.$bus.$off('logout', this.handleLogout)
   }

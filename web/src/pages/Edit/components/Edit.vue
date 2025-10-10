@@ -357,6 +357,13 @@ export default {
         theme = exampleData.theme
         view = null
       }
+      // 如果主题模板未定义或为空，则使用暗夜冰刃主题
+      if (!theme || !theme.template) {
+        theme = {
+          template: 'darkNightLceBlade',
+          config: {}
+        }
+      }
       console.log('Edit.vue - 初始化MindMap实例，参数:', {
         el: this.$refs.mindMapContainer,
         data: root,

@@ -33,7 +33,7 @@ const store = new Vuex.Store({
       // 是否显示滚动条
       isShowScrollbar: false,
       // 是否是暗黑模式
-      isDark: false,
+      isDark: true,
       // 是否开启AI功能
       enableAi: true
     },
