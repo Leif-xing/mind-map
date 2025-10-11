@@ -456,6 +456,29 @@ export const aiConfigApi = {
     return data
   },
   
+  // 更新用户密码
+  async updatePassword(userId, newPassword) {
+    // 注意：在实际应用中，密码更新应该使用专门的密码重置流程
+    // 这里只是一个示例实现
+    const hashedPassword = btoa(newPassword); // 简单的Base64编码，实际应用中应使用更强的哈希算法
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        password: hashedPassword,
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('更新密码失败:', error);
+      throw new Error(error.message || '更新密码失败');
+    }
+    
+    console.log('密码更新成功');
+    return { success: true };
+  },
+  
   // 用户选择AI配置
   async selectAiConfig(userId, configId) {
     // 首先验证用户权限

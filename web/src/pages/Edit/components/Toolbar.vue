@@ -75,14 +75,23 @@
           <span class="icon iconfont iconexport"></span>
           <span class="text">{{ $t('toolbar.export') }}</span>
         </div>
-        <div
-          class="toolbarBtn"
-          @click="logout"
-          style="margin-right: 0;"
-        >
-          <span class="icon iconfont iconwithdraw"></span>
-          <span class="text">退出登录</span>
-        </div>
+        <!-- 用户下拉菜单 -->
+        <el-dropdown class="user-dropdown" popper-class="user-dropdown-popper" @command="handleUserCommand" trigger="click">
+          <div class="toolbarBtn user-menu-btn">
+            <i class="el-icon-user-solid icon"></i>
+            <span class="text">{{ currentUser ? currentUser.username || currentUser.email || currentUser.id : '用户' }}</span>
+          </div>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="changePassword">
+              <i class="el-icon-edit"></i>
+              修改密码
+            </el-dropdown-item>
+            <el-dropdown-item command="logout">
+              <i class="el-icon-switch-button"></i>
+              退出登录
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
         <!-- 本地文件树 -->
         <div
           class="fileTreeBox"
@@ -352,7 +361,11 @@ export default {
         initialTop: 0
       },
       // 状态栏消息
-      statusMessage: ''
+      statusMessage: '',
+      // 密码修改相关
+      currentPassword: '',
+      newPassword: '',
+      confirmNewPassword: ''
     }
   },
   computed: {
@@ -360,7 +373,8 @@ export default {
       isDark: state => state.localConfig.isDark,
       isHandleLocalFile: state => state.isHandleLocalFile,
       openNodeRichText: state => state.localConfig.openNodeRichText,
-      enableAi: state => state.localConfig.enableAi
+      enableAi: state => state.localConfig.enableAi,
+      currentUser: state => state.currentUser
     }),
 
     btnLit() {
@@ -1369,9 +1383,167 @@ export default {
       }
     },
     
+    handleUserCommand(command) {
+      if (command === 'logout') {
+        // 触发退出登录事件
+        this.$bus.$emit('logout')
+      } else if (command === 'changePassword') {
+        this.changePassword()
+      }
+    },
+    
     logout() {
       // 触发退出登录事件
       this.$bus.$emit('logout')
+    },
+    
+    async changePassword() {
+      // 获取当前用户信息
+      const currentUser = this.currentUser;
+      if (!currentUser) {
+        this.$message.error('请先登录');
+        return;
+      }
+      
+      // 创建密码修改的弹窗
+      const h = this.$createElement;
+      
+      const inputStyle = {
+        width: '100%',
+        padding: '8px',
+        marginBottom: '10px',
+        boxSizing: 'border-box'
+      };
+      
+      // 使用 Vue 的动态组件创建对话框
+      this.$msgbox({
+        title: '修改密码',
+        message: h('div', null, [
+          h('div', { style: { marginBottom: '10px' } }, [
+            h('label', { style: { display: 'block', marginBottom: '5px' } }, '当前密码:'),
+            h('input', {
+              attrs: { type: 'password', placeholder: '请输入当前密码' },
+              style: {
+                ...inputStyle,
+                backgroundColor: '#fff', // 输入框保持白色
+                color: '#000',
+                border: '1px solid #dcdfe6'
+              },
+              domProps: { value: this.currentPassword },
+              on: {
+                input: (event) => {
+                  this.currentPassword = event.target.value;
+                }
+              }
+            })
+          ]),
+          h('div', { style: { marginBottom: '10px' } }, [
+            h('label', { style: { display: 'block', marginBottom: '5px' } }, '新密码:'),
+            h('input', {
+              attrs: { type: 'password', placeholder: '请输入新密码' },
+              style: {
+                ...inputStyle,
+                backgroundColor: '#fff', // 输入框保持白色
+                color: '#000',
+                border: '1px solid #dcdfe6'
+              },
+              domProps: { value: this.newPassword },
+              on: {
+                input: (event) => {
+                  this.newPassword = event.target.value;
+                }
+              }
+            })
+          ]),
+          h('div', { style: { marginBottom: '10px' } }, [
+            h('label', { style: { display: 'block', marginBottom: '5px' } }, '确认新密码:'),
+            h('input', {
+              attrs: { type: 'password', placeholder: '请再次输入新密码' },
+              style: {
+                ...inputStyle,
+                backgroundColor: '#fff', // 输入框保持白色
+                color: '#000',
+                border: '1px solid #dcdfe6'
+              },
+              domProps: { value: this.confirmNewPassword },
+              on: {
+                input: (event) => {
+                  this.confirmNewPassword = event.target.value;
+                }
+              }
+            })
+          ])
+        ]),
+        showCancelButton: true,
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        customClass: 'el-message-box-gray', // 使用灰色主题
+        beforeClose: (action, instance, done) => {
+          if (action === 'confirm') {
+            // 验证输入
+            if (!this.currentPassword) {
+              this.$message.error('请输入当前密码');
+              return;
+            }
+            
+            if (!this.newPassword || this.newPassword.length < 6) {
+              this.$message.error('新密码长度不能少于6位');
+              return;
+            }
+            
+            if (this.newPassword !== this.confirmNewPassword) {
+              this.$message.error('两次输入的新密码不一致');
+              return;
+            }
+            
+            // 验证当前密码是否正确
+            if (this.currentPassword !== currentUser.password) {
+              this.$message.error('当前密码输入错误');
+              return;
+            }
+            
+            // 更新用户密码
+            this.updatePassword(currentUser).then(() => {
+              this.$message.success('密码修改成功');
+              this.resetPasswordFields();
+              done();
+            }).catch(error => {
+              this.$message.error('密码修改失败: ' + error.message);
+            });
+          } else {
+            this.resetPasswordFields();
+            done();
+          }
+        }
+      });
+    },
+    
+    async updatePassword(currentUser) {
+      try {
+        // 更新用户密码
+        const updatedUser = { ...currentUser, password: this.newPassword };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        
+        // 如果使用 Supabase，也需要更新数据库中的密码
+        if (this.$store.state.supabaseEnabled) {
+          await this.$store.dispatch('updateUserPassword', {
+            userId: currentUser.id,
+            newPassword: this.newPassword
+          });
+        }
+        
+        // 重置表单数据
+        this.resetPasswordFields();
+      } catch (error) {
+        console.error('修改密码失败:', error);
+        throw error;
+      }
+    },
+    
+    resetPasswordFields() {
+      this.currentPassword = '';
+      this.newPassword = '';
+      this.confirmNewPassword = '';
     }
   }
 }
@@ -1848,5 +2020,79 @@ export default {
       }
     }
   }
+}
+
+/* 用户下拉菜单样式 */
+.user-dropdown {
+  margin-right: 0;
+}
+
+.user-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0 10px;
+}
+
+.user-menu-btn .icon {
+  font-size: 16px;
+  margin-right: 5px;
+}
+
+.user-menu-btn .text {
+  margin: 0 5px 0 0; /* 调整用户名文本的边距 */
+  max-width: 100px; /* 限制用户名宽度 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 用户下拉菜单弹出层样式 - 与触发元素右对齐，并向右偏移4px */
+.user-dropdown-popper {
+  right: -4px !important;
+  left: auto !important;
+}
+
+/* 用户下拉菜单文本颜色 */
+.user-dropdown-popper .el-dropdown-menu__item {
+  color: #606266 !important; /* 设置为浅亮色 */
+}
+
+.user-dropdown-popper .el-dropdown-menu__item:focus,
+.user-dropdown-popper .el-dropdown-menu__item:hover {
+  background-color: #f5f7fa !important;
+  color: #409eff !important; /* 悬停时的颜色 */
+}
+
+/* 灰色主题消息框样式 */
+.el-message-box-gray {
+  background-color: #f4f4f5 !important;
+  border-color: #e4e7ed !important;
+  color: #000 !important;
+}
+
+.el-message-box-gray .el-message-box__title,
+.el-message-box-gray .el-message-box__message {
+  color: #000 !important;
+}
+
+.el-message-box-gray .el-input__inner {
+  background-color: #fff !important;
+  border-color: #dcdfe6 !important;
+  color: #000 !important;
+}
+
+.el-message-box-gray .el-message-box__btns {
+  border-top-color: #e4e7ed !important;
+}
+
+/* 深色主题下的用户菜单样式 */
+.toolbarContainer.isDark .user-menu-btn .icon {
+  color: #fff;
+}
+
+.toolbarContainer.isDark .user-menu-btn:hover .icon {
+  background: hsla(0, 0%, 100%, 0.05);
 }
 </style>

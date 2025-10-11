@@ -323,6 +323,25 @@ const store = new Vuex.Store({
       commit('setCurrentUser', null);
     },
     
+    // 更新用户密码
+    async updateUserPassword({ commit, state }, { userId, newPassword }) {
+      if (state.supabaseEnabled) {
+        // 使用 Supabase API 更新密码
+        try {
+          await userApi.updatePassword(userId, newPassword);
+          // 注意：出于安全考虑，实际的密码更新需要使用专门的API
+          // 这里仅作为占位符，实际实现需要根据你的 Supabase 配置进行调整
+          console.log('通过Supabase更新密码成功');
+        } catch (error) {
+          console.error('更新数据库密码失败:', error);
+          throw error;
+        }
+      } else {
+        // 使用本地存储更新密码
+        commit('updateUserPassword', { userId, newPassword });
+      }
+    },
+    
     // 获取用户可用的AI配置
     async fetchAvailableAiConfigs({ commit, state }, userId) {
       try {

@@ -11,7 +11,7 @@
       id="mindMapContainer"
       ref="mindMapContainer"
     ></div>
-    <Count :mindMap="mindMap" v-if="!isZenMode"></Count>
+    <!-- <Count :mindMap="mindMap" v-if="!isZenMode"></Count> -->
     <Navigator v-if="mindMap" :mindMap="mindMap"></Navigator>
     <NavigatorToolbar :mindMap="mindMap" v-if="!isZenMode"></NavigatorToolbar>
     <OutlineSidebar :mindMap="mindMap"></OutlineSidebar>
