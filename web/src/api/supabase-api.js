@@ -558,67 +558,79 @@ export const aiConfigApi = {
     return config
   },
   
-  // 通过后端代理调用AI服务（保护API密钥）
+  // 通过后端代理调用AI服务（基于数据库配置）
   async callAiService(userId, aiPayload) {
-    // 验证用户权限和配置
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, mind_map_permission, current_ai_config_id')
-      .eq('id', userId)
-      .single()
-      
-    if (userError || !user) {
-      throw new Error('用户验证失败')
+    console.log('开始AI服务调用:', { userId, hasPayload: !!aiPayload })
+    
+    // 验证必要参数
+    if (!userId) {
+      throw new Error('用户ID不能为空')
     }
     
-    // 检查AI使用权限：只要有思维导图权限，就具有AI权限
-    if (user.mind_map_permission !== 1) {
-      throw new Error('无AI使用权限')
+    if (!aiPayload) {
+      throw new Error('AI请求数据不能为空')
     }
     
-    if (!user.current_ai_config_id) {
-      throw new Error('未选择AI配置，请先选择AI服务')
-    }
+    console.log('准备发送AI代理请求:', {
+      userId: userId,
+      payloadKeys: Object.keys(aiPayload),
+      messagesCount: aiPayload.messages?.length
+    })
     
-    // 获取AI配置（包含加密的API密钥）
-    const { data: config, error: configError } = await supabase
-      .from('ai_provider_configs')
-      .select('api_endpoint, api_key_encrypted, model_name')
-      .eq('id', user.current_ai_config_id)
-      .eq('is_active', true)
-      .single()
-    
-    if (configError || !config) {
-      throw new Error('AI配置无效或不可用')
-    }
-    
-    // 解密API密钥（实际应用中应在后端完成）
-    const apiKey = await decryptApiKey(config.api_key_encrypted)
-    
-    // 通过后端代理调用AI服务
-    // 注意：在实际部署中，您需要在后端设置一个API端点来处理AI请求
-    // 以避免在前端暴露API密钥
-    const proxyResponse = await fetch('/api/ai/proxy', {
+    // 直接调用后端AI代理服务
+    const proxyResponse = await fetch('/api/ai-proxy', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // 在实际应用中应使用更安全的身份验证方式
-        'X-User-Id': userId,
-        'Authorization': `Bearer ${apiKey}`
+        'X-User-Id': userId.toString()
       },
       body: JSON.stringify({
-        ...aiPayload,
-        model: aiPayload.model || config.model_name,
-        endpoint: config.api_endpoint
+        userId: userId,
+        aiPayload: aiPayload
       })
     })
     
+    console.log('AI代理响应状态:', proxyResponse.status)
+    
     if (!proxyResponse.ok) {
-      const errorData = await proxyResponse.json().catch(() => ({}))
-      throw new Error(errorData.error || `AI服务调用失败: ${proxyResponse.status}`)
+      const errorText = await proxyResponse.text().catch(() => '')
+      console.error('AI代理请求失败:', {
+        status: proxyResponse.status,
+        statusText: proxyResponse.statusText,
+        error: errorText
+      })
+      
+      let errorData = {}
+      try {
+        errorData = JSON.parse(errorText)
+      } catch (e) {
+        errorData = { error: errorText || '未知错误' }
+      }
+      
+      // 根据状态码提供更具体的错误信息
+      if (proxyResponse.status === 401) {
+        throw new Error(errorData.error || '认证失败，请重新登录')
+      } else if (proxyResponse.status === 403) {
+        throw new Error(errorData.error || '无AI使用权限')
+      } else if (proxyResponse.status === 400) {
+        throw new Error(errorData.error || '请求参数错误')
+      } else if (proxyResponse.status === 503) {
+        throw new Error(errorData.error || '无法连接到AI服务')
+      } else if (proxyResponse.status === 504) {
+        throw new Error(errorData.error || 'AI服务请求超时')
+      } else {
+        throw new Error(errorData.error || `AI服务调用失败: ${proxyResponse.status} ${proxyResponse.statusText}`)
+      }
     }
     
-    return await proxyResponse.json()
+    const result = await proxyResponse.json()
+    console.log('AI服务调用成功:', {
+      hasChoices: !!result.choices,
+      choicesLength: result.choices?.length,
+      hasContent: !!result.choices?.[0]?.message?.content
+    })
+    
+    return result
   }
 }
 

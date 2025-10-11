@@ -13,31 +13,47 @@ class Ai {
     // 记录提供商类型供路由使用
     this.providerType = providerType
     
-    // 火山方舟接口
+    // 检查是否是预定义类型，否则使用通用AI提供商接口
     if (providerType === 'huoshan') {
+      // 火山方舟接口
       this.baseData = {
         api: options.api || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
         method: options.method || 'POST',
         headers: {
-          Authorization: 'Bearer ' + options.key
+          Authorization: 'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY')
         },
         data: {
           model: options.model,
           stream: true
         }
       }
-    }
-    // Navy API接口
-    else if (providerType === 'navy') {
+    } else if (providerType === 'navy') {
+      // Navy API接口
       this.baseData = {
         api: options.api || 'https://api.navy/v1/chat/completions',
         method: options.method || 'POST',
         headers: {
-          'Authorization': 'Bearer ' + options.key,
+          'Authorization': 'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY'),
           'Content-Type': 'application/json'
         },
         data: {
           model: options.model,
+          stream: true
+        }
+      }
+    } else {
+      // 通用AI提供商接口 - 适用于从数据库获取的配置
+      // 在安全的系统中，前端可能没有实际的API密钥
+      // 因此使用占位符密钥，实际密钥将在代理服务中处理
+      this.baseData = {
+        api: options.api || options.apiEndpoint || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+        method: options.method || 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY'),
+          'Content-Type': 'application/json'
+        },
+        data: {
+          model: options.model || options.modelName,
           stream: true
         }
       }

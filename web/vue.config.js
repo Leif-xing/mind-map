@@ -47,6 +47,10 @@ module.exports = {
       '^/api/v3/': {
         target: 'http://ark.cn-beijing.volces.com',
         changeOrigin: true
+      },
+      '^/api/ai-proxy': {
+        target: 'http://localhost:3456',
+        changeOrigin: true
       }
     }
   }

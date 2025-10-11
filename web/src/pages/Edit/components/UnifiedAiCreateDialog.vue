@@ -54,7 +54,6 @@
 
 <script>
 import { mapState } from 'vuex'
-import Ai from '@/utils/ai'
 import { transformMarkdownTo } from 'simple-mind-map/src/parse/markdownTo'
 
 export default {
@@ -75,7 +74,6 @@ export default {
       topic: '',
       generating: false,
       generatingContent: '',
-      aiInstance: null,
       isLoopRendering: false,
       rootWaitCount: 0
     }
@@ -167,14 +165,16 @@ export default {
       this.visible = false
       
       try {
-        // 初始化AI实例
-        this.aiInstance = new Ai({
-          port: this.currentProvider.config.port || 3456
-        })
+        // 检查用户是否有AI权限和有效的AI配置
+        const currentUserId = this.$store.state.currentUser?.id
+        if (!currentUserId) {
+          throw new Error('用户未登录')
+        }
         
-        // 根据当前提供商初始化
-        const providerType = this.aiSystem.currentProvider
-        this.aiInstance.init(providerType, this.currentProvider.config)
+        const currentConfig = await this.$store.dispatch('fetchUserCurrentAiConfig', currentUserId)
+        if (!currentConfig) {
+          throw new Error('未选择AI配置，请先选择AI服务')
+        }
         
         // 清空当前思维导图 - 使用空的根节点结构而不是null
         this.mindMap.setData({
@@ -193,45 +193,54 @@ export default {
         // 显示开始生成的消息
         this.$message.info(`开始使用 ${this.currentProviderName} 生成思维导图...`)
         
-        // 发起AI请求
-        await this.aiInstance.request(
-          {
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ]
-          },
-          // 流式响应回调
-          (content) => {
-            if (content) {
-              const arr = content.split(/\n+/)
-              this.generatingContent = arr.splice(0, arr.length - 1).join('\n')
+        // 使用安全代理发起AI请求
+        const aiPayload = {
+          messages: [
+            {
+              role: 'user',
+              content: prompt
             }
-            this.renderMindMap()
-          },
-          // 完成回调
-          (content) => {
-            this.generatingContent = content
-            this.generating = false
-            this.$bus.$emit('ai_generating_status', false)
-            this.renderMindMap()
-            this.$message.success(`${this.currentProviderName} 生成完成！`)
-          },
-          // 错误回调
-          (error) => {
-            console.error('AI生成失败:', error)
-            this.generating = false
-            this.$bus.$emit('ai_generating_status', false)
-            this.$message.error(`AI生成失败: ${error.message || '未知错误'}`)
-          }
-        )
+          ]
+        }
+        
+        console.log('发起安全AI请求...')
+        
+        // 调用后端代理进行AI请求
+        const response = await this.$store.dispatch('callAiThroughProxy', {
+          userId: currentUserId,
+          aiPayload: aiPayload
+        })
+        
+        // 成功获取AI响应后，开始渲染
+        this.generatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+        this.generating = false
+        this.$bus.$emit('ai_generating_status', false)
+        this.renderMindMap()
+        this.$message.success(`${this.currentProviderName} 生成完成！`)
       } catch (error) {
         console.error('AI生成异常:', error)
         this.generating = false
         this.$bus.$emit('ai_generating_status', false)
-        this.$message.error(`生成异常: ${error.message}`)
+        
+        // 根据错误类型提供更具体的错误信息
+        let errorMessage = 'AI生成失败'
+        if (error.message) {
+          if (error.message.includes('401')) {
+            errorMessage += ': 认证失败，请检查AI配置或联系管理员'
+          } else if (error.message.includes('未登录')) {
+            errorMessage += ': 用户未登录，请重新登录'
+          } else if (error.message.includes('未选择AI配置')) {
+            errorMessage += ': 请先选择AI服务配置'
+          } else if (error.message.includes('无AI使用权限')) {
+            errorMessage += ': 当前用户无AI使用权限'
+          } else {
+            errorMessage += ': ' + error.message
+          }
+        } else {
+          errorMessage += ': 未知错误'
+        }
+        
+        this.$message.error(errorMessage)
       }
     },
 
@@ -420,9 +429,6 @@ export default {
     },
 
     stopGenerate() {
-      if (this.aiInstance) {
-        this.aiInstance.stop()
-      }
       this.generating = false
       this.$bus.$emit('ai_generating_status', false)
       this.$message.success('已停止AI生成')

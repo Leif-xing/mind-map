@@ -103,7 +103,6 @@
 </template>
 
 <script>
-import Ai from '@/utils/ai'
 import { transformMarkdownTo } from 'simple-mind-map/src/parse/markdownTo'
 import {
   createUid,
@@ -127,7 +126,6 @@ export default {
   },
   data() {
     return {
-      aiInstance: null,
       isAiCreating: false,
       aiCreatingContent: '',
 
@@ -410,7 +408,26 @@ export default {
         console.error('AI生成失败:', error)
         this.resetOnAiCreatingStop()
         this.resetOnRenderEnd()
-        this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
+        
+        // 根据错误类型提供更具体的错误信息
+        let errorMessage = this.$t('ai.generationFailed')
+        if (error.message) {
+          if (error.message.includes('401')) {
+            errorMessage += ': 认证失败，请检查AI配置或联系管理员'
+          } else if (error.message.includes('未登录')) {
+            errorMessage += ': 用户未登录，请重新登录'
+          } else if (error.message.includes('未选择AI配置')) {
+            errorMessage += ': 请先选择AI服务配置'
+          } else if (error.message.includes('无AI使用权限')) {
+            errorMessage += ': 当前用户无AI使用权限'
+          } else {
+            errorMessage += ': ' + error.message
+          }
+        } else {
+          errorMessage += ': 未知错误'
+        }
+        
+        this.$message.error(errorMessage)
       }
     },
 
@@ -418,7 +435,6 @@ export default {
     resetOnAiCreatingStop() {
       this.aiCreatingMaskVisible = false
       this.isAiCreating = false
-      this.aiInstance = null
     },
 
     // 渲染结束后需要复位的数据
@@ -432,7 +448,6 @@ export default {
 
     // 停止生成
     stopCreate() {
-      this.aiInstance.stop()
       this.isAiCreating = false
       this.aiCreatingMaskVisible = false
       this.$message.success(this.$t('ai.stoppedGenerating'))
@@ -673,7 +688,7 @@ export default {
         if (!this.beingCreatePartNode) {
           return
         }
-        await this.aiTest()
+        // 移除旧的aiTest()检查，直接进行续写
         this.beingAiCreateNodeUid = this.beingCreatePartNode.getData('uid')
         const currentMindMapData = this.mindMap.getData()
         this.mindMapDataCache = JSON.stringify(currentMindMapData)
@@ -815,7 +830,7 @@ export default {
       err = () => {}
     ) {
       try {
-        await this.aiTest()
+        // 移除旧的aiTest()检查，直接进行AI对话
         
         // 检查用户是否有AI权限和有效的AI配置
         const currentUserId = this.$store.state.currentUser?.id
@@ -863,11 +878,7 @@ export default {
 
     // AI对话停止
     aiChatStop() {
-      if (this.aiInstance) {
-        this.aiInstance.stop()
-        this.isAiCreating = false
-        this.aiInstance = null
-      }
+      this.isAiCreating = false
     }
   }
 }
