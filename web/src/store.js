@@ -363,12 +363,43 @@ const store = new Vuex.Store({
       try {
         const success = await aiConfigApi.selectAiConfig(userId, configId)
         if (success) {
-          // 更新本地状态
-          const newAiSystem = {
-            ...state.aiSystem,
-            currentProvider: configId
+          // 从后端获取所选配置的详细信息
+          const selectedConfig = await aiConfigApi.getUserCurrentAiConfig(userId)
+          
+          if (selectedConfig) {
+            // 更新本地状态，包括当前配置ID和配置详情
+            const newAiSystem = {
+              ...state.aiSystem,
+              currentProvider: configId,
+              providers: {
+                ...state.aiSystem.providers,
+                [configId]: {
+                  name: selectedConfig.provider_name || selectedConfig.providerName,
+                  api: selectedConfig.api_endpoint || selectedConfig.apiEndpoint,
+                  type: 'custom',
+                  config: {
+                    model: selectedConfig.model_name || selectedConfig.modelName,
+                    // 注意：不包含API密钥等敏感信息
+                  }
+                }
+              }
+            }
+            commit('setLocalConfig', { aiSystem: newAiSystem })
+            
+            // 添加调试信息
+            console.log('选择AI配置成功 - 新的AI系统状态:', newAiSystem)
+          } else {
+            // 如果获取不到配置详情，至少更新当前选择
+            const newAiSystem = {
+              ...state.aiSystem,
+              currentProvider: configId
+            }
+            commit('setLocalConfig', { aiSystem: newAiSystem })
+            
+            // 添加调试信息
+            console.log('选择AI配置成功 - 但未获取到配置详情，AI系统状态:', newAiSystem)
           }
-          commit('setLocalConfig', { aiSystem: newAiSystem })
+          
           return success
         }
       } catch (error) {

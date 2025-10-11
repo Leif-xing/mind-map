@@ -312,13 +312,33 @@ export const mindMapApi = {
 export const aiConfigApi = {
   // 管理员创建AI提供商配置
   async createAiProviderConfig(configData) {
+    // 检查必填字段
+    if (!configData.providerName || !configData.apiEndpoint || !configData.modelName || !configData.apiKey) {
+      throw new Error('缺少必要字段')
+    }
+    
+    // 加密API密钥
+    const encryptedApiKey = await encryptApiKey(configData.apiKey)
+    
+    // 检查是否已存在相同API密钥和模型名称的配置
+    const { data: existingConfig, error: existingError } = await supabase
+      .from('ai_provider_configs')
+      .select('id, provider_name')
+      .eq('api_key_encrypted', encryptedApiKey)
+      .eq('model_name', configData.modelName)
+      .single()
+    
+    if (existingConfig) {
+      throw new Error(`已存在相同的API密钥和模型名称配置: ${existingConfig.provider_name}`)
+    }
+    
     const { data: aiConfig, error } = await supabase
       .from('ai_provider_configs')
       .insert([{
         provider_name: configData.providerName,
         api_endpoint: configData.apiEndpoint,
         model_name: configData.modelName,
-        api_key_encrypted: await encryptApiKey(configData.apiKey), // 加密存储
+        api_key_encrypted: encryptedApiKey, // 加密存储
         is_active: configData.isActive !== undefined ? configData.isActive : true,
         created_by: configData.createdBy
       }])

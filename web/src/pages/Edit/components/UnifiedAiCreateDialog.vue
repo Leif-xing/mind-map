@@ -97,7 +97,14 @@ export default {
     
     hasValidConfig() {
       const config = this.currentProvider?.config
-      return config && config.key && config.model
+      const result = config && config.model
+      console.log('hasValidConfig 计算:', {
+        currentProvider: this.currentProvider,
+        config: config,
+        model: config?.model,
+        result: result
+      })
+      return result // 只需检查模型名称，API密钥由后端代理
     }
   },
   watch: {
@@ -114,9 +121,34 @@ export default {
     },
 
     async startGenerate() {
+      // 添加调试信息
+      console.log('开始生成 - 当前AI系统状态:', this.aiSystem);
+      console.log('当前提供商:', this.currentProvider);
+      console.log('当前提供商名称:', this.currentProviderName);
+      console.log('当前模型:', this.currentModel);
+      console.log('hasValidConfig 计算结果:', this.hasValidConfig);
+      
       if (!this.hasValidConfig) {
-        this.$message.error('请先配置AI接口')
-        return
+        // 检查用户角色，显示不同的提示
+        const currentUser = this.$store.state.currentUser;
+        if (currentUser && currentUser.isAdmin) {
+          // 管理员提示配置
+          this.$message.error('请先配置AI接口')
+          return
+        } else {
+          // 普通用户提示选择AI模型
+          this.$confirm('当前还没有选择AI大模型，请先选择AI大模型', '提示', {
+            confirmButtonText: '去选择',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            // 触发打开AI选择对话框
+            this.$bus.$emit('open_ai_config')
+          }).catch(() => {
+            // 用户取消操作
+          });
+          return
+        }
       }
 
       console.log('开始AI生成，主题:', this.topic)

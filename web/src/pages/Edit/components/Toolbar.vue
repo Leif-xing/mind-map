@@ -839,6 +839,9 @@ export default {
         // 立即显示对话框
         this.showMindMapDialog = true
         
+        // 设置状态栏提示信息
+        this.statusMessage = '双击卡片切换所选思维导图'
+        
         // 初始化拖拽功能
         this.initDialogDrag()
         

@@ -40,6 +40,8 @@ export default {
                 if (userInfo && userInfo.mindMapPermission === 1) {
                   // 更新本地存储以确保信息同步
                   localStorage.setItem('currentUser', JSON.stringify(userInfo))
+                  // 将用户信息恢复到 Vuex store
+                  this.$store.commit('setCurrentUser', userInfo)
                   console.log('用户会话验证成功:', userInfo.username || userInfo.id)
                 } else {
                   // 用户权限已被禁用或用户不存在
@@ -58,6 +60,8 @@ export default {
             }
           } else {
             console.log('未找到本地用户信息')
+            // 确保 Vuex store 中的 currentUser 也是 null
+            this.$store.commit('setCurrentUser', null)
           }
         } else {
           // 使用本地存储时，验证用户是否仍然存在于本地用户列表中
@@ -78,6 +82,8 @@ export default {
               console.log('本地用户权限已被禁用，已清除登录状态')
             } else {
               console.log('本地用户会话验证成功:', currentUser.username)
+              // 将用户信息恢复到 Vuex store
+              this.$store.commit('setCurrentUser', userExists)
             }
           }
         }

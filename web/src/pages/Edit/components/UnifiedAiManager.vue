@@ -96,11 +96,32 @@ export default {
     },
 
     openCreate() {
+      // 添加调试信息
+      console.log('openCreate - 当前AI系统状态:', this.aiSystem);
+      console.log('openCreate - 当前提供商ID:', this.aiSystem.currentProvider);
+      console.log('openCreate - 当前提供商详细信息:', this.aiSystem.providers[this.aiSystem.currentProvider]);
+      
       // 检查是否已配置
       const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
-      if (!currentProvider || !currentProvider.config.key || !currentProvider.config.model) {
-        this.$message.warning('请先配置AI接口')
-        this.configDialogVisible = true
+      if (!currentProvider || !currentProvider.config.model) {
+        // 检查用户角色，显示不同的提示
+        if (this.isCurrentUserAdmin) {
+          // 管理员提示配置
+          this.$message.warning('请先配置AI接口')
+          this.configDialogVisible = true
+        } else {
+          // 普通用户提示选择AI模型
+          this.$confirm('当前还没有选择AI大模型，请先选择AI大模型', '提示', {
+            confirmButtonText: '去选择',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            // 打开AI模型选择对话框
+            this.selectionDialogVisible = true
+          }).catch(() => {
+            // 用户取消操作
+          });
+        }
         return
       }
       

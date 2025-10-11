@@ -158,44 +158,22 @@ export default {
     ...mapMutations(['setLocalConfig']),
     ...mapActions(['selectAiConfig']),
     
-    async initConfig() {
-      // 首先尝试从数据库获取配置列表
-      try {
-        const currentUser = this.$store.state.currentUser;
-        console.log('initConfig - 当前用户信息:', currentUser);
-        
-        if (currentUser && currentUser.isAdmin) {
-          const configs = await aiConfigApi.getAllAiProviderConfigs();
-          if (configs && configs.length > 0) {
-            // 如果数据库中有配置，使用第一个配置进行初始化
-            const latestConfig = configs[0]; // 使用最新的配置
-            this.existingConfigId = latestConfig.id;
-            this.config = {
-              providerName: latestConfig.providerName || '',
-              key: '', // 不从数据库加载密钥，出于安全考虑
-              model: latestConfig.modelName || '',
-              api: latestConfig.apiEndpoint || '',
-              method: 'POST'
-            };
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('获取数据库配置失败:', error);
-      }
-      
-      // 如果没有从数据库获取到配置，使用本地配置
+    initConfig() {
+      // 从当前的AI系统配置加载内容
       const currentProviderKey = this.aiSystem.currentProvider
       const currentProvider = this.aiSystem.providers[currentProviderKey] || {}
       const config = currentProvider.config || {}
       
+      // 保留当前配置信息，但不设置existingConfigId以确保新增模式
       this.config = {
-        providerName: currentProvider.name || '',
-        key: config.key || '',
-        model: config.model || '',
-        api: currentProvider.api || config.api || '',
-        method: config.method || 'POST'
+        providerName: currentProvider.name || this.config?.providerName || '',
+        key: this.config?.key || '', // 保留用户输入的密钥
+        model: config.model || this.config?.model || '', // 优先使用当前配置的模型
+        api: currentProvider.api || config.api || this.config?.api || '', // 优先使用当前配置的API
+        method: config.method || this.config?.method || 'POST'
       }
+      
+      this.existingConfigId = null; // 确保为新增模式
     },
 
     async testConnection() {
@@ -320,6 +298,9 @@ export default {
               }
             }
             
+            // 保存成功后，清空密钥字段，保留其他字段内容以供安全和便利性
+            this.config.key = '';
+            
             this.saving = false;
             this.handleClose();
           } catch (error) {
@@ -335,7 +316,7 @@ export default {
 
     handleClose() {
       this.visible = false
-      this.initConfig() // 重置配置
+      // 不再重置配置，保留输入内容供下次使用
     },
 
     getStatusTitle() {

@@ -32,20 +32,8 @@
               {{ model.isActive ? '可用' : '不可用' }}
             </el-tag>
           </div>
-          <div class="cardActions">
-            <el-button 
-              size="small" 
-              type="primary" 
-              @click="selectModel(model)"
-            >
-              选择
-            </el-button>
-          </div>
         </div>
       </div>
-    </div>
-    <div slot="footer" class="dialog-footer">
-      <el-button @click="handleCancel">取消</el-button>
     </div>
   </el-dialog>
 </template>
@@ -168,6 +156,8 @@ export default {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 20px;
+      width: 100%;
+      box-sizing: border-box;
       
       @media (max-width: 992px) {
         grid-template-columns: repeat(2, 1fr);
@@ -185,7 +175,7 @@ export default {
       transition: all 0.3s;
       cursor: pointer;
       position: relative;
-      background-color: #fff;
+      background-color: #ffffff;
       
       &:hover {
         border-color: #409eff;
@@ -232,10 +222,6 @@ export default {
           margin-top: 4px;
         }
       }
-      
-      .cardActions {
-        text-align: right;
-      }
     }
   }
 }
@@ -247,28 +233,29 @@ body.isDark {
       color: hsla(0, 0%, 100%, 0.9);
     }
     
-    .modelCard {
-      border-color: hsla(0, 0%, 100%, 0.2);
-      background-color: hsla(0, 0%, 100%, 0.05);
+    /deep/ .modelCard {
+      border-color: hsla(0, 0%, 100%, 0.2) !important;
+      background-color: rgba(255, 255, 255, 0.05) !important; /* 调整深色主题下的卡片背景，更加柔和 */
       
       &:hover {
-        border-color: #409eff;
+        border-color: #409eff !important;
+        background-color: rgba(64, 158, 255, 0.1) !important; /* 调整悬停背景 */
       }
       
       &.selected {
-        background-color: hsla(210, 100%, 30%, 0.1);
+        background-color: rgba(64, 158, 255, 0.15) !important;
       }
       
       .providerName {
-        color: hsla(0, 0%, 100%, 0.9);
+        color: hsla(0, 0%, 100%, 0.9) !important;
       }
       
       .modelName {
-        color: hsla(0, 0%, 100%, 0.7);
+        color: hsla(0, 0%, 100%, 0.7) !important;
       }
       
       .apiEndpoint {
-        color: hsla(0, 0%, 100%, 0.5);
+        color: hsla(0, 0%, 100%, 0.5) !important;
       }
     }
   }

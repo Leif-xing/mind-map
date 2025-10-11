@@ -53,7 +53,7 @@
       
       <!-- 普通用户视图：选择AI配置（卡片网格方式） -->
       <div v-else class="userView">
-        <p class="selectionTip">请选择要使用的AI模型：</p>
+        <p class="selectionTip">请<b>双击</b>选择要使用的AI模型：</p>
         <div class="modelGrid" v-if="!loading && availableConfigs.length > 0">
           <div 
             v-for="config in availableConfigs"
@@ -72,15 +72,6 @@
               >
                 {{ (config.is_active || config.isActive) ? '可用' : '不可用' }}
               </el-tag>
-            </div>
-            <div class="cardActions">
-              <el-button 
-                size="small" 
-                type="primary" 
-                @click="selectModel(config)"
-              >
-                选择
-              </el-button>
             </div>
           </div>
         </div>
@@ -130,16 +121,6 @@
       </div>
     </el-dialog>
     
-    <div slot="footer" class="dialog-footer" v-if="!isCurrentUserAdmin">
-      <el-button @click="handleCancel">取消</el-button>
-      <el-button 
-        type="primary" 
-        @click="handleConfirm" 
-        :disabled="!selectedConfig || !selectedConfigValid"
-      >
-        确认选择
-      </el-button>
-    </div>
   </el-dialog>
 </template>
 
@@ -471,6 +452,8 @@ export default {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
+    width: 100%;
+    box-sizing: border-box;
     
     @media (max-width: 992px) {
       grid-template-columns: repeat(2, 1fr);
@@ -488,7 +471,9 @@ export default {
     transition: all 0.3s;
     cursor: pointer;
     position: relative;
-    background-color: #fff;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    min-width: 0; /* 确保flex/grid项目可以缩小 */
     
     &:hover {
       border-color: #409eff;
@@ -526,9 +511,45 @@ export default {
         margin-top: 4px;
       }
     }
-    
-    .cardActions {
-      text-align: right;
+  }
+  
+  // 深色主题适配
+  body.isDark {
+    .aiSelectionDialog {
+      /deep/ .el-dialog__body {
+        color: hsla(0, 0%, 100%, 0.9);
+      }
+      
+      .selectionTip {
+        color: hsla(0, 0%, 100%, 0.7);
+        
+        b {
+          color: #409eff; /* 使用醒目的蓝色显示"双击" */
+        }
+      }
+
+      /deep/ .modelCard {
+        border-color: hsla(0, 0%, 100%, 0.2) !important;
+        background-color: rgba(255, 255, 255, 0.05) !important; /* 调整深色主题下的卡片背景，更加柔和 */
+        
+        &:hover {
+          border-color: #409eff !important;
+          background-color: rgba(64, 158, 255, 0.1) !important; /* 调整悬停背景 */
+        }
+        
+        &.selected {
+          border-color: #409eff !important;
+          background-color: rgba(64, 158, 255, 0.15) !important;
+        }
+        
+        .providerName {
+          color: hsla(0, 0%, 100%, 0.9) !important;
+        }
+        
+        .modelName {
+          color: hsla(0, 0%, 100%, 0.7) !important;
+        }
+      }
     }
   }
   
