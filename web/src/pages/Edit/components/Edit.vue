@@ -115,7 +115,6 @@ import NodeIconToolbar from './NodeIconToolbar.vue'
 import OutlineEdit from './OutlineEdit.vue'
 import { showLoading, hideLoading } from '@/utils/loading'
 import handleClipboardText from '@/utils/handleClipboardText'
-import { getParentWithClass } from '@/utils'
 import Scrollbar from './Scrollbar.vue'
 import exampleData from 'simple-mind-map/example/exampleData'
 import FormulaSidebar from './FormulaSidebar.vue'
@@ -240,7 +239,7 @@ export default {
     this.$bus.$on('export', this.export)
     this.$bus.$on('setData', this.setData)
     this.$bus.$on('loadMindMapData', this.handleLoadMindMapData)
-    console.log('🔥 Edit.vue - 已注册 loadMindMapData 事件监听器:', this.handleLoadMindMapData);
+
     this.$bus.$on('startTextEdit', this.handleStartTextEdit)
     this.$bus.$on('endTextEdit', this.handleEndTextEdit)
     this.$bus.$on('createAssociativeLine', this.handleCreateLineFromActiveNode)
@@ -364,14 +363,7 @@ export default {
           config: {}
         }
       }
-      console.log('Edit.vue - 初始化MindMap实例，参数:', {
-        el: this.$refs.mindMapContainer,
-        data: root,
-        layout: layout,
-        theme: theme.template,
-        themeConfig: theme.config,
-        viewData: view
-      });
+
       this.mindMap = new MindMap({
         el: this.$refs.mindMapContainer,
         data: root,
@@ -469,7 +461,7 @@ export default {
           })
         }
       })
-      console.log('Edit.vue - MindMap实例创建完成:', this.mindMap);
+
       this.loadPlugins()
       this.mindMap.keyCommand.addShortcut('Control+s', () => {
         this.manualSave()
@@ -566,23 +558,18 @@ export default {
     
     // 强制重新渲染思维导图
     forceReRender() {
-      console.log('Edit.vue - forceReRender方法被调用');
       if (this.mindMap) {
         try {
           // 清除所有缓存
           if (this.mindMap.renderer) {
-            console.log('Edit.vue - 清除渲染器缓存');
             this.mindMap.renderer.clear();
           }
           // 重新渲染
-          console.log('Edit.vue - 重新渲染');
           this.mindMap.reRender();
           // 重置视图
           if (this.mindMap.view) {
-            console.log('Edit.vue - 重置视图');
             this.mindMap.view.reset();
           }
-          console.log('Edit.vue - 强制重新渲染完成');
         } catch (err) {
           console.error('Edit.vue - 强制重新渲染出错:', err);
         }
@@ -591,8 +578,6 @@ export default {
     
     // 处理加载思维导图数据
     handleLoadMindMapData(mindMapDataObj) {
-      console.log('🔥 Edit.vue - handleLoadMindMapData 方法被调用!');
-      console.log('🔥 Edit.vue - 接收到 loadMindMapData 事件:', mindMapDataObj);
       
       if (!this.mindMap) {
         console.error('Edit.vue - mindMap 实例不存在，无法加载数据');
@@ -602,7 +587,6 @@ export default {
       try {
         // 提取数据内容
         const data = mindMapDataObj.content || mindMapDataObj;
-        console.log('Edit.vue - 准备加载的数据:', data);
         
         if (!data) {
           console.error('Edit.vue - 没有有效的数据内容');
@@ -614,7 +598,6 @@ export default {
         
         // 发送加载完成事件
         this.$bus.$emit('mindMapLoaded');
-        console.log('Edit.vue - 思维导图数据加载完成，发送 mindMapLoaded 事件');
         
       } catch (error) {
         console.error('Edit.vue - 加载思维导图数据失败:', error);

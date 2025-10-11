@@ -5,7 +5,6 @@
 </template>
 
 <script>
-import supabase from '@/utils/supabase'
 import { userApi } from '@/api/supabase-api'
 
 export default {
@@ -22,8 +21,8 @@ export default {
           
           if (currentUser) {
             try {
+
               // 验证用户是否仍然存在于 Supabase 数据库中
-              console.log('验证用户信息 ID:', currentUser.id, '邮箱:', currentUser.email)
               
               if (currentUser.id) {
                 // 验证用户是否仍然存在且有效
@@ -42,24 +41,19 @@ export default {
                   localStorage.setItem('currentUser', JSON.stringify(userInfo))
                   // 将用户信息恢复到 Vuex store
                   this.$store.commit('setCurrentUser', userInfo)
-                  console.log('用户会话验证成功:', userInfo.username || userInfo.id)
                 } else {
                   // 用户权限已被禁用或用户不存在
                   localStorage.removeItem('currentUser')
-                  console.log('用户权限已被禁用或用户不存在，已清除登录状态')
                 }
               } else {
                 // 缺少必要的用户ID，清除登录状态
                 localStorage.removeItem('currentUser')
-                console.log('用户信息不完整（缺少ID），已清除登录状态')
               }
             } catch (fetchError) {
               // 用户不存在或验证失败，清除登录状态
-              console.log('用户验证失败，可能已被删除或权限变更，已清除登录状态')
               localStorage.removeItem('currentUser')
             }
           } else {
-            console.log('未找到本地用户信息')
             // 确保 Vuex store 中的 currentUser 也是 null
             this.$store.commit('setCurrentUser', null)
           }
@@ -75,13 +69,10 @@ export default {
             if (!userExists) {
               // 用户不存在了，清除登录状态
               localStorage.removeItem('currentUser')
-              console.log('本地用户已被删除，已清除登录状态')
             } else if (userExists.mindMapPermission !== 1) {
               // 用户权限已被禁用
               localStorage.removeItem('currentUser')
-              console.log('本地用户权限已被禁用，已清除登录状态')
             } else {
-              console.log('本地用户会话验证成功:', currentUser.username)
               // 将用户信息恢复到 Vuex store
               this.$store.commit('setCurrentUser', userExists)
             }

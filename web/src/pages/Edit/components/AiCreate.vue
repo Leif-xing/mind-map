@@ -210,21 +210,10 @@ export default {
 
       const config = currentProvider.config
 
-      console.log('AI连接测试:', {
-        hostname: window.location.hostname,
-        isDeployed: isDeployed,
-        currentProvider: currentProvider.name,
-        config: {
-          api: currentProvider.api,
-          model: config.model,
-          hasKey: !!config.key,
-          port: config.port
-        }
-      })
+
 
       if (isDeployed) {
-        // 部署环境：直接测试AI API
-        console.log('部署环境 - 测试AI API连接...')
+
 
         // 确保使用HTTPS
         const secureApi = currentProvider.api.replace(/^http:\/\//, 'https://')
@@ -244,7 +233,6 @@ export default {
               stream: false
             })
           })
-          console.log('AI API测试响应:', response.status, response.statusText)
 
           if (response.ok) {
             this.$message.success(this.$t('ai.connectSuccessful'))
@@ -261,12 +249,10 @@ export default {
         }
       } else {
         // 本地环境：测试代理服务
-        console.log('本地环境 - 测试代理服务连接...')
         try {
           const response = await fetch(`http://localhost:${config.port}/ai/test`, {
             method: 'GET'
           })
-          console.log('代理服务测试响应:', response.status)
 
           this.$message.success(this.$t('ai.connectSuccessful'))
           this.clientTipDialogVisible = false
@@ -357,7 +343,7 @@ export default {
         return
       }
       
-      console.log('开始AI生成，输入内容:', aiInputText)
+
       
       this.closeAiCreateDialog()
       this.aiCreatingMaskVisible = true
@@ -391,7 +377,7 @@ export default {
         // 先设置为空数据，但不调用setRootNodeCenter（因为此时没有节点）
         this.mindMap.setData(null)
         
-        console.log('发起安全AI请求...')
+
         
         // 调用后端代理进行AI请求
         const response = await this.$store.dispatch('callAiThroughProxy', {
@@ -457,14 +443,13 @@ export default {
     loopRenderOnAiCreating() {
       if (!this.aiCreatingContent.trim() || this.isLoopRendering) return
       
-      console.log('开始渲染AI内容:', this.aiCreatingContent)
+
       
       this.isLoopRendering = true
       let treeData
       
       try {
         treeData = transformMarkdownTo(this.aiCreatingContent)
-        console.log('转换后的树数据:', treeData)
         
         // 验证数据有效性
         if (!treeData || typeof treeData !== 'object') {
@@ -532,13 +517,11 @@ export default {
       this.mindMap.on('node_tree_render_end', onRenderEnd)
 
       try {
-        console.log('设置思维导图数据...')
         this.mindMap.setData(treeData)
         
         // 确保根节点居中（在有数据后调用）
         setTimeout(() => {
           if (this.mindMap.renderer && this.mindMap.renderer.root) {
-            console.log('设置根节点居中...')
             this.mindMap.renderer.setRootNodeCenter()
           }
         }, 100)
