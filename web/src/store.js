@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import { storeLocalConfig, getUserData, storeUserData } from '@/api'
 import { userApi, mindMapApi, aiConfigApi } from '@/api/supabase-api'
+import { compressMindMap, decompressMindMap } from '@/utils/mindmap-compression'
 
 Vue.use(Vuex)
 

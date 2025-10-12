@@ -1,4 +1,5 @@
 import supabase from '@/utils/supabase'
+import { compressMindMap, decompressMindMap } from '@/utils/mindmap-compression'
 
 // 用户相关API
 export const userApi = {
@@ -193,12 +194,15 @@ export const userApi = {
 export const mindMapApi = {
   // 保存思维导图
   async saveMindMap(userId, title, content) {
+    // 压缩思维导图数据
+    const compressedContent = compressMindMap(content)
+    
     const { data: mindMap, error } = await supabase
       .from('mind_maps')
       .insert([{
         user_id: userId,
         title,
-        content
+        content: compressedContent  // 存储压缩后的内容
       }])
       .select()
       .single()
@@ -212,11 +216,14 @@ export const mindMapApi = {
 
   // 更新思维导图
   async updateMindMap(mindMapId, title, content) {
+    // 压缩思维导图数据
+    const compressedContent = compressMindMap(content)
+    
     const { data: updatedMindMap, error } = await supabase
       .from('mind_maps')
       .update({
         title,
-        content,
+        content: compressedContent,  // 存储压缩后的内容
         updated_at: new Date().toISOString()
       })
       .eq('id', mindMapId)
@@ -233,9 +240,10 @@ export const mindMapApi = {
   // 获取用户的思维导图列表
   async getUserMindMaps(userId) {
     // console.log('API - 开始获取用户思维导图列表，用户ID:', userId); // 隐私保护：不输出用户ID
+    // 只获取元数据，不获取内容（内容在单独获取时才解压缩）
     const { data: mindMaps, error } = await supabase
       .from('mind_maps')
-      .select('*')
+      .select('id, user_id, title, created_at, updated_at, is_public')  // 不包含content字段
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
 
@@ -245,14 +253,6 @@ export const mindMapApi = {
     }
 
     // console.log('API - 获取到的思维导图列表:', mindMaps); // 隐私保护：不输出思维导图数据
-    if (mindMaps && mindMaps.length > 0) {
-      mindMaps.forEach((map, index) => {
-        // console.log(`API - 思维导图 ${index + 1}: ID=${map.id}, 标题=${map.title}, 内容类型=${typeof map.content}, 是否有内容=${!!map.content}`); // 隐私保护：不输出思维导图数据
-        if (map.content) {
-          // console.log(`API - 思维导图 ${index + 1} 内容预览:`, map.content.root ? map.content.root.data.text.substring(0, 50) + '...' : '无根节点'); // 隐私保护：不输出内容预览
-        }
-      });
-    }
     return mindMaps
   },
 
@@ -267,6 +267,16 @@ export const mindMapApi = {
 
     if (error) {
       throw new Error(error.message || '获取思维导图失败')
+    }
+
+    // 如果内容存在，则解压缩
+    if (mindMap && mindMap.content) {
+      try {
+        mindMap.content = decompressMindMap(mindMap.content)
+      } catch (decompressError) {
+        console.error('解压缩思维导图失败:', decompressError)
+        throw new Error('思维导图数据损坏或解压缩失败')
+      }
     }
 
     return mindMap
@@ -297,7 +307,7 @@ export const mindMapApi = {
       })
       .eq('id', mindMapId)
       .eq('user_id', userId)
-      .select()
+      .select('id, user_id, title, created_at, updated_at, is_public')  // 只返回元数据，不返回内容
       .single()
 
     if (error) {
