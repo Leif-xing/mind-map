@@ -179,7 +179,10 @@ export default {
     value(val) {
       this.visible = val
       if (val) {
-        this.loadAvailableConfigs()
+        // 延迟加载配置，先显示对话框，再加载数据
+        this.$nextTick(() => {
+          this.loadAvailableConfigs();
+        });
       }
     },
     visible(val) {
@@ -190,6 +193,11 @@ export default {
     ...mapActions(['fetchAvailableAiConfigs', 'selectAiConfig']),
     
     async loadAvailableConfigs() {
+      // 防止重复加载
+      if (this.loading) {
+        return;
+      }
+      
       this.loading = true
       try {
         // 检查当前用户
@@ -211,15 +219,40 @@ export default {
           // 管理员获取所有配置
           this.availableConfigs = await aiConfigApi.getAllAiProviderConfigs();
         } else {
-          // 普通用户获取可用配置
-          this.availableConfigs = await this.fetchAvailableAiConfigs(userId);
-          
-          // 设置默认选择
-          const currentConfigId = this.aiSystem.currentProvider;
-          if (currentConfigId && this.availableConfigs.some(c => c.id === currentConfigId)) {
-            this.selectedConfig = currentConfigId;
-          } else if (this.availableConfigs.length > 0) {
-            this.selectedConfig = this.availableConfigs[0].id;
+          // 普通用户获取可用配置 - 先检查store中是否已有缓存数据
+          const cachedConfigs = this.$store.getters.availableAiConfigs;
+          if (cachedConfigs && cachedConfigs.length > 0) {
+            // 如果有缓存数据，先使用缓存，然后在后台更新
+            this.availableConfigs = cachedConfigs;
+            
+            // 在后台获取最新数据，更新UI
+            setTimeout(async () => {
+              try {
+                const updatedConfigs = await this.fetchAvailableAiConfigs(userId);
+                this.availableConfigs = updatedConfigs;
+                
+                // 设置默认选择
+                const currentConfigId = this.aiSystem.currentProvider;
+                if (currentConfigId && this.availableConfigs.some(c => c.id === currentConfigId)) {
+                  this.selectedConfig = currentConfigId;
+                } else if (this.availableConfigs.length > 0) {
+                  this.selectedConfig = this.availableConfigs[0].id;
+                }
+              } catch (error) {
+                console.error('更新AI配置失败:', error);
+              }
+            }, 100); // 短暂延迟以避免阻塞UI
+          } else {
+            // 没有缓存数据，正常加载
+            this.availableConfigs = await this.fetchAvailableAiConfigs(userId);
+            
+            // 设置默认选择
+            const currentConfigId = this.aiSystem.currentProvider;
+            if (currentConfigId && this.availableConfigs.some(c => c.id === currentConfigId)) {
+              this.selectedConfig = currentConfigId;
+            } else if (this.availableConfigs.length > 0) {
+              this.selectedConfig = this.availableConfigs[0].id;
+            }
           }
         }
       } catch (error) {

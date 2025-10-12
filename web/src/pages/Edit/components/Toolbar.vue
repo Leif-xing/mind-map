@@ -436,6 +436,7 @@ export default {
     this.$nextTick(() => {
       setTimeout(() => {
         this.preloadMindMaps()
+        this.preloadAiConfigs() // 同时预加载AI模型配置
       }, 2000) // 2秒后开始预加载
     })
   },
@@ -861,7 +862,7 @@ export default {
         
         // 如果已有预加载的数据，直接使用
         if (this.mindMaps.length > 0) {
-          console.log('使用预加载的思维导图数据，共', this.mindMaps.length, '个')
+          // console.log('使用预加载的思维导图数据，共', this.mindMaps.length, '个'); // 仅调试时使用
           this.mindMapLoading = false
         } else {
           // 没有预加载数据，显示加载状态并获取
@@ -869,13 +870,13 @@ export default {
           
           try {
             const mindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
-            console.log('获取到的思维导图列表:', mindMaps);
-            console.log('思维导图列表详情:');
-            if (mindMaps && mindMaps.length > 0) {
-              mindMaps.forEach((map, index) => {
-                console.log(`  ${index + 1}. ID: ${map.id}, 标题: ${map.title}, 内容预览: ${map.content ? (map.content.root ? map.content.root.data.text : '无根节点') : '无内容'}`);
-              });
-            }
+            // console.log('获取到的思维导图列表:', mindMaps); // 隐私保护：不输出用户数据
+            // console.log('思维导图列表详情:'); // 隐私保护：不输出用户数据
+            // if (mindMaps && mindMaps.length > 0) {
+            //   mindMaps.forEach((map, index) => {
+            //     console.log(`  ${index + 1}. ID: ${map.id}, 标题: ${map.title}, 内容预览: ${map.content ? (map.content.root ? map.content.root.data.text : '无根节点') : '无内容'}`); // 隐私保护：不输出用户数据
+            //   });
+            // }
             this.mindMaps = mindMaps
           } catch (error) {
             console.error('加载思维导图失败:', error)
@@ -1005,64 +1006,64 @@ export default {
     
     // 加载思维导图
     async loadMindMap(selectedMindMap) {
-      console.log('准备加载思维导图:', selectedMindMap);
-      console.log('准备加载的思维导图ID:', selectedMindMap.id);
-      console.log('准备加载的思维导图标题:', selectedMindMap.title);
-      console.log('准备加载的思维导图内容预览:', selectedMindMap.content ? selectedMindMap.content.root.data.text.substring(0, 50) + '...' : '无内容');
+      // console.log('准备加载思维导图:', selectedMindMap); // 隐私保护：不输出用户数据
+      // console.log('准备加载的思维导图ID:', selectedMindMap.id); // 隐私保护：不输出用户数据
+      // console.log('准备加载的思维导图标题:', selectedMindMap.title); // 隐私保护：不输出用户数据
+      // console.log('准备加载的思维导图内容预览:', selectedMindMap.content ? selectedMindMap.content.root.data.text.substring(0, 50) + '...' : '无内容'); // 隐私保护：不输出用户数据
       
       // 保存一份副本以避免引用问题
       // 使用更深层的复制方法，确保所有属性都被复制
       const mindMapToLoad = JSON.parse(JSON.stringify(selectedMindMap));
-      console.log('复制后的思维导图子节点检查:', {
-        hasContent: !!mindMapToLoad.content,
-        hasRoot: !!mindMapToLoad.content?.root,
-        hasChildren: !!mindMapToLoad.content?.root?.children,
-        childCount: mindMapToLoad.content?.root?.children ? mindMapToLoad.content.root.children.length : 0,
-        childrenPreview: mindMapToLoad.content?.root?.children?.slice(0, 2).map(child => ({
-          text: child.data?.text,
-          childCount: child.children?.length || 0
-        }))
-      });
-      console.log('复制后的思维导图:', mindMapToLoad);
+      // console.log('复制后的思维导图子节点检查:', {
+      //   hasContent: !!mindMapToLoad.content,
+      //   hasRoot: !!mindMapToLoad.content?.root,
+      //   hasChildren: !!mindMapToLoad.content?.root?.children,
+      //   childCount: mindMapToLoad.content?.root?.children ? mindMapToLoad.content.root.children.length : 0,
+      //   childrenPreview: mindMapToLoad.content?.root?.children?.slice(0, 2).map(child => ({
+      //     text: child.data?.text,
+      //     childCount: child.children?.length || 0
+      //   }))
+      // }); // 隐私保护：不输出用户数据
+      // console.log('复制后的思维导图:', mindMapToLoad); // 隐私保护：不输出用户数据
       
       try {
         // 加载思维导图
-        console.log('发送加载思维导图事件，数据:', { content: mindMapToLoad.content });
-        console.log('即将加载的思维导图ID:', mindMapToLoad.id);
-        console.log('即将加载的思维导图标题:', mindMapToLoad.title);
+        // console.log('发送加载思维导图事件，数据:', { content: mindMapToLoad.content }); // 隐私保护：不输出用户数据
+        // console.log('即将加载的思维导图ID:', mindMapToLoad.id); // 隐私保护：不输出用户数据
+        // console.log('即将加载的思维导图标题:', mindMapToLoad.title); // 隐私保护：不输出用户数据
         
         // 确保传递正确的数据格式
         const contentToLoad = mindMapToLoad.content;
-        console.log('加载的内容结构检查:', {
-          hasRoot: !!contentToLoad?.root,
-          rootData: contentToLoad?.root ? contentToLoad.root.data : null,
-          contentKeys: contentToLoad ? Object.keys(contentToLoad) : null
-        });
+        // console.log('加载的内容结构检查:', {
+        //   hasRoot: !!contentToLoad?.root,
+        //   rootData: contentToLoad?.root ? contentToLoad.root.data : null,
+        //   contentKeys: contentToLoad ? Object.keys(contentToLoad) : null
+        // }); // 隐私保护：不输出用户数据
         
         // 创建一个Promise来确保数据加载完成
         const loadPromise = new Promise((resolve) => {
           // 监听一个自定义事件，当思维导图渲染完成时触发
           const listener = () => {
             this.$bus.$off('mindMapLoaded', listener);
-            console.log('接收到思维导图加载完成事件');
+            // console.log('接收到思维导图加载完成事件'); // 仅调试时使用
             resolve();
           };
           this.$bus.$on('mindMapLoaded', listener);
           
           // 检查 contentToLoad 是否包含完整的子节点数据
-          console.log('准备发送的思维导图数据检查:', {
-            hasRoot: !!contentToLoad?.root,
-            hasChildren: !!contentToLoad?.root?.children,
-            childCount: contentToLoad?.root?.children ? contentToLoad.root.children.length : 0,
-            childrenPreview: contentToLoad?.root?.children?.slice(0, 2).map(child => ({
-              text: child.data?.text,
-              childCount: child.children?.length || 0
-            }))
-          });
+          // console.log('准备发送的思维导图数据检查:', {
+          //   hasRoot: !!contentToLoad?.root,
+          //   hasChildren: !!contentToLoad?.root?.children,
+          //   childCount: contentToLoad?.root?.children ? contentToLoad.root.children.length : 0,
+          //   childrenPreview: contentToLoad?.root?.children?.slice(0, 2).map(child => ({
+          //     text: child.data?.text,
+          //     childCount: child.children?.length || 0
+          //   }))
+          // }); // 隐私保护：不输出用户数据
           
-          console.log('🚀 Toolbar.vue - 正在发送 loadMindMapData 事件');
-          console.log('🚀 Toolbar.vue - 事件总线实例:', this.$bus);
-          console.log('🚀 Toolbar.vue - 发送的数据:', { content: contentToLoad });
+          // console.log('🚀 Toolbar.vue - 正在发送 loadMindMapData 事件'); // 仅调试时使用
+          // console.log('🚀 Toolbar.vue - 事件总线实例:', this.$bus); // 仅调试时使用
+          // console.log('🚀 Toolbar.vue - 发送的数据:', { content: contentToLoad }); // 隐私保护：不输出用户数据
           // 发送加载数据事件
           this.$bus.$emit('loadMindMapData', { content: contentToLoad });
           
@@ -1075,9 +1076,9 @@ export default {
         
         // 等待思维导图加载完成后再关闭对话框
         await loadPromise;
-        console.log('思维导图已加载，关闭对话框');
+        // console.log('思维导图已加载，关闭对话框'); // 仅调试时使用
         this.closeMindMapDialog();
-        console.log('思维导图加载完成');
+        // console.log('思维导图加载完成'); // 仅调试时使用
       } catch (err) {
         console.error('加载思维导图异常:', err);
       }
@@ -1085,7 +1086,7 @@ export default {
     
     // 删除思维导图
     async deleteMindMap(mindMap) {
-      console.log('准备删除思维导图:', mindMap);
+      // console.log('准备删除思维导图:', mindMap); // 隐私保护：不输出用户数据
       try {
         await this.$confirm(`确定要删除思维导图 "${mindMap.title}" 吗？`, '删除确认', {
           confirmButtonText: '确定',
@@ -1109,7 +1110,7 @@ export default {
         // 重新加载思维导图列表
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
         this.mindMaps = updatedMindMaps
-        console.log('删除后更新思维导图列表，共', updatedMindMaps.length, '个')
+        // console.log('删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
         
         // 设置状态消息在8秒后清除
         setTimeout(() => {
@@ -1149,12 +1150,29 @@ export default {
           return // 用户未登录，跳过预加载
         }
         
-        console.log('开始预加载思维导图列表...')
+        // console.log('开始预加载思维导图列表...'); // 仅调试时使用
         const mindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
         this.mindMaps = mindMaps
-        console.log('思维导图列表预加载完成，共', mindMaps.length, '个')
+        // console.log('思维导图列表预加载完成，共', mindMaps.length, '个'); // 仅调试时使用
       } catch (error) {
-        console.log('思维导图预加载失败:', error.message)
+        // console.log('思维导图预加载失败:', error.message); // 仅调试时使用
+        // 预加载失败不影响用户体验，静默处理
+      }
+    },
+    
+    // 预加载AI模型配置
+    async preloadAiConfigs() {
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+        if (!currentUser) {
+          return // 用户未登录，跳过预加载
+        }
+        
+        // console.log('开始预加载AI模型配置...'); // 仅调试时使用
+        const aiConfigs = await this.$store.dispatch('fetchAvailableAiConfigs', currentUser.id)
+        // console.log('AI模型配置预加载完成，共', aiConfigs.length, '个'); // 仅调试时使用
+      } catch (error) {
+        // console.log('AI模型配置预加载失败:', error.message); // 仅调试时使用
         // 预加载失败不影响用户体验，静默处理
       }
     },
@@ -1176,12 +1194,12 @@ export default {
           return;
         }
         
-        console.log('开始刷新思维导图列表...');
+        // console.log('开始刷新思维导图列表...'); // 仅调试时使用
         const mindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id);
         this.mindMaps = mindMaps;
         this.filteredMindMaps = mindMaps; // 同时更新过滤后的列表
         
-        console.log('思维导图列表刷新完成，共', mindMaps.length, '个');
+        // console.log('思维导图列表刷新完成，共', mindMaps.length, '个'); // 仅调试时使用
         this.$message.success(`思维导图列表刷新完成，共 ${mindMaps.length} 个`);
         this.statusMessage = `已更新 ${mindMaps.length} 个思维导图`;
       } catch (error) {
@@ -1279,7 +1297,7 @@ export default {
         // 重新加载思维导图列表
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
         this.mindMaps = updatedMindMaps
-        console.log('批量删除后更新思维导图列表，共', updatedMindMaps.length, '个')
+        // console.log('批量删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
         
         // 设置状态消息在8秒后清除
         setTimeout(() => {

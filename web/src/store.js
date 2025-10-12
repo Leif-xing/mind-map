@@ -227,7 +227,7 @@ const store = new Vuex.Store({
   actions: {
     // 用户注册（使用Supabase）
     async registerUser({ commit }, { username, password, email }) {
-      console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled);
+      // console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled); // 仅调试时使用
       if (this.state.supabaseEnabled) {
         // 使用Supabase进行注册
         const user = await userApi.register(username, password, email)
@@ -240,7 +240,7 @@ const store = new Vuex.Store({
     
     // 用户登录（使用Supabase）
     async loginUser({ commit }, { username, password }) {
-      console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled);
+      // console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled); // 仅调试时使用
       let user;
       if (this.state.supabaseEnabled) {
         // 使用Supabase进行登录
@@ -275,7 +275,7 @@ const store = new Vuex.Store({
     async getUserMindMaps({ commit }, userId) {
       if (this.state.supabaseEnabled) {
         const mindMaps = await mindMapApi.getUserMindMaps(userId)
-        console.log('从Supabase获取到的思维导图列表:', mindMaps);
+        // console.log('从Supabase获取到的思维导图列表:', mindMaps); // 隐私保护：不输出用户数据
         return mindMaps
       } else {
         // 返回本地存储的思维导图数据
@@ -331,7 +331,7 @@ const store = new Vuex.Store({
           await userApi.updatePassword(userId, newPassword);
           // 注意：出于安全考虑，实际的密码更新需要使用专门的API
           // 这里仅作为占位符，实际实现需要根据你的 Supabase 配置进行调整
-          console.log('通过Supabase更新密码成功');
+          // console.log('通过Supabase更新密码成功'); // 仅调试时使用
         } catch (error) {
           console.error('更新数据库密码失败:', error);
           throw error;
@@ -377,49 +377,78 @@ const store = new Vuex.Store({
       }
     },
     
-    // 用户选择AI配置
+    // 用户选择AI配置（优化版本：立即更新UI，异步更新数据库）
     async selectAiConfig({ commit, state }, { userId, configId }) {
       try {
-        const success = await aiConfigApi.selectAiConfig(userId, configId)
-        if (success) {
-          // 从后端获取所选配置的详细信息
-          const selectedConfig = await aiConfigApi.getUserCurrentAiConfig(userId)
+        // 首先尝试从本地状态获取配置，避免重复数据库查询
+        const providers = state.aiSystem.providers || {};
+        const configInState = providers[configId];
+        
+        if (configInState) {
+          // 如果配置已经在本地状态中，立即更新当前配置，然后异步更新数据库
+          const newAiSystem = {
+            ...state.aiSystem,
+            currentProvider: configId
+          };
+          commit('setLocalConfig', { aiSystem: newAiSystem });
           
-          if (selectedConfig) {
-            // 更新本地状态，包括当前配置ID和配置详情
-            const newAiSystem = {
-              ...state.aiSystem,
-              currentProvider: configId,
-              providers: {
-                ...state.aiSystem.providers,
-                [configId]: {
-                  name: selectedConfig.provider_name || selectedConfig.providerName,
-                  api: selectedConfig.api_endpoint || selectedConfig.apiEndpoint,
-                  type: 'custom',
-                  config: {
-                    model: selectedConfig.model_name || selectedConfig.modelName,
-                    // 注意：不包含API密钥等敏感信息
+          // 异步更新数据库，不阻塞UI响应
+          aiConfigApi.selectAiConfig(userId, configId)
+            .then(success => {
+              if (success) {
+                // console.log('AI配置选择已同步到数据库:', configId); // 仅调试时使用
+              } else {
+                console.error('AI配置选择同步到数据库失败:', configId);
+              }
+            })
+            .catch(error => {
+              console.error('异步更新AI配置选择到数据库失败:', error);
+            });
+          
+          return true;
+        } else {
+          // 如果配置不在本地状态中，按原方式处理
+          const success = await aiConfigApi.selectAiConfig(userId, configId)
+          if (success) {
+            // 从后端获取所选配置的详细信息
+            const selectedConfig = await aiConfigApi.getUserCurrentAiConfig(userId)
+            
+            if (selectedConfig) {
+              // 更新本地状态，包括当前配置ID和配置详情
+              const newAiSystem = {
+                ...state.aiSystem,
+                currentProvider: configId,
+                providers: {
+                  ...state.aiSystem.providers,
+                  [configId]: {
+                    name: selectedConfig.provider_name || selectedConfig.providerName,
+                    api: selectedConfig.api_endpoint || selectedConfig.apiEndpoint,
+                    type: 'custom',
+                    config: {
+                      model: selectedConfig.model_name || selectedConfig.modelName,
+                      // 注意：不包含API密钥等敏感信息
+                    }
                   }
                 }
               }
+              commit('setLocalConfig', { aiSystem: newAiSystem })
+              
+              // 添加调试信息
+              // console.log('选择AI配置成功 - 新的AI系统状态:', newAiSystem); // 隐私保护：不输出系统状态
+            } else {
+              // 如果获取不到配置详情，至少更新当前选择
+              const newAiSystem = {
+                ...state.aiSystem,
+                currentProvider: configId
+              }
+              commit('setLocalConfig', { aiSystem: newAiSystem })
+              
+              // 添加调试信息
+              // console.log('选择AI配置成功 - 但未获取到配置详情，AI系统状态:', newAiSystem); // 隐私保护：不输出系统状态
             }
-            commit('setLocalConfig', { aiSystem: newAiSystem })
             
-            // 添加调试信息
-            console.log('选择AI配置成功 - 新的AI系统状态:', newAiSystem)
-          } else {
-            // 如果获取不到配置详情，至少更新当前选择
-            const newAiSystem = {
-              ...state.aiSystem,
-              currentProvider: configId
-            }
-            commit('setLocalConfig', { aiSystem: newAiSystem })
-            
-            // 添加调试信息
-            console.log('选择AI配置成功 - 但未获取到配置详情，AI系统状态:', newAiSystem)
+            return success
           }
-          
-          return success
         }
       } catch (error) {
         console.error('选择AI配置失败:', error)
@@ -469,6 +498,34 @@ const store = new Vuex.Store({
         console.error('AI服务调用失败:', error)
         throw error
       }
+    }
+  },
+  getters: {
+    // 获取用户可用的AI配置
+    availableAiConfigs: (state) => {
+      // 从AI系统中提取可用的配置信息，不包含敏感信息如API密钥
+      const currentProviderId = state.aiSystem.currentProvider;
+      const providers = state.aiSystem.providers || {};
+      
+      // 只返回激活状态的配置（普通用户视角）
+      const availableConfigs = [];
+      Object.keys(providers).forEach(key => {
+        const provider = providers[key];
+        // 仅返回非内置配置（即从数据库获取的配置）
+        if (key !== 'huoshan' && key !== 'navy') {
+          availableConfigs.push({
+            id: key,
+            provider_name: provider.name || provider.providerName,
+            api_endpoint: provider.api || provider.apiEndpoint,
+            model_name: provider.config?.model || provider.modelName,
+            is_active: true, // 从数据库加载的配置默认为激活状态
+            created_at: provider.createdAt,
+            updated_at: provider.updatedAt
+          });
+        }
+      });
+      
+      return availableConfigs;
     }
   }
 })

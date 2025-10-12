@@ -4,7 +4,7 @@ import supabase from '@/utils/supabase'
 export const userApi = {
   // 注册用户
   async register(username, password, email = null) {
-    console.log('Supabase API - Register called with:', { username, email });
+
     
     // 首先检查用户名是否已存在
     const { data: existingUser, error: checkError } = await supabase
@@ -14,12 +14,12 @@ export const userApi = {
       .single()
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 表示未找到数据
-      console.log('Supabase API - Check username error:', checkError);
+      // console.log('Supabase API - Check username error:', checkError); // 调试时可启用
       throw new Error('检查用户名时出错')
     }
 
     if (existingUser) {
-      console.log('Supabase API - Username already exists:', existingUser);
+      // console.log('Supabase API - Username already exists:', existingUser); // 隐私保护：不输出用户信息
       throw new Error('用户名已存在')
     }
 
@@ -36,11 +36,11 @@ export const userApi = {
       .single()
 
     if (error) {
-      console.log('Supabase API - Insert user error:', error);
+      // console.log('Supabase API - Insert user error:', error); // 调试时可启用
       throw new Error(error.message || '注册失败')
     }
 
-    console.log('Supabase API - User registered successfully:', newUser);
+    // console.log('Supabase API - User registered successfully:', newUser); // 隐私保护：不输出用户数据
     return newUser
   },
 
@@ -160,7 +160,7 @@ export const userApi = {
   // 更新用户权限
   // 更新用户导图权限
   async updateMindMapPermission(userId, permission) {
-    console.log('Updating mind map permission:', { userId, permission });
+    // console.log('Updating mind map permission:', { userId, permission }); // 隐私保护：不输出用户ID
     
     const { error } = await supabase
       .from('users')
@@ -184,7 +184,7 @@ export const userApi = {
       throw new Error(selectError.message || '获取更新后的用户数据失败')
     }
 
-    console.log('Updated user data:', updatedUser);
+    // console.log('Updated user data:', updatedUser); // 隐私保护：不输出用户数据
     return updatedUser
   }
 }
@@ -232,7 +232,7 @@ export const mindMapApi = {
 
   // 获取用户的思维导图列表
   async getUserMindMaps(userId) {
-    console.log('API - 开始获取用户思维导图列表，用户ID:', userId);
+    // console.log('API - 开始获取用户思维导图列表，用户ID:', userId); // 隐私保护：不输出用户ID
     const { data: mindMaps, error } = await supabase
       .from('mind_maps')
       .select('*')
@@ -244,12 +244,12 @@ export const mindMapApi = {
       throw new Error(error.message || '获取思维导图列表失败')
     }
 
-    console.log('API - 获取到的思维导图列表:', mindMaps);
+    // console.log('API - 获取到的思维导图列表:', mindMaps); // 隐私保护：不输出思维导图数据
     if (mindMaps && mindMaps.length > 0) {
       mindMaps.forEach((map, index) => {
-        console.log(`API - 思维导图 ${index + 1}: ID=${map.id}, 标题=${map.title}, 内容类型=${typeof map.content}, 是否有内容=${!!map.content}`);
+        // console.log(`API - 思维导图 ${index + 1}: ID=${map.id}, 标题=${map.title}, 内容类型=${typeof map.content}, 是否有内容=${!!map.content}`); // 隐私保护：不输出思维导图数据
         if (map.content) {
-          console.log(`API - 思维导图 ${index + 1} 内容预览:`, map.content.root ? map.content.root.data.text.substring(0, 50) + '...' : '无根节点');
+          // console.log(`API - 思维导图 ${index + 1} 内容预览:`, map.content.root ? map.content.root.data.text.substring(0, 50) + '...' : '无根节点'); // 隐私保护：不输出内容预览
         }
       });
     }
@@ -475,7 +475,7 @@ export const aiConfigApi = {
       throw new Error(error.message || '更新密码失败');
     }
     
-    console.log('密码更新成功');
+
     return { success: true };
   },
   
@@ -560,7 +560,7 @@ export const aiConfigApi = {
   
   // 通过后端代理调用AI服务（基于数据库配置）
   async callAiService(userId, aiPayload) {
-    console.log('开始AI服务调用:', { userId, hasPayload: !!aiPayload })
+    // console.log('开始AI服务调用:', { userId, hasPayload: !!aiPayload }); // 隐私保护：不输出用户ID和请求负载
     
     // 验证必要参数
     if (!userId) {
@@ -571,11 +571,11 @@ export const aiConfigApi = {
       throw new Error('AI请求数据不能为空')
     }
     
-    console.log('准备发送AI代理请求:', {
-      userId: userId,
-      payloadKeys: Object.keys(aiPayload),
-      messagesCount: aiPayload.messages?.length
-    })
+    // console.log('准备发送AI代理请求:', {
+    //   userId: userId,
+    //   payloadKeys: Object.keys(aiPayload),
+    //   messagesCount: aiPayload.messages?.length
+    // }); // 隐私保护：不输出用户ID和请求详情
     
     // 直接调用后端AI代理服务
     const proxyResponse = await fetch('/api/ai-proxy', {
@@ -590,7 +590,7 @@ export const aiConfigApi = {
       })
     })
     
-    console.log('AI代理响应状态:', proxyResponse.status)
+    // console.log('AI代理响应状态:', proxyResponse.status); // 调试时可启用
     
     if (!proxyResponse.ok) {
       const errorText = await proxyResponse.text().catch(() => '')
@@ -624,11 +624,11 @@ export const aiConfigApi = {
     }
     
     const result = await proxyResponse.json()
-    console.log('AI服务调用成功:', {
-      hasChoices: !!result.choices,
-      choicesLength: result.choices?.length,
-      hasContent: !!result.choices?.[0]?.message?.content
-    })
+    // console.log('AI服务调用成功:', {
+    //   hasChoices: !!result.choices,
+    //   choicesLength: result.choices?.length,
+    //   hasContent: !!result.choices?.[0]?.message?.content
+    // }); // 隐私保护：不输出AI响应内容
     
     return result
   }

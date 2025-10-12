@@ -96,12 +96,12 @@ export default {
     hasValidConfig() {
       const config = this.currentProvider?.config
       const result = config && config.model
-      console.log('hasValidConfig 计算:', {
-        currentProvider: this.currentProvider,
-        config: config,
-        model: config?.model,
-        result: result
-      })
+      // console.log('hasValidConfig 计算:', { // 仅调试时使用
+      //   currentProvider: this.currentProvider,
+      //   config: config,
+      //   model: config?.model,
+      //   result: result
+      // })
       return result // 只需检查模型名称，API密钥由后端代理
     }
   },
@@ -120,11 +120,11 @@ export default {
 
     async startGenerate() {
       // 添加调试信息
-      console.log('开始生成 - 当前AI系统状态:', this.aiSystem);
-      console.log('当前提供商:', this.currentProvider);
-      console.log('当前提供商名称:', this.currentProviderName);
-      console.log('当前模型:', this.currentModel);
-      console.log('hasValidConfig 计算结果:', this.hasValidConfig);
+      // console.log('开始生成 - 当前AI系统状态:', this.aiSystem); // 隐私保护：不输出AI系统状态
+      // console.log('当前提供商:', this.currentProvider); // 隐私保护：不输出提供商信息
+      // console.log('当前提供商名称:', this.currentProviderName); // 隐私保护：不输出提供商名称
+      // console.log('当前模型:', this.currentModel); // 隐私保护：不输出模型信息
+      // console.log('hasValidConfig 计算结果:', this.hasValidConfig); // 仅调试时使用
       
       if (!this.hasValidConfig) {
         // 检查用户角色，显示不同的提示
@@ -149,7 +149,7 @@ export default {
         }
       }
 
-      console.log('开始AI生成，主题:', this.topic)
+      // console.log('开始AI生成，主题:', this.topic); // 隐私保护：不输出用户输入的主题
       
       // 先设置生成状态
       this.generating = true
@@ -203,7 +203,7 @@ export default {
           ]
         }
         
-        console.log('发起安全AI请求...')
+        // console.log('发起安全AI请求...'); // 仅调试时使用
         
         // 调用后端代理进行AI请求
         const response = await this.$store.dispatch('callAiThroughProxy', {
@@ -315,7 +315,7 @@ export default {
         
         // 添加唯一标识
         this.addUid(treeData)
-        console.log('添加UID后的数据:', treeData)
+        // console.log('添加UID后的数据:', treeData); // 隐私保护：不输出用户数据
         
       } catch (error) {
         console.error('数据转换失败:', error)
@@ -329,11 +329,11 @@ export default {
 
       // 在当前渲染完成时再进行下一次渲染
       const onRenderEnd = () => {
-        console.log('渲染结束回调触发')
+        // console.log('渲染结束回调触发'); // 仅调试时使用
         try {
           // 如果生成结束且数据渲染完毕，解绑事件
           if (!this.generating) {
-            console.log('生成完成，解绑事件')
+            // console.log('生成完成，解绑事件'); // 仅调试时使用
             this.mindMap.off('node_tree_render_end', onRenderEnd)
             this.isLoopRendering = false
             return
@@ -353,9 +353,9 @@ export default {
           // 如果和上次数据一样则不触发重新渲染
           const curTreeData = JSON.stringify(newTreeData)
           if (curTreeData === lastTreeData) {
-            console.log('🔄 增量渲染 - 数据未变化，等待下次检查')
-            console.log('🔄 增量渲染 - 当前生成状态:', this.generating)
-            console.log('🔄 增量渲染 - 当前内容长度:', this.generatingContent.length)
+            // console.log('🔄 增量渲染 - 数据未变化，等待下次检查'); // 仅调试时使用
+            // console.log('🔄 增量渲染 - 当前生成状态:', this.generating); // 仅调试时使用
+            // console.log('🔄 增量渲染 - 当前内容长度:', this.generatingContent.length); // 隐私保护：不输出内容长度
             setTimeout(() => {
               onRenderEnd()
             }, 500)
@@ -364,12 +364,12 @@ export default {
           lastTreeData = curTreeData
           
           // 记录数据变化
-          console.log('🔄 增量渲染 - 检测到数据变化')
-          console.log('🔄 增量渲染 - 新数据子节点数量:', newTreeData?.children?.length || 0)
-          console.log('🔄 增量渲染 - 更新思维导图数据')
-          console.log('🔄 增量渲染 - 更新前画布节点数:', (this.mindMap.renderer && this.mindMap.renderer.nodeList) ? this.mindMap.renderer.nodeList.length : 'N/A')
+          // console.log('🔄 增量渲染 - 检测到数据变化'); // 仅调试时使用
+          // console.log('🔄 增量渲染 - 新数据子节点数量:', newTreeData?.children?.length || 0); // 仅调试时使用
+          // console.log('🔄 增量渲染 - 更新思维导图数据'); // 仅调试时使用
+          // console.log('🔄 增量渲染 - 更新前画布节点数:', (this.mindMap.renderer && this.mindMap.renderer.nodeList) ? this.mindMap.renderer.nodeList.length : 'N/A'); // 仅调试时使用
           this.mindMap.updateData(newTreeData)
-          console.log('🔄 增量渲染 - 更新后画布节点数:', (this.mindMap.renderer && this.mindMap.renderer.nodeList) ? this.mindMap.renderer.nodeList.length : 'N/A')
+          // console.log('🔄 增量渲染 - 更新后画布节点数:', (this.mindMap.renderer && this.mindMap.renderer.nodeList) ? this.mindMap.renderer.nodeList.length : 'N/A'); // 仅调试时使用
           
         } catch (error) {
           console.error('渲染过程出错:', error)

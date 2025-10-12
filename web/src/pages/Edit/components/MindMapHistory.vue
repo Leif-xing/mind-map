@@ -321,7 +321,7 @@ export default {
         } catch (cancelAction) {
           // 用户点击"取消"或关闭对话框，不执行任何操作
           if (cancelAction === 'cancel') {
-            console.log('用户取消加载思维导图');
+            // console.log('用户取消加载思维导图'); // 仅调试时使用
           } else {
             // 用户选择"不保存，直接加载"
             this.$emit('load-mind-map', mindMap);

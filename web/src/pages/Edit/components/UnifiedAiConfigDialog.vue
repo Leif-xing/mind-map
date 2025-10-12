@@ -224,7 +224,7 @@ export default {
           try {
             // 获取当前用户信息并进行调试
             const currentUser = this.$store.state.currentUser;
-            console.log('SaveConfig - 当前用户信息:', currentUser);
+            // console.log('SaveConfig - 当前用户信息:', currentUser); // 隐私保护：不输出用户信息
             
             if (!currentUser) {
               this.$message.error('请先登录');

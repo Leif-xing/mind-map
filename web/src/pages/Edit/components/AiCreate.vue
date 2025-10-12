@@ -174,6 +174,9 @@ export default {
     this.$bus.$on('ai_chat', this.aiChat)
     this.$bus.$on('ai_chat_stop', this.aiChatStop)
     this.$bus.$on('showAiConfigDialog', this.showAiSelectionDialog) // 改为调用新的AI选择对话框
+    
+    // 预加载AI配置以提高后续加载速度
+    this.preloadAiConfigs();
   },
   mounted() {
     document.body.appendChild(this.$refs.aiCreatingMaskRef)
@@ -186,6 +189,29 @@ export default {
     this.$bus.$off('showAiConfigDialog', this.showAiSelectionDialog) // 改为取消监听新对话框
   },
   methods: {
+    // 预加载AI配置以提高打开对话框的速度
+    async preloadAiConfigs() {
+      try {
+        const currentUser = this.$store.state.currentUser;
+        if (!currentUser) {
+          return;
+        }
+        
+        const userId = currentUser.id;
+        if (!userId) {
+          return;
+        }
+        
+        // 触发API配置的预加载（如果当前用户不是管理员，则加载可用配置）
+        if (!currentUser.isAdmin) {
+          await this.$store.dispatch('fetchAvailableAiConfigs', userId);
+        }
+      } catch (error) {
+        // 预加载失败不影响主要功能，仅记录日志
+        // console.log('预加载AI配置失败:', error); // 仅调试时使用
+      }
+    },
+
     // 显示AI配置修改弹窗
     showAiConfigDialog() {
       this.aiConfigDialogVisible = true
@@ -217,7 +243,7 @@ export default {
 
         // 确保使用HTTPS
         const secureApi = currentProvider.api.replace(/^http:\/\//, 'https://')
-        console.log('使用安全API地址进行测试:', secureApi)
+        // console.log('使用安全API地址进行测试:', secureApi); // 仅调试时使用
 
         try {
           const response = await fetch(secureApi, {

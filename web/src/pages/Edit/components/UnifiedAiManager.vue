@@ -97,9 +97,9 @@ export default {
 
     openCreate() {
       // 添加调试信息
-      console.log('openCreate - 当前AI系统状态:', this.aiSystem);
-      console.log('openCreate - 当前提供商ID:', this.aiSystem.currentProvider);
-      console.log('openCreate - 当前提供商详细信息:', this.aiSystem.providers[this.aiSystem.currentProvider]);
+      // console.log('openCreate - 当前AI系统状态:', this.aiSystem); // 隐私保护：不输出AI系统状态
+      // console.log('openCreate - 当前提供商ID:', this.aiSystem.currentProvider); // 隐私保护：不输出提供商ID
+      // console.log('openCreate - 当前提供商详细信息:', this.aiSystem.providers[this.aiSystem.currentProvider]); // 隐私保护：不输出提供商详细信息
       
       // 检查是否已配置
       const currentProvider = this.aiSystem.providers[this.aiSystem.currentProvider]
