@@ -502,14 +502,14 @@ export default {
     connectFailed: '連接失敗',
     connectionDetection: '連接檢測',
     configurationMissing: '配置缺失',
-    aiCreateMsgPrefix: '幫我寫一個【',
+    aiCreateMsgPrefix: '以"',
     aiCreateMsgPostfix:
-      '】，需要以Markdown格式返回，並且只能使用Markdown的標題和無序列表兩種語法，可以支持多層嵌套。只需返回內容即可。',
+      '"為主題創建思維導圖，嚴格按照以下要求：1、輸出標準markdown格式，用#做為標題分級符號，不混用其他格式2、標題內容簡潔精煉，不超過25個字3、思維導圖結構清晰，層次分明，避免層級跳躍4、只返回內容即可',
     aiCreatePartMsgPrefix: '我有一個主題爲【',
     aiCreatePartMsgCenter: '】的思維導圖，幫我續寫其中一個內容爲【',
     aiCreatePartMsgPostfix: '】的節點的下級內容',
     aiCreatePartMsgHelp:
-      '。需要以Markdown格式返回，並且只能使用Markdown的標題和無序列表兩種語法，可以支持多層嵌套。只需返回內容即可。',
+      '。嚴格按照以下要求：1、輸出標準markdown格式，用#做為標題分級符號，不混用其他格式2、標題內容簡潔精煉，不超過25個字3、思維導圖結構清晰，層次分明，避免層級跳躍4、只返回內容即可。',
     aiCreatePart: 'AI續寫'
   },
   note: {

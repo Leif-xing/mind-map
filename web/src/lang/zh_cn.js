@@ -505,14 +505,14 @@ export default {
     connectFailed: '连接失败',
     connectionDetection: '连接检测',
     configurationMissing: '配置缺失',
-    aiCreateMsgPrefix: '帮我写一个【',
+    aiCreateMsgPrefix: '以"',
     aiCreateMsgPostfix:
-      '】，需要以Markdown格式返回，并且只能使用Markdown的标题和无序列表两种语法，可以支持多层嵌套。只需返回内容即可。',
+      '"为主题创建思维导图，严格按照以下要求：1、输出标准markdown格式，用#做为标题分级符号，不混用其他格式2、标题内容简洁精炼，不超过25个字3、思维导图结构清晰，层次分明，避免层级跳跃4、只返回内容即可',
     aiCreatePartMsgPrefix: '我有一个主题为【',
     aiCreatePartMsgCenter: '】的思维导图，帮我续写其中一个内容为【',
     aiCreatePartMsgPostfix: '】的节点的下级内容',
     aiCreatePartMsgHelp:
-      '。需要以Markdown格式返回，并且只能使用Markdown的标题和无序列表两种语法，可以支持多层嵌套。只需返回内容即可。',
+      '。严格按照以下要求：1、输出标准markdown格式，用#做为标题分级符号，不混用其他格式2、标题内容简洁精炼，不超过25个字3、思维导图结构清晰，层次分明，避免层级跳跃4、只返回内容即可。',
     aiCreatePart: 'AI续写'
   },
   note: {

@@ -524,15 +524,15 @@ export default {
     connectFailed: 'connection failed',
     connectionDetection: 'Connection detection',
     configurationMissing: 'Configuration missing',
-    aiCreateMsgPrefix: 'Help me write one【',
+    aiCreateMsgPrefix: 'Create a mind map themed"',
     aiCreateMsgPostfix:
-      '】. It needs to be returned in Markdown format and can only use two syntax: Markdown title and unordered list. It can support multiple layers of nesting. Just return the content.',
+      '", strictly following these requirements: 1. Output standard markdown format, using # as the title level symbol, do not mix other formats 2. The title content should be concise and refined, no more than 25 characters 3. The mind map structure is clear, the levels are distinct, and avoiding hierarchical jumps 4. Return content only',
     aiCreatePartMsgPrefix: 'I have a theme for【',
     aiCreatePartMsgCenter:
       '】Can you help me continue writing one of the contents of the mind map【',
     aiCreatePartMsgPostfix: '】The subordinate content of the node',
     aiCreatePartMsgHelp:
-      '. Needs to be returned in Markdown format and can only use two syntax: Markdown title and unordered list. It can support multi-level nesting. Just return the content.',
+      '. Strictly follow these requirements: 1. Output standard markdown format, using # as the title level symbol, do not mix other formats 2. The title content should be concise and refined, no more than 25 characters 3. The mind map structure is clear, the levels are distinct, and avoiding hierarchical jumps 4. Return content only.',
     aiCreatePart: 'AI Continuation'
   },
   note: {

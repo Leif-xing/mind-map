@@ -519,15 +519,15 @@ export default {
     connectFailed: 'Kết nối thất bại',
     connectionDetection: 'Phát hiện kết nối',
     configurationMissing: 'Thiếu cấu hình',
-    aiCreateMsgPrefix: 'Giúp tôi viết một【',
+    aiCreateMsgPrefix: 'Tạo một sơ đồ tư duy với chủ đề"',
     aiCreateMsgPostfix:
-      '】. Nó cần được trả về ở định dạng Markdown và chỉ có thể sử dụng hai cú pháp: tiêu đề Markdown và danh sách không có thứ tự. Nó có thể hỗ trợ nhiều lớp lồng nhau. Chỉ cần trả về nội dung.',
+      '", tuân thủ nghiêm ngặt các yêu cầu sau: 1. Xuất định dạng markdown tiêu chuẩn, sử dụng # làm ký hiệu cấp độ tiêu đề, không trộn các định dạng khác 2. Nội dung tiêu đề ngắn gọn và tinh tế, không quá 25 ký tự 3. Cấu trúc sơ đồ tư duy rõ ràng, các cấp phân biệt, tránh nhảy cấp 4. Chỉ trả về nội dung',
     aiCreatePartMsgPrefix: 'Tôi có một chủ đề là【',
     aiCreatePartMsgCenter:
       '】Bạn có thể giúp tôi tiếp tục viết một trong những nội dung của sơ đồ tư duy【',
     aiCreatePartMsgPostfix: '】Nội dung phụ thuộc của nút',
     aiCreatePartMsgHelp:
-      '. Cần được trả về ở định dạng Markdown và chỉ có thể sử dụng hai cú pháp: tiêu đề Markdown và danh sách không có thứ tự. Nó có thể hỗ trợ lồng ghép nhiều cấp độ. Chỉ cần trả về nội dung.',
+      '. Tuân thủ nghiêm ngặt các yêu cầu sau: 1. Xuất định dạng markdown tiêu chuẩn, sử dụng # làm ký hiệu cấp độ tiêu đề, không trộn các định dạng khác 2. Nội dung tiêu đề ngắn gọn và tinh tế, không quá 25 ký tự 3. Cấu trúc sơ đồ tư duy rõ ràng, các cấp phân biệt, tránh nhảy cấp 4. Chỉ trả về nội dung.',
     aiCreatePart: 'AI Tiếp tục'
   },
   note: {
