@@ -77,6 +77,22 @@
         $t('ai.stopGenerating')
       }}</el-button>
     </div>
+    <!-- AI续写专用加载动画遮罩层 -->
+    <div
+      class="aiPartCreatingMask"
+      v-show="aiPartCreating"
+    >
+      <div class="ai-part-loading-content">
+        <div class="ai-part-loading-icon"></div>
+      </div>
+      <el-button 
+        type="danger" 
+        class="btn"
+        @click="stopPartCreate"
+      >
+        停止续写
+      </el-button>
+    </div>
     <AiConfigDialog v-model="aiConfigDialogVisible"></AiConfigDialog>
     <AiSelectionDialog v-model="aiSelectionDialogVisible"></AiSelectionDialog>
     <!-- AI续写 -->
@@ -145,7 +161,8 @@ export default {
 
       createPartDialogVisible: false,
       aiPartInput: '',
-      beingCreatePartNode: null
+      beingCreatePartNode: null,
+      aiPartCreating: false  // AI续写专用加载状态
     }
   },
   computed: {
@@ -373,7 +390,6 @@ export default {
       
       this.closeAiCreateDialog()
       this.aiCreatingMaskVisible = true
-      console.log('开始AI请求，显示加载遮罩...')  // 控制台日志
       // 发起请求
       this.isAiCreating = true
       
@@ -414,7 +430,6 @@ export default {
         
         // 成功获取AI响应后，开始渲染
         this.aiCreatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
-        console.log('AI响应接收完成，开始渲染思维导图...')  // 控制台日志
         this.loopRenderOnAiCreating()
         this.resetOnAiCreatingStop()
         this.$message.success(this.$t('ai.aiGenerationSuccess'))
@@ -422,7 +437,6 @@ export default {
         console.error('AI生成失败:', error)
         this.resetOnAiCreatingStop()
         this.resetOnRenderEnd()
-        console.log('AI生成失败，结束加载遮罩')  // 控制台日志
         
         // 根据错误类型提供更具体的错误信息
         let errorMessage = this.$t('ai.generationFailed')
@@ -450,7 +464,6 @@ export default {
     resetOnAiCreatingStop() {
       this.aiCreatingMaskVisible = false
       this.isAiCreating = false
-      console.log('AI请求完成或出错，结束加载遮罩')  // 控制台日志
     },
 
     // 渲染结束后需要复位的数据
@@ -460,7 +473,6 @@ export default {
       this.aiCreatingContent = ''
       this.mindMapDataCache = ''
       this.beingAiCreateNodeUid = ''
-      console.log('渲染结束，复位相关数据')  // 控制台日志
     },
 
     // 停止生成
@@ -468,7 +480,13 @@ export default {
       this.isAiCreating = false
       this.aiCreatingMaskVisible = false
       this.$message.success(this.$t('ai.stoppedGenerating'))
-      console.log('AI生成已停止，销毁加载遮罩')  // 控制台日志
+    },
+
+    // 停止AI续写
+    stopPartCreate() {
+      this.isAiCreating = false
+      this.aiPartCreating = false  // 销毁AI续写加载动画
+      this.$message.success('已停止AI续写')
     },
 
     // 轮询进行渲染
@@ -707,8 +725,7 @@ export default {
         this.beingAiCreateNodeUid = this.beingCreatePartNode.getData('uid')
         const currentMindMapData = this.mindMap.getData()
         this.mindMapDataCache = JSON.stringify(currentMindMapData)
-        this.aiCreatingMaskVisible = true
-        console.log('开始AI续写请求，显示加载遮罩...')  // 控制台日志
+        this.aiPartCreating = true  // 显示AI续写专用加载动画
         // 发起请求
         this.isAiCreating = true
         
@@ -742,17 +759,19 @@ export default {
           
           // 成功获取AI响应后，开始渲染
           this.aiCreatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
-          console.log('AI续写响应接收完成，开始渲染思维导图...')  // 控制台日志
           this.loopRenderOnAiCreatingPart()
-          this.resetOnAiCreatingStop()
+          // 为AI续写创建专门的停止处理
+          this.isAiCreating = false
+          this.aiPartCreating = false  // 结束AI续写加载动画
           this.resetAiCreatePartDialog()
           this.$message.success(this.$t('ai.aiGenerationSuccess'))
         } catch (error) {
           console.error('AI续写失败:', error)
-          this.resetOnAiCreatingStop()
+          // 为AI续写创建专门的错误处理
+          this.isAiCreating = false
+          this.aiPartCreating = false  // 结束AI续写加载动画
           this.resetAiCreatePartDialog()
           this.resetOnRenderEnd()
-          console.log('AI续写失败，结束加载遮罩')  // 控制台日志
           this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
         }
       } catch (error) {
@@ -945,5 +964,58 @@ export default {
     top: 100px;
     transform: translateX(-50%);
   }
+}
+
+// AI续写专用加载动画遮罩层
+.aiPartCreatingMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ai-part-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-part-loading-icon {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// AI续写停止按钮在遮罩层中的位置与AiCreate相同
+.aiPartCreatingMask .btn {
+  position: absolute;
+  left: 50%;
+  top: 100px;
+  transform: translateX(-50%);
+}
+
+// 深色主题适配
+body.isDark .aiPartCreatingMask {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+body.isDark .ai-part-loading-icon {
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #409eff;
 }
 </style>
