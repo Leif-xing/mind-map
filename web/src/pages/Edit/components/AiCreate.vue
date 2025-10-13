@@ -373,6 +373,7 @@ export default {
       
       this.closeAiCreateDialog()
       this.aiCreatingMaskVisible = true
+      console.log('开始AI请求，显示加载遮罩...')  // 控制台日志
       // 发起请求
       this.isAiCreating = true
       
@@ -413,6 +414,7 @@ export default {
         
         // 成功获取AI响应后，开始渲染
         this.aiCreatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+        console.log('AI响应接收完成，开始渲染思维导图...')  // 控制台日志
         this.loopRenderOnAiCreating()
         this.resetOnAiCreatingStop()
         this.$message.success(this.$t('ai.aiGenerationSuccess'))
@@ -420,6 +422,7 @@ export default {
         console.error('AI生成失败:', error)
         this.resetOnAiCreatingStop()
         this.resetOnRenderEnd()
+        console.log('AI生成失败，结束加载遮罩')  // 控制台日志
         
         // 根据错误类型提供更具体的错误信息
         let errorMessage = this.$t('ai.generationFailed')
@@ -447,6 +450,7 @@ export default {
     resetOnAiCreatingStop() {
       this.aiCreatingMaskVisible = false
       this.isAiCreating = false
+      console.log('AI请求完成或出错，结束加载遮罩')  // 控制台日志
     },
 
     // 渲染结束后需要复位的数据
@@ -456,6 +460,7 @@ export default {
       this.aiCreatingContent = ''
       this.mindMapDataCache = ''
       this.beingAiCreateNodeUid = ''
+      console.log('渲染结束，复位相关数据')  // 控制台日志
     },
 
     // 停止生成
@@ -463,6 +468,7 @@ export default {
       this.isAiCreating = false
       this.aiCreatingMaskVisible = false
       this.$message.success(this.$t('ai.stoppedGenerating'))
+      console.log('AI生成已停止，销毁加载遮罩')  // 控制台日志
     },
 
     // 轮询进行渲染
@@ -702,6 +708,7 @@ export default {
         const currentMindMapData = this.mindMap.getData()
         this.mindMapDataCache = JSON.stringify(currentMindMapData)
         this.aiCreatingMaskVisible = true
+        console.log('开始AI续写请求，显示加载遮罩...')  // 控制台日志
         // 发起请求
         this.isAiCreating = true
         
@@ -735,6 +742,7 @@ export default {
           
           // 成功获取AI响应后，开始渲染
           this.aiCreatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+          console.log('AI续写响应接收完成，开始渲染思维导图...')  // 控制台日志
           this.loopRenderOnAiCreatingPart()
           this.resetOnAiCreatingStop()
           this.resetAiCreatePartDialog()
@@ -744,6 +752,7 @@ export default {
           this.resetOnAiCreatingStop()
           this.resetAiCreatePartDialog()
           this.resetOnRenderEnd()
+          console.log('AI续写失败，结束加载遮罩')  // 控制台日志
           this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
         }
       } catch (error) {

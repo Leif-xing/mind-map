@@ -49,6 +49,20 @@
         </el-button>
       </div>
     </el-dialog>
+    
+    <!-- 加载动画遮罩层 -->
+    <div v-show="aiLoading" class="ai-loading-overlay">
+      <div class="ai-loading-content">
+        <div class="loading-icon"></div>
+      </div>
+      <el-button 
+        type="warning" 
+        class="stop-btn"
+        @click="stopGenerate"
+      >
+        停止生成
+      </el-button>
+    </div>
   </div>
 </template>
 
@@ -75,7 +89,8 @@ export default {
       generating: false,
       generatingContent: '',
       isLoopRendering: false,
-      rootWaitCount: 0
+      rootWaitCount: 0,
+      aiLoading: false
     }
   },
   computed: {
@@ -154,9 +169,12 @@ export default {
       // 先设置生成状态
       this.generating = true
       this.generatingContent = ''
+      this.aiLoading = true  // 开始加载动画
       
       // 通知管理器更新生成状态
       this.$bus.$emit('ai_generating_status', true)
+      
+      console.log('开始AI请求，显示加载动画...')  // 控制台日志
       
       // 保存主题到临时变量，因为关闭弹窗会清空topic
       const currentTopic = this.topic
@@ -213,14 +231,18 @@ export default {
         
         // 成功获取AI响应后，开始渲染
         this.generatingContent = response.choices?.[0]?.message?.content || response.content || JSON.stringify(response)
+        console.log('AI响应接收完成，开始渲染思维导图...')  // 控制台日志
         this.generating = false
+        this.aiLoading = false  // 结束加载动画
         this.$bus.$emit('ai_generating_status', false)
         this.renderMindMap()
         this.$message.success(`${this.currentProviderName} 生成完成！`)
       } catch (error) {
         console.error('AI生成异常:', error)
         this.generating = false
+        this.aiLoading = false  // 结束加载动画
         this.$bus.$emit('ai_generating_status', false)
+        console.log('AI生成失败，结束加载动画')  // 控制台日志
         
         // 根据错误类型提供更具体的错误信息
         let errorMessage = 'AI生成失败'
@@ -411,8 +433,10 @@ export default {
 
     stopGenerate() {
       this.generating = false
+      this.aiLoading = false  // 销毁加载动画
       this.$bus.$emit('ai_generating_status', false)
       this.$message.success('已停止AI生成')
+      console.log('AI生成已停止，销毁加载动画')  // 控制台日志
     },
 
     handleClose() {
@@ -479,5 +503,71 @@ body.isDark {
       }
     }
   }
+}
+
+// 加载动画样式
+.ai-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ai-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-icon {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// 深色主题下的加载动画适配
+body.isDark .ai-loading-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+body.isDark .loading-icon {
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #409eff;
+}
+
+// 深色主题下的停止按钮适配
+body.isDark .el-button--warning {
+  background-color: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
+
+// 加载动画遮罩层上的停止按钮
+.ai-loading-overlay .stop-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000000;
+}
+
+body.isDark .el-button--warning {
+  background-color: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
 }
 </style>
