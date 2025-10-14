@@ -245,7 +245,8 @@
           :key="mindMap.id" 
           class="mindmap-card"
           :class="{ 'selected': isSelected(mindMap.id) }"
-          @dblclick="loadMindMap(mindMap)"
+          @dblclick.stop="loadMindMap(mindMap)"
+          @click="handleCardClick(mindMap)"
         >
           <div class="mindmap-card-content">
             <div class="mindmap-info">
@@ -535,7 +536,6 @@ export default {
         }
         resolve([...dirList, ...fileList])
       } catch (error) {
-        console.log(error)
         this.fileTreeVisible = false
         resolve([])
         if (error.toString().includes('aborted')) {
@@ -573,7 +573,6 @@ export default {
         })
         this.$refs.ImportRef.confirm()
       } catch (error) {
-        console.log(error)
       }
     },
 
@@ -602,7 +601,6 @@ export default {
         }
         this.readFile()
       } catch (error) {
-        console.log(error)
         if (error.toString().includes('aborted')) {
           return
         }
@@ -742,15 +740,12 @@ export default {
     
     // 保存到数据库（自动模式，不提示用户输入标题）
     async saveToDatabaseAuto() {
-      console.log('开始自动保存思维导图...');
       try {
         // 获取当前思维导图数据
         let data = getData()
-        console.log('获取到的思维导图数据:', data);
         
         // 检查用户是否已登录
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
-        console.log('当前用户:', currentUser);
         if (!currentUser) {
           this.$message.error('请先登录')
           this.$router.push('/login')
@@ -759,7 +754,6 @@ export default {
         
         // 使用当前时间作为标题（用于自动保存）
         let autoSaveTitle = `思维导图_${new Date().toISOString().replace(/[:.]/g, '-')}`
-        console.log('自动保存标题:', autoSaveTitle);
         
         // 如果有根节点，使用根节点文本作为标题（去除HTML标签）
         if (data && data.root && data.root.data && data.root.data.text) {
@@ -767,19 +761,15 @@ export default {
           tempDiv.innerHTML = data.root.data.text
           const rootNodeText = tempDiv.textContent || tempDiv.innerText || ''
           autoSaveTitle = `${rootNodeText}_自动保存_${new Date().toISOString().replace(/[:.]/g, '-')}`
-          console.log('使用根节点文本的标题:', autoSaveTitle);
         }
         
         // 调用store中的保存方法
-        console.log('调用store保存方法...');
-        const result = await this.$store.dispatch('saveMindMap', {
+        await this.$store.dispatch('saveMindMap', {
           userId: currentUser.id,
           title: autoSaveTitle,
           content: data
         })
-        console.log('自动保存成功:', result)
       } catch (error) {
-        console.error('自动保存思维导图失败:', error)
         // 自动保存失败时不显示错误消息，避免打扰用户
       }
     },
@@ -1004,12 +994,59 @@ export default {
       }
     },
     
+    // 处理卡片单击事件（用于调试）
+    handleCardClick(mindMap) {
+      // 移除调试日志
+    },
+    
+    // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
+    async getMindMapDataFromCache(mindMapId) {
+      // 1. 先尝试从localStorage获取
+      try {
+        const cacheKey = `mindmap_cache_${mindMapId}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        
+        if (cachedData) {
+          return JSON.parse(cachedData);
+        }
+        
+        // 2. 如果缓存中没有，从数据库获取
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        if (!currentUser) {
+          return null;
+        }
+        
+        const fullMindMapData = await this.$store.dispatch('getMindMapById', {
+          mindMapId: mindMapId,
+          userId: currentUser.id
+        });
+        
+        if (fullMindMapData && fullMindMapData.content) {
+          // 保存到缓存供下次使用
+          this.saveMindMapDataToCache(mindMapId, fullMindMapData.content);
+          return fullMindMapData.content;
+        } else {
+          return null;
+        }
+        
+      } catch (error) {
+        return null;
+      }
+    },
+    
+    // 保存思维导图数据到缓存
+    saveMindMapDataToCache(mindMapId, data) {
+      try {
+        const cacheKey = `mindmap_cache_${mindMapId}`;
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+      } catch (error) {
+        // 保存失败，但不抛出错误
+      }
+    },
+    
     // 加载思维导图
     async loadMindMap(selectedMindMap) {
-      // console.log('准备加载思维导图:', selectedMindMap); // 隐私保护：不输出用户数据
-      // console.log('准备加载的思维导图ID:', selectedMindMap.id); // 隐私保护：不输出用户数据
-      // console.log('准备加载的思维导图标题:', selectedMindMap.title); // 隐私保护：不输出用户数据
-      // console.log('准备加载的思维导图内容预览:', selectedMindMap.content ? selectedMindMap.content.root.data.text.substring(0, 50) + '...' : '无内容'); // 隐私保护：不输出用户数据
+
       
       // 保存一份副本以避免引用问题
       // 使用更深层的复制方法，确保所有属性都被复制
@@ -1032,8 +1069,29 @@ export default {
         // console.log('即将加载的思维导图ID:', mindMapToLoad.id); // 隐私保护：不输出用户数据
         // console.log('即将加载的思维导图标题:', mindMapToLoad.title); // 隐私保护：不输出用户数据
         
-        // 确保传递正确的数据格式
-        const contentToLoad = mindMapToLoad.content;
+        // 正确的逻辑：从缓存中获取思维导图数据
+
+        
+        // 1. 先保存当前思维导图的数据到缓存（如果有修改）
+
+        if (this.$getCurrentData) {
+          const currentData = this.$getCurrentData();
+
+          
+          // 获取当前思维导图的ID（需要从store或其他地方获取）
+          const currentMindMapId = this.$store.state.currentMindMapId || 'current';
+          this.saveMindMapDataToCache(currentMindMapId, currentData);
+        } else {
+
+        }
+        
+        // 2. 从缓存中获取目标思维导图的数据
+        const contentToLoad = await this.getMindMapDataFromCache(mindMapToLoad.id);
+        
+        if (!contentToLoad) {
+          this.$message.error('加载思维导图失败：无法获取数据');
+          return;
+        }
         // console.log('加载的内容结构检查:', {
         //   hasRoot: !!contentToLoad?.root,
         //   rootData: contentToLoad?.root ? contentToLoad.root.data : null,
@@ -1061,11 +1119,11 @@ export default {
           //   }))
           // }); // 隐私保护：不输出用户数据
           
-          // console.log('🚀 Toolbar.vue - 正在发送 loadMindMapData 事件'); // 仅调试时使用
-          // console.log('🚀 Toolbar.vue - 事件总线实例:', this.$bus); // 仅调试时使用
-          // console.log('🚀 Toolbar.vue - 发送的数据:', { content: contentToLoad }); // 隐私保护：不输出用户数据
           // 发送加载数据事件
           this.$bus.$emit('loadMindMapData', { content: contentToLoad });
+          
+          // 更新当前思维导图ID到store
+          this.$store.commit('setCurrentMindMapId', mindMapToLoad.id);
           
           // 设置超时，确保即使没有收到完成事件也能继续
           setTimeout(() => {
@@ -1080,7 +1138,7 @@ export default {
         this.closeMindMapDialog();
         // console.log('思维导图加载完成'); // 仅调试时使用
       } catch (err) {
-        console.error('加载思维导图异常:', err);
+        // 加载思维导图异常
       }
     },
     

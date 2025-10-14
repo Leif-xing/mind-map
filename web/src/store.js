@@ -44,6 +44,7 @@ const store = new Vuex.Store({
     isSourceCodeEdit: false, // 是否是源码编辑模式
     extraTextOnExport: '', // 导出时底部添加的文字
     isDragOutlineTreeNode: false, // 当前是否正在拖拽大纲树的节点
+    currentMindMapId: null, // 当前正在编辑的思维导图ID
     // 统一AI系统配置
     aiSystem: {
       currentProvider: 'huoshan', // 当前选择的提供商
@@ -153,6 +154,10 @@ const store = new Vuex.Store({
     // 设置树节点拖拽
     setIsDragOutlineTreeNode(state, data) {
       state.isDragOutlineTreeNode = data
+    },
+    
+    setCurrentMindMapId(state, mindMapId) {
+      state.currentMindMapId = mindMapId
     },
 
     // 扩展主题列表
@@ -310,6 +315,16 @@ const store = new Vuex.Store({
         return await mindMapApi.deleteMindMap(mindMapId, userId)
       } else {
         // 本地删除逻辑
+        return null
+      }
+    },
+    
+    // 获取特定思维导图的完整数据
+    async getMindMapById({ commit }, { mindMapId, userId }) {
+      if (this.state.supabaseEnabled) {
+        return await mindMapApi.getMindMapById(mindMapId, userId)
+      } else {
+        // 本地获取逻辑
         return null
       }
     },

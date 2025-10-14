@@ -533,26 +533,49 @@ export default {
 
     // 动态设置思维导图数据
     setData(data) {
+      console.log('🔄 Edit.vue setData - 开始设置数据');
+      console.log('🔄 Edit.vue setData - 接收的数据:', data);
+      
       if (!this.mindMap) {
-        console.error('mindMap 实例不存在，无法设置数据');
+        console.error('❌ Edit.vue setData - mindMap 实例不存在，无法设置数据');
         return;
       }
       
-      // 简单直接的数据设置
-      if (data.root) {
-        this.mindMap.setFullData(data);
-      } else {
-        this.mindMap.setData(data);
-      }
+      console.log('🔍 Edit.vue setData - mindMap实例存在，继续处理');
+      console.log('🔍 Edit.vue setData - 数据类型检查:', {
+        hasRoot: !!data.root,
+        dataType: typeof data,
+        isFullData: !!data.root
+      });
       
-      // 重置视图
-      if (this.mindMap.view) {
-        this.mindMap.view.reset();
-      }
-      
-      // 强制重新渲染
-      if (this.mindMap.renderer) {
-        this.mindMap.renderer.reRender && this.mindMap.renderer.reRender();
+      try {
+        // 简单直接的数据设置
+        if (data.root) {
+          console.log('📊 Edit.vue setData - 使用 setFullData 设置完整数据');
+          this.mindMap.setFullData(data);
+        } else {
+          console.log('📊 Edit.vue setData - 使用 setData 设置根节点数据');
+          this.mindMap.setData(data);
+        }
+        
+        console.log('✅ Edit.vue setData - 数据设置完成');
+        
+        // 重置视图
+        if (this.mindMap.view) {
+          console.log('🔄 Edit.vue setData - 重置视图');
+          this.mindMap.view.reset();
+        }
+        
+        // 强制重新渲染
+        if (this.mindMap.renderer) {
+          console.log('🔄 Edit.vue setData - 强制重新渲染');
+          this.mindMap.renderer.reRender && this.mindMap.renderer.reRender();
+        }
+        
+        console.log('✅ Edit.vue setData - 所有操作完成');
+        
+      } catch (error) {
+        console.error('❌ Edit.vue setData - 设置数据时出错:', error);
       }
     },
     
@@ -578,29 +601,43 @@ export default {
     
     // 处理加载思维导图数据
     handleLoadMindMapData(mindMapDataObj) {
+      console.log('🔍 Edit.vue - 开始处理加载思维导图数据');
+      console.log('🔍 Edit.vue - 接收到的数据对象:', mindMapDataObj);
       
       if (!this.mindMap) {
-        console.error('Edit.vue - mindMap 实例不存在，无法加载数据');
+        console.error('❌ Edit.vue - mindMap 实例不存在，无法加载数据');
         return;
       }
       
       try {
         // 提取数据内容
         const data = mindMapDataObj.content || mindMapDataObj;
+        console.log('🔍 Edit.vue - 提取的数据内容:', data);
         
         if (!data) {
-          console.error('Edit.vue - 没有有效的数据内容');
+          console.error('❌ Edit.vue - 没有有效的数据内容');
           return;
         }
         
+        // 检查数据结构
+        console.log('🔍 Edit.vue - 数据结构检查:', {
+          hasRoot: !!data.root,
+          hasLayout: !!data.layout,
+          hasTheme: !!data.theme,
+          rootContent: data.root ? data.root.data : null
+        });
+        
         // 使用 setData 方法加载数据
+        console.log('🔄 Edit.vue - 正在调用 setData 方法');
         this.setData(data);
+        console.log('✅ Edit.vue - setData 调用完成');
         
         // 发送加载完成事件
         this.$bus.$emit('mindMapLoaded');
+        console.log('📤 Edit.vue - 已发送 mindMapLoaded 事件');
         
       } catch (error) {
-        console.error('Edit.vue - 加载思维导图数据失败:', error);
+        console.error('❌ Edit.vue - 加载思维导图数据失败:', error);
       }
     },
     
