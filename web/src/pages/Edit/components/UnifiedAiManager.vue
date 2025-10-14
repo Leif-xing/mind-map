@@ -17,7 +17,8 @@
       ref="aiCreateDialog"
     ></UnifiedAiCreateDialog>
     
-    <!-- 生成中的停止按钮 -->
+    <!-- 生成中的停止按钮 - 已禁用 -->
+    <!--
     <div v-if="isGenerating" class="generatingTip">
       <el-button 
         type="danger" 
@@ -28,6 +29,7 @@
         停止生成
       </el-button>
     </div>
+    -->
   </div>
 </template>
 

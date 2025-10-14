@@ -557,7 +557,7 @@ export default {
         color: hsla(0, 0%, 100%, 0.7);
         
         b {
-          color: #409eff; /* 使用醒目的蓝色显示"双击" */
+          color: #e6a23c; /* 使用醒目的橙色显示"双击" */
         }
       }
 
@@ -602,6 +602,10 @@ body.isDark {
 
     .selectionTip {
       color: hsla(0, 0%, 100%, 0.7);
+      
+      b {
+        color: #e6a23c; /* 使用醒目的橙色显示"双击" */
+      }
     }
 
     .configDetails {

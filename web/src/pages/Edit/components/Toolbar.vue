@@ -2110,6 +2110,11 @@ export default {
   color: #fff;
 }
 
+.toolbarContainer.isDark .user-menu-btn .text {
+  color: #409EFF; /* 使用醒目的蓝色 */
+  font-weight: bold; /* 加粗显示 */
+}
+
 .toolbarContainer.isDark .user-menu-btn:hover .icon {
   background: hsla(0, 0%, 100%, 0.05);
 }

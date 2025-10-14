@@ -9,6 +9,7 @@ import 'viewerjs/dist/viewer.css'
 import VueViewer from 'v-viewer'
 import i18n from './i18n'
 import { getLang } from '@/api'
+import Message from './element-ui-config' // 导入禁用消息的配置
 // import VConsole from 'vconsole'
 // const vConsole = new VConsole()
 
@@ -17,6 +18,7 @@ import { getLang } from '@/api'
 Vue.config.productionTip = false
 const bus = new Vue()
 Vue.prototype.$bus = bus
+Vue.prototype.$message = Message // 使用禁用消息的配置
 Vue.use(ElementUI)
 Vue.use(VueViewer)
 
