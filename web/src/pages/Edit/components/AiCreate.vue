@@ -73,6 +73,9 @@
       ref="aiCreatingMaskRef"
       v-show="aiCreatingMaskVisible"
     >
+      <div class="ai-timer">
+        <span class="timer-text">{{ formatTime(aiCreateElapsedTime) }}</span>
+      </div>
       <el-button type="warning" class="btn" @click="stopCreate">{{
         $t('ai.stopGenerating')
       }}</el-button>
@@ -84,6 +87,9 @@
     >
       <div class="ai-part-loading-content">
         <div class="ai-part-loading-icon"></div>
+        <div class="ai-timer-part">
+          <span class="timer-text">{{ formatTime(aiPartElapsedTime) }}</span>
+        </div>
       </div>
       <el-button 
         type="danger" 
@@ -162,7 +168,13 @@ export default {
       createPartDialogVisible: false,
       aiPartInput: '',
       beingCreatePartNode: null,
-      aiPartCreating: false  // AI续写专用加载状态
+      aiPartCreating: false,  // AI续写专用加载状态
+      aiCreateStartTime: null, // AI创建开始时间
+      aiCreateElapsedTime: 0,  // AI创建已用时间（秒）
+      aiPartStartTime: null,   // AI续写开始时间
+      aiPartElapsedTime: 0,    // AI续写已用时间（秒）
+      timerInterval: null,     // 计时器ID
+      partTimerInterval: null  // AI续写计时器ID
     }
   },
   computed: {
@@ -204,6 +216,10 @@ export default {
     this.$bus.$off('ai_chat', this.aiChat)
     this.$bus.$off('ai_chat_stop', this.aiChatStop)
     this.$bus.$off('showAiConfigDialog', this.showAiSelectionDialog) // 改为取消监听新对话框
+    
+    // 组件销毁时停止计时器
+    this.stopTimer()
+    this.stopPartTimer()
   },
   methods: {
     // 预加载AI配置以提高打开对话框的速度
@@ -237,6 +253,13 @@ export default {
     // 显示AI选择弹窗
     showAiSelectionDialog() {
       this.aiSelectionDialogVisible = true
+    },
+    
+    // 格式化时间（秒转为mm:ss格式）
+    formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     },
 
     // 客户端连接检测
@@ -393,6 +416,9 @@ export default {
       // 发起请求
       this.isAiCreating = true
       
+      // 启动计时器
+      this.startTimer()
+      
       try {
         // 检查用户是否有AI权限和有效的AI配置
         const currentUserId = this.$store.state.currentUser?.id
@@ -459,11 +485,70 @@ export default {
         this.$message.error(errorMessage)
       }
     },
-
+    
+    // 启动计时器
+    startTimer() {
+      // 清除之前的定时器
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+      }
+      
+      this.aiCreateStartTime = new Date();
+      this.aiCreateElapsedTime = 0;
+      
+      this.timerInterval = setInterval(() => {
+        if (this.aiCreatingMaskVisible) { // 只有在遮罩显示时才计时
+          const now = new Date();
+          this.aiCreateElapsedTime = Math.floor((now - this.aiCreateStartTime) / 1000);
+        } else {
+          // 如果遮罩已隐藏，停止计时器
+          this.stopTimer();
+        }
+      }, 1000);
+    },
+    
+    // 停止计时器
+    stopTimer() {
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    },
+    
+    // 启动AI续写计时器
+    startPartTimer() {
+      // 清除之前的续写定时器
+      if (this.partTimerInterval) {
+        clearInterval(this.partTimerInterval);
+      }
+      
+      this.aiPartStartTime = new Date();
+      this.aiPartElapsedTime = 0;
+      
+      this.partTimerInterval = setInterval(() => {
+        if (this.aiPartCreating) { // 只有在续写遮罩显示时才计时
+          const now = new Date();
+          this.aiPartElapsedTime = Math.floor((now - this.aiPartStartTime) / 1000);
+        } else {
+          // 如果续写遮罩已隐藏，停止计时器
+          this.stopPartTimer();
+        }
+      }, 1000);
+    },
+    
+    // 停止AI续写计时器
+    stopPartTimer() {
+      if (this.partTimerInterval) {
+        clearInterval(this.partTimerInterval);
+        this.partTimerInterval = null;
+      }
+    },
+    
     // AI请求完成或出错后需要复位的数据
     resetOnAiCreatingStop() {
       this.aiCreatingMaskVisible = false
       this.isAiCreating = false
+      this.stopTimer()
     },
 
     // 渲染结束后需要复位的数据
@@ -479,6 +564,7 @@ export default {
     stopCreate() {
       this.isAiCreating = false
       this.aiCreatingMaskVisible = false
+      this.stopTimer()
       this.$message.success(this.$t('ai.stoppedGenerating'))
     },
 
@@ -486,6 +572,7 @@ export default {
     stopPartCreate() {
       this.isAiCreating = false
       this.aiPartCreating = false  // 销毁AI续写加载动画
+      this.stopPartTimer()
       this.$message.success('已停止AI续写')
     },
 
@@ -729,6 +816,9 @@ export default {
         // 发起请求
         this.isAiCreating = true
         
+        // 启动AI续写计时器
+        this.startPartTimer()
+        
         try {
           // 检查用户是否有AI权限和有效的AI配置
           const currentUserId = this.$store.state.currentUser?.id
@@ -763,6 +853,7 @@ export default {
           // 为AI续写创建专门的停止处理
           this.isAiCreating = false
           this.aiPartCreating = false  // 结束AI续写加载动画
+          this.stopPartTimer()
           this.resetAiCreatePartDialog()
           this.$message.success(this.$t('ai.aiGenerationSuccess'))
         } catch (error) {
@@ -770,6 +861,7 @@ export default {
           // 为AI续写创建专门的错误处理
           this.isAiCreating = false
           this.aiPartCreating = false  // 结束AI续写加载动画
+          this.stopPartTimer()
           this.resetAiCreatePartDialog()
           this.resetOnRenderEnd()
           this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
@@ -961,8 +1053,28 @@ export default {
   .btn {
     position: absolute;
     left: 50%;
-    top: 100px;
+    top: 130px; /* 调整位置为给计时器留出空间 */
     transform: translateX(-50%);
+  }
+  
+  .ai-timer {
+    position: absolute;
+    left: 50%;
+    top: 80px; /* 位于按钮上方 */
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 100000; /* 确保计时器在最上层 */
+    
+    .timer-text {
+      font-size: 16px;
+      font-weight: bold;
+      color: #409EFF;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 8px 16px;
+      border-radius: 20px;
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+      display: inline-block;
+    }
   }
 }
 
@@ -985,6 +1097,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative; /* 为计时器定位做准备 */
 }
 
 .ai-part-loading-icon {
@@ -996,6 +1109,22 @@ export default {
   animation: spin 1s linear infinite;
 }
 
+.ai-timer-part {
+  margin-top: 10px; /* 在加载图标下方 */
+  z-index: 100000; /* 确保计时器在最上层 */
+  
+  .timer-text {
+    font-size: 16px;
+    font-weight: bold;
+    color: #409EFF;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 6px 12px;
+    border-radius: 18px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    display: inline-block;
+  }
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -1005,7 +1134,7 @@ export default {
 .aiPartCreatingMask .btn {
   position: absolute;
   left: 50%;
-  top: 100px;
+  top: 150px; /* 调整位置为给计时器留出空间 */
   transform: translateX(-50%);
 }
 

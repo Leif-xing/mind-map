@@ -54,6 +54,9 @@
     <div v-show="aiLoading" class="ai-loading-overlay">
       <div class="ai-loading-content">
         <div class="loading-icon"></div>
+        <div class="ai-timer">
+          <span class="timer-text">{{ formatTime(aiElapsedTime) }}</span>
+        </div>
       </div>
       <el-button 
         type="warning" 
@@ -90,7 +93,10 @@ export default {
       generatingContent: '',
       isLoopRendering: false,
       rootWaitCount: 0,
-      aiLoading: false
+      aiLoading: false,
+      aiStartTime: null,          // AI生成开始时间
+      aiElapsedTime: 0,           // AI生成已用时间（秒）
+      aiTimerInterval: null       // AI生成计时器ID
     }
   },
   computed: {
@@ -132,6 +138,13 @@ export default {
     openConfig() {
       this.$bus.$emit('open_ai_config')
     },
+    
+    // 格式化时间（秒转为mm:ss格式）
+    formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    },
 
     async startGenerate() {
       // 添加调试信息
@@ -171,6 +184,13 @@ export default {
       this.generatingContent = ''
       this.aiLoading = true  // 开始加载动画
       
+      // 启动计时器
+      this.startTimer()
+      
+      // 在AI创建时，完全隐藏思维导图内容
+      // 设置为null使画布上不显示任何节点
+      this.mindMap.setData(null);
+      
       // 通知管理器更新生成状态
       this.$bus.$emit('ai_generating_status', true)
       
@@ -192,16 +212,10 @@ export default {
           throw new Error('未选择AI配置，请先选择AI服务')
         }
         
-        // 清空当前思维导图 - 使用空的根节点结构而不是null
-        this.mindMap.setData({
-          data: {
-            text: '生成中...',
-            richText: false,
-            expand: true,
-            isActive: false
-          },
-          children: []
-        })
+        // 在AI创建时，完全隐藏思维导图内容
+        // 通过设置null值使画布上不显示任何节点
+        this.mindMap.setData(null);
+        console.log('AI创建开始，隐藏思维导图内容');
         
         // 构建提示词
         const prompt = this.buildPrompt(currentTopic)
@@ -430,6 +444,7 @@ export default {
     stopGenerate() {
       this.generating = false
       this.aiLoading = false  // 销毁加载动画
+      this.stopTimer()  // 停止计时器
       this.$bus.$emit('ai_generating_status', false)
       this.$message.success('已停止AI生成')
     },
@@ -447,7 +462,40 @@ export default {
       this.topic = ''
       this.generatingContent = ''
       this.rootWaitCount = 0
+    },
+    
+    // 启动AI生成计时器
+    startTimer() {
+      // 清除之前的定时器
+      if (this.aiTimerInterval) {
+        clearInterval(this.aiTimerInterval);
+      }
+      
+      this.aiStartTime = new Date();
+      this.aiElapsedTime = 0;
+      
+      this.aiTimerInterval = setInterval(() => {
+        if (this.aiLoading) { // 只有在加载动画显示时才计时
+          const now = new Date();
+          this.aiElapsedTime = Math.floor((now - this.aiStartTime) / 1000);
+        } else {
+          // 如果加载动画已隐藏，停止计时器
+          this.stopTimer();
+        }
+      }, 1000);
+    },
+    
+    // 停止AI生成计时器
+    stopTimer() {
+      if (this.aiTimerInterval) {
+        clearInterval(this.aiTimerInterval);
+        this.aiTimerInterval = null;
+      }
     }
+  },
+  beforeDestroy() {
+    // 组件销毁时停止计时器
+    this.stopTimer();
   }
 }
 </script>
@@ -535,11 +583,27 @@ body.isDark {
   100% { transform: rotate(360deg); }
 }
 
+.ai-timer {
+  margin-top: 10px; /* 在加载图标下方 */
+  z-index: 100000; /* 确保计时器在最上层 */
+  
+  .timer-text {
+    font-size: 16px;
+    font-weight: bold;
+    color: #409EFF;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 6px 12px;
+    border-radius: 18px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    display: inline-block;
+  }
+}
+
 // 与AiCreate.vue中的按钮样式保持一致
 .ai-loading-overlay .btn {
   position: absolute;
   left: 50%;
-  top: 100px;
+  top: 150px; /* 调整位置为给计时器留出空间 */
   transform: translateX(-50%);
 }
 
