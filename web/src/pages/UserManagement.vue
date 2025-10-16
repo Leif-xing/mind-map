@@ -175,7 +175,7 @@ export default {
             .order('created_at', { ascending: false })
 
           if (error) {
-            console.error('获取用户列表失败:', error)
+            // console.error('获取用户列表失败:', error)
             this.$message.error('获取用户列表失败: ' + error.message)
             // 回退到本地存储
             this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
@@ -192,7 +192,7 @@ export default {
             })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           }
         } catch (error) {
-          console.error('获取用户列表异常:', error)
+          // console.error('获取用户列表异常:', error)
           this.$message.error('获取用户列表异常: ' + error.message)
           // 回退到本地存储
           this.users = [...this.$store.state.users].sort((a, b) => b.id - a.id)
@@ -228,7 +228,7 @@ export default {
           this.$message.success(`用户 ${user.username} 导图权限已更新`)
           this.loadUsers() // 重新加载用户列表
         } catch (error) {
-          console.error('更新用户权限失败:', error)
+          // console.error('更新用户权限失败:', error)
           this.$message.error('更新用户权限失败: ' + error.message)
         }
       } else {
@@ -272,7 +272,7 @@ export default {
                 return
               }
             } catch (error) {
-              console.error('检查管理员数量异常:', error)
+              // console.error('检查管理员数量异常:', error)
               this.$message.error('检查管理员数量异常: ' + error.message)
               return
             }
@@ -291,7 +291,7 @@ export default {
               this.loadUsers() // 重新加载用户列表
             }
           } catch (error) {
-            console.error('删除用户异常:', error)
+            // console.error('删除用户异常:', error)
             this.$message.error('删除用户异常: ' + error.message)
           }
         }).catch(() => {

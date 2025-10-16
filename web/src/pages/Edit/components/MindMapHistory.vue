@@ -163,8 +163,21 @@ export default {
           editingTitle: false,
           tempTitle: mindMap.title
         }))
+        // 同步到Vuex本地缓存（只存储原始数据，不包含UI状态字段）
+        this.$store.commit('setLocalMindMaps', mindMaps)
+        
+        // 加载列表时清空思维导图内容缓存，确保加载最新内容
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        cacheKeys.forEach(key => {
+          if (currentMindMapId && !key.includes(currentMindMapId)) {
+            localStorage.removeItem(key);
+          } else if (!currentMindMapId) {
+            localStorage.removeItem(key);
+          }
+        });
       } catch (error) {
-        console.error('加载思维导图失败:', error)
+        // console.error('加载思维导图失败:', error)
         this.$message.error('加载思维导图失败: ' + error.message)
       } finally {
         this.loading = false
@@ -204,7 +217,7 @@ export default {
         this.loadMindMaps() // 重新加载列表
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('删除思维导图失败:', error)
+          // console.error('删除思维导图失败:', error)
           this.$message.error('删除思维导图失败: ' + error.message)
         }
       }
@@ -238,7 +251,7 @@ export default {
         this.loadMindMaps() // 重新加载列表
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('批量删除思维导图失败:', error)
+          // console.error('批量删除思维导图失败:', error)
           this.$message.error('批量删除思维导图失败: ' + error.message)
         }
       }
@@ -272,7 +285,7 @@ export default {
         this.loadMindMaps() // 重新加载列表
       } catch (error) {
         if (error !== 'cancel') {
-          console.error('清空思维导图失败:', error)
+          // console.error('清空思维导图失败:', error)
           this.$message.error('清空思维导图失败: ' + error.message)
         }
       }
@@ -370,7 +383,7 @@ export default {
         mindMap.updated_at = updatedMindMap.updated_at
         this.$message.success('标题更新成功')
       } catch (error) {
-        console.error('更新标题失败:', error)
+        // console.error('更新标题失败:', error)
         this.$message.error('标题更新失败: ' + error.message)
         mindMap.tempTitle = mindMap.title // 恢复原值
       } finally {

@@ -159,7 +159,7 @@ export default {
           this.$router.push('/login')
         }
       } catch (error) {
-        console.error('注册错误:', error)
+        // console.error('注册错误:', error)
         this.$message.error('注册失败: ' + error.message)
       } finally {
         this.loading = false

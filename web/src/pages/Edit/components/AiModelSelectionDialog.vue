@@ -87,7 +87,7 @@ export default {
         // 获取用户可用的AI配置
         this.models = await aiConfigApi.getUserAvailableAiConfigs(userId)
       } catch (error) {
-        console.error('加载AI模型失败:', error)
+        console.error('Failed to load AI models:', error)
         this.$message.error('加载AI模型失败: ' + error.message)
         this.models = []
       } finally {

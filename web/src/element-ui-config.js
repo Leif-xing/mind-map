@@ -1,5 +1,95 @@
 import { Message } from 'element-ui';
 
+// 拖拽指令
+const dragDirective = {
+  bind(el, binding, vnode) {
+    const dialogHeaderEl = el.querySelector('.el-dialog__header');
+    const dragDom = el.querySelector('.el-dialog');
+    
+    if (!dialogHeaderEl || !dragDom) {
+      return;
+    }
+    
+    dialogHeaderEl.style.cursor = 'move';
+    
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let isDragging = false;
+    
+    const handleMousedown = (e) => {
+      // 只有点击标题栏才触发拖拽
+      if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+        return;
+      }
+      
+      // 计算鼠标按下时的偏移量
+      startX = e.clientX;
+      startY = e.clientY;
+      isDragging = true;
+      
+      // 获取当前dialog的位置
+      const style = window.getComputedStyle(dragDom);
+      // 解析transform属性获取当前位置
+      const transform = style.transform || style.webkitTransform || style.mozTransform;
+      if (transform && transform !== 'none') {
+        const matrix = new DOMMatrixReadOnly(transform);
+        lastX = matrix.m41 || 0;
+        lastY = matrix.m42 || 0;
+      } else {
+        lastX = 0;
+        lastY = 0;
+      }
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseup);
+    };
+    
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      
+      const currentX = e.clientX;
+      const currentY = e.clientY;
+      
+      const offsetX = currentX - startX;
+      const offsetY = currentY - startY;
+      
+      dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`;
+      dragDom.style.willChange = 'transform'; // 优化性能
+    };
+    
+    const handleMouseup = () => {
+      isDragging = false;
+      dragDom.style.willChange = 'auto';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseup);
+    };
+    
+    dialogHeaderEl.addEventListener('mousedown', handleMousedown);
+    
+    // 保存事件处理函数，以便后续清理
+    if (!el._dragHandlers) {
+      el._dragHandlers = {};
+    }
+    el._dragHandlers.mousedown = handleMousedown;
+  },
+  unbind(el) {
+    // 移除事件监听器
+    if (el._dragHandlers && el._dragHandlers.mousedown) {
+      const dialogHeaderEl = el.querySelector('.el-dialog__header');
+      if (dialogHeaderEl) {
+        dialogHeaderEl.removeEventListener('mousedown', el._dragHandlers.mousedown);
+      }
+      el._dragHandlers = null;
+    }
+  }
+};
+
+export { dragDirective };
+
+// 动态创建CSS样式来设置消息提示的位置和对齐方式
+
 // 动态创建CSS样式来设置消息提示的位置和对齐方式
 const addCustomMessageStyles = () => {
   const styleId = 'custom-message-styles';
@@ -53,8 +143,7 @@ const createCustomMessageHandler = (originalMethod) => {
       // 调用原始方法显示消息
       return originalMethod(options);
     } else {
-      // 对于其他消息，记录到控制台但不显示
-      console.log('消息提示已被过滤:', messageText);
+      // 对于其他消息，不显示也不记录到控制台
       return null;
     }
   };

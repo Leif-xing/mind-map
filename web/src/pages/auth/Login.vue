@@ -154,7 +154,7 @@ export default {
           }
         }
       } catch (error) {
-        console.error('登录错误:', error)
+        // console.error('登录错误:', error)
         this.$message.error('登录失败: ' + error.message)
       } finally {
         this.loading = false

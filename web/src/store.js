@@ -45,6 +45,7 @@ const store = new Vuex.Store({
     extraTextOnExport: '', // 导出时底部添加的文字
     isDragOutlineTreeNode: false, // 当前是否正在拖拽大纲树的节点
     currentMindMapId: null, // 当前正在编辑的思维导图ID
+    localMindMaps: [], // 本地缓存的思维导图列表
     // 统一AI系统配置
     aiSystem: {
       currentProvider: 'huoshan', // 当前选择的提供商
@@ -158,6 +159,11 @@ const store = new Vuex.Store({
     
     setCurrentMindMapId(state, mindMapId) {
       state.currentMindMapId = mindMapId
+    },
+    
+    // 设置本地缓存的思维导图列表
+    setLocalMindMaps(state, mindMaps) {
+      state.localMindMaps = mindMaps;
     },
 
     // 扩展主题列表
@@ -289,13 +295,66 @@ const store = new Vuex.Store({
       }
     },
     
-    // 保存思维导图
-    async saveMindMap({ commit }, { userId, title, content }) {
+    // 保存思维导图（根据是否传入ID来决定是创建还是更新），并同步到本地缓存
+    async saveMindMap({ commit, state }, { id, userId, title, content, isUpdate }) {
+      console.log('💾 Store - 开始保存思维导图，ID:', id, '标题:', title, '用户ID:', userId);
+      
       if (this.state.supabaseEnabled) {
-        return await mindMapApi.saveMindMap(userId, title, content)
+        let result;
+        if (id) {
+          // 如果传入了ID，则更新现有思维导图
+          console.log('💾 Store - 更新现有思维导图，ID:', id);
+          // 输出完整的思维导图内容以确认保存的是最新内容
+          console.log('💾 Store - 准备保存的思维导图内容:', JSON.stringify(content, null, 2));
+          result = await mindMapApi.updateMindMap(id, title, content);
+          console.log('💾 Store - 更新思维导图完成，结果ID:', result?.id);
+          
+          // 同步到本地缓存 - 更新现有记录
+          const updatedMindMap = {
+            id: result.id,
+            user_id: result.user_id,
+            title: result.title,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+            is_public: result.is_public
+          };
+          
+          // 更新本地缓存列表中的对应记录
+          const updatedLocalList = state.localMindMaps.map(mindMap => 
+            mindMap.id === id ? updatedMindMap : mindMap
+          );
+          commit('setLocalMindMaps', updatedLocalList);
+          console.log('💾 Store - 本地缓存已更新，列表长度:', updatedLocalList.length);
+          
+        } else {
+          // 如果没有传入ID，则创建新思维导图
+          console.log('💾 Store - 创建新思维导图，用户ID:', userId);
+          // 输出完整的思维导图内容以确认保存的是最新内容
+          console.log('💾 Store - 准备创建的思维导图内容:', JSON.stringify(content, null, 2));
+          result = await mindMapApi.saveMindMap(userId, title, content);
+          console.log('💾 Store - 创建思维导图完成，结果ID:', result?.id);
+          
+          // 同步到本地缓存 - 添加新记录
+          const newMindMap = {
+            id: result.id,
+            user_id: result.user_id,
+            title: result.title,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+            is_public: result.is_public
+          };
+          
+          // 将新记录添加到本地缓存列表的开头
+          const updatedLocalList = [newMindMap, ...state.localMindMaps];
+          commit('setLocalMindMaps', updatedLocalList);
+          console.log('💾 Store - 本地缓存已更新，列表长度:', updatedLocalList.length);
+        }
+        
+        return result;
       } else {
+        console.log('💾 Store - Supabase未启用，使用本地保存逻辑');
         // 本地保存逻辑
-        return null
+        return null;
       }
     },
     
@@ -349,7 +408,7 @@ const store = new Vuex.Store({
           // 这里仅作为占位符，实际实现需要根据你的 Supabase 配置进行调整
           // console.log('通过Supabase更新密码成功'); // 仅调试时使用
         } catch (error) {
-          console.error('更新数据库密码失败:', error);
+          // console.error('更新数据库密码失败:', error);
           throw error;
         }
       } else {
@@ -388,7 +447,7 @@ const store = new Vuex.Store({
         commit('setLocalConfig', { aiSystem: newAiSystem })
         return configs
       } catch (error) {
-        console.error('获取AI配置失败:', error)
+        // console.error('获取AI配置失败:', error)
         throw error
       }
     },
@@ -414,11 +473,11 @@ const store = new Vuex.Store({
               if (success) {
                 // console.log('AI配置选择已同步到数据库:', configId); // 仅调试时使用
               } else {
-                console.error('AI配置选择同步到数据库失败:', configId);
+                // console.error('AI配置选择同步到数据库失败:', configId);
               }
             })
             .catch(error => {
-              console.error('异步更新AI配置选择到数据库失败:', error);
+              // console.error('异步更新AI配置选择到数据库失败:', error);
             });
           
           return true;
@@ -467,7 +526,7 @@ const store = new Vuex.Store({
           }
         }
       } catch (error) {
-        console.error('选择AI配置失败:', error)
+        // console.error('选择AI配置失败:', error)
         throw error
       }
     },
@@ -501,7 +560,7 @@ const store = new Vuex.Store({
         }
         return null
       } catch (error) {
-        console.error('获取用户当前AI配置失败:', error)
+        // console.error('获取用户当前AI配置失败:', error)
         throw error
       }
     },
@@ -511,7 +570,7 @@ const store = new Vuex.Store({
       try {
         return await aiConfigApi.callAiService(userId, aiPayload)
       } catch (error) {
-        console.error('AI服务调用失败:', error)
+        // console.error('AI服务调用失败:', error)
         throw error
       }
     }

@@ -154,9 +154,130 @@ export default {
       this.$emit('input', val)
     }
   },
+  mounted() {
+    // 初始化拖拽功能
+    this.initDrag();
+  },
+  watch: {
+    value(val) {
+      this.visible = val
+      if (val) {
+        this.initConfig()
+        // 对话框显示时初始化拖拽功能
+        this.$nextTick(() => {
+          this.initDrag();
+        });
+      } else {
+        // 对话框关闭时清理拖拽事件
+        this.cleanupDrag();
+      }
+    },
+    visible(val) {
+      this.$emit('input', val)
+      if (val) {
+        // 对话框显示时初始化拖拽功能
+        this.$nextTick(() => {
+          this.initDrag();
+        });
+      } else {
+        // 对话框关闭时清理拖拽事件
+        this.cleanupDrag();
+      }
+    }
+  },
+  
   methods: {
-    ...mapMutations(['setLocalConfig']),
-    ...mapActions(['selectAiConfig']),
+    // 初始化拖拽功能
+    initDrag() {
+      // 获取对话框头部和对话框元素
+      this.$nextTick(() => {
+        if (this.visible) {
+          const dialogHeaderEl = document.querySelector('.unifiedAiConfigDialog .el-dialog__header');
+          const dragDom = document.querySelector('.unifiedAiConfigDialog .el-dialog');
+          
+          if (!dialogHeaderEl || !dragDom) {
+            // 如果元素还未渲染，稍后重试
+            setTimeout(() => {
+              this.initDrag();
+            }, 100);
+            return;
+          }
+          
+          dialogHeaderEl.style.cursor = 'move';
+          
+          let startX = 0;
+          let startY = 0;
+          let lastX = 0;
+          let lastY = 0;
+          let isDragging = false;
+          
+          const handleMousedown = (e) => {
+            // 只有点击标题栏才触发拖拽
+            if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+              return;
+            }
+            
+            // 计算鼠标按下时的偏移量
+            startX = e.clientX;
+            startY = e.clientY;
+            isDragging = true;
+            
+            // 获取当前dialog的位置
+            const style = window.getComputedStyle(dragDom);
+            // 解析transform属性获取当前位置
+            const transform = style.transform || style.webkitTransform || style.mozTransform;
+            if (transform && transform !== 'none') {
+              const matrix = new DOMMatrixReadOnly(transform);
+              lastX = matrix.m41 || 0;
+              lastY = matrix.m42 || 0;
+            } else {
+              lastX = 0;
+              lastY = 0;
+            }
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseup);
+          };
+          
+          const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            
+            const offsetX = currentX - startX;
+            const offsetY = currentY - startY;
+            
+            dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`;
+            dragDom.style.willChange = 'transform'; // 优化性能
+          };
+          
+          const handleMouseup = () => {
+            isDragging = false;
+            dragDom.style.willChange = 'auto';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseup);
+          };
+          
+          // 添加事件监听器
+          dialogHeaderEl.addEventListener('mousedown', handleMousedown);
+          
+          // 保存引用，以便后续清理
+          this.dragHandler = {
+            element: dialogHeaderEl,
+            mousedownHandler: handleMousedown
+          };
+        }
+      });
+    },
+    
+    // 清理拖拽事件
+    cleanupDrag() {
+      if (this.dragHandler) {
+        this.dragHandler.element.removeEventListener('mousedown', this.dragHandler.mousedownHandler);
+        this.dragHandler = null;
+      }
+    },
     
     initConfig() {
       // 从当前的AI系统配置加载内容
@@ -208,7 +329,7 @@ export default {
           throw new Error(`连接失败: ${response.status} - ${errorText}`)
         }
       } catch (error) {
-        console.error('连接测试失败:', error)
+        // console.error('连接测试失败:', error)
         this.$message.error(`连接测试失败: ${error.message}`)
       } finally {
         this.testing = false
@@ -294,7 +415,7 @@ export default {
                 });
                 this.$message.success('已设置为当前AI配置！');
               } catch (selectError) {
-                console.error('设置当前AI配置失败:', selectError);
+                // console.error('设置当前AI配置失败:', selectError);
               }
             }
             
@@ -304,7 +425,7 @@ export default {
             this.saving = false;
             this.handleClose();
           } catch (error) {
-            console.error('保存AI配置失败:', error);
+            // console.error('保存AI配置失败:', error);
             this.$message.error('保存AI配置失败: ' + error.message);
             this.saving = false;
           }
@@ -317,6 +438,98 @@ export default {
     handleClose() {
       this.visible = false
       // 不再重置配置，保留输入内容供下次使用
+    },
+    
+    // 初始化拖拽功能
+    initDrag() {
+      // 获取对话框头部和对话框元素
+      this.$nextTick(() => {
+        if (this.visible) {
+          const dialogHeaderEl = document.querySelector('.unifiedAiConfigDialog .el-dialog__header');
+          const dragDom = document.querySelector('.unifiedAiConfigDialog .el-dialog');
+          
+          if (!dialogHeaderEl || !dragDom) {
+            // 如果元素还未渲染，稍后重试
+            setTimeout(() => {
+              this.initDrag();
+            }, 100);
+            return;
+          }
+          
+          dialogHeaderEl.style.cursor = 'move';
+          
+          let startX = 0;
+          let startY = 0;
+          let lastX = 0;
+          let lastY = 0;
+          let isDragging = false;
+          
+          const handleMousedown = (e) => {
+            // 只有点击标题栏才触发拖拽
+            if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+              return;
+            }
+            
+            // 计算鼠标按下时的偏移量
+            startX = e.clientX;
+            startY = e.clientY;
+            isDragging = true;
+            
+            // 获取当前dialog的位置
+            const style = window.getComputedStyle(dragDom);
+            // 解析transform属性获取当前位置
+            const transform = style.transform || style.webkitTransform || style.mozTransform;
+            if (transform && transform !== 'none') {
+              const matrix = new DOMMatrixReadOnly(transform);
+              lastX = matrix.m41 || 0;
+              lastY = matrix.m42 || 0;
+            } else {
+              lastX = 0;
+              lastY = 0;
+            }
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseup);
+          };
+          
+          const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            
+            const offsetX = currentX - startX;
+            const offsetY = currentY - startY;
+            
+            dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`;
+            dragDom.style.willChange = 'transform'; // 优化性能
+          };
+          
+          const handleMouseup = () => {
+            isDragging = false;
+            dragDom.style.willChange = 'auto';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseup);
+          };
+          
+          // 添加事件监听器
+          dialogHeaderEl.addEventListener('mousedown', handleMousedown);
+          
+          // 保存引用，以便后续清理
+          this.dragHandler = {
+            element: dialogHeaderEl,
+            mousedownHandler: handleMousedown
+          };
+        }
+      });
+    },
+    
+    // 清理拖拽事件
+    cleanupDrag() {
+      if (this.dragHandler) {
+        this.dragHandler.element.removeEventListener('mousedown', this.dragHandler.mousedownHandler);
+        this.dragHandler = null;
+      }
     },
 
     getStatusTitle() {
@@ -336,6 +549,10 @@ export default {
       if (!this.config.api) return '请配置API接口'
       return `当前配置: ${this.config.providerName} - ${this.config.model}`
     }
+  },
+  beforeDestroy() {
+    // 组件销毁时清理拖拽事件
+    this.cleanupDrag();
   }
 }
 </script>

@@ -144,7 +144,7 @@ export const storeUserData = (users, userIdCounter) => {
     };
     localStorage.setItem('SIMPLE_MIND_MAP_USER_DATA', JSON.stringify(userData));
   } catch (error) {
-    console.error('存储用户数据失败:', error);
+    // console.error('存储用户数据失败:', error);
   }
 }
 
@@ -157,7 +157,7 @@ export const getUserData = () => {
     }
     return null;
   } catch (error) {
-    console.error('获取用户数据失败:', error);
+    // console.error('获取用户数据失败:', error);
     return null;
   }
 }

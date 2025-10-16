@@ -239,7 +239,7 @@ export default {
                   this.selectedConfig = this.availableConfigs[0].id;
                 }
               } catch (error) {
-                console.error('更新AI配置失败:', error);
+                // console.error('更新AI配置失败:', error);
               }
             }, 100); // 短暂延迟以避免阻塞UI
           } else {
@@ -256,7 +256,7 @@ export default {
           }
         }
       } catch (error) {
-        console.error('加载AI配置失败:', error);
+        // console.error('加载AI配置失败:', error);
         this.$message.error('加载AI配置失败: ' + error.message);
       } finally {
         this.loading = false;

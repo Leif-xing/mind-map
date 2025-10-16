@@ -100,7 +100,7 @@ class Ai {
               return JSON.parse(item.replace(/^data:/, ''))
             })
         } catch (e) {
-          console.error('解析AI响应数据出错:', e, chunk)
+          // console.error('解析AI响应数据出错:', e, chunk)
           // 如果解析出错，继续处理其他数据
         }
         list.forEach(item => {
@@ -113,7 +113,7 @@ class Ai {
                 .join('')
             }
           } catch (e) {
-            console.error('处理AI响应数据出错:', e, item)
+            // console.error('处理AI响应数据出错:', e, item)
           }
         })
         progress(this.content)
@@ -197,7 +197,7 @@ class Ai {
           
           if (!res.ok) {
             const errorText = await res.text()
-            console.error('代理API错误详情:', errorText)
+            // console.error('代理API错误详情:', errorText)
             throw new Error(`代理API失败: ${res.status} - ${errorText}`)
           }
         } catch (proxyError) {
@@ -230,7 +230,7 @@ class Ai {
           })
           console.log('代理服务响应状态:', res.status)
         } catch (error) {
-          console.error('代理服务请求失败:', error)
+          // console.error('代理服务请求失败:', error)
           throw error
         }
       } else {
@@ -256,14 +256,14 @@ class Ai {
             throw new Error(`本地直连失败: ${res.status} ${text}`)
           }
         } catch (localDirectError) {
-          console.error('本地直连远端API失败:', localDirectError)
+          // console.error('本地直连远端API失败:', localDirectError)
           throw localDirectError
         }
       }
     }
     
     if (res.status && res.status !== 200) {
-      console.error('请求失败，状态码:', res.status)
+      // console.error('请求失败，状态码:', res.status)
       throw new Error(`请求失败，状态码: ${res.status}`)
     }
     

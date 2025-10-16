@@ -50,7 +50,7 @@ export default {
     
     // 如果是管理员访问思维导图页面，可以保留，但也可以添加提示
     if (currentUser.isAdmin) {
-      console.log('管理员正在使用思维导图功能')
+      // 管理员正在使用思维导图功能
     }
     
     this.initLocalConfig()
@@ -109,7 +109,7 @@ export default {
         this.$bus.$emit('loadMindMapData', mindMap)
       }).catch(() => {
         // 用户取消操作
-        console.log('用户取消加载思维导图')
+        // 用户取消加载思维导图
       })
     },
     

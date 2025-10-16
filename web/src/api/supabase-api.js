@@ -248,7 +248,7 @@ export const mindMapApi = {
       .order('updated_at', { ascending: false })
 
     if (error) {
-      console.error('API - 获取思维导图列表失败:', error);
+      // console.error('API - 获取思维导图列表失败:', error);
       throw new Error(error.message || '获取思维导图列表失败')
     }
 
@@ -274,7 +274,7 @@ export const mindMapApi = {
       try {
         mindMap.content = decompressMindMap(mindMap.content)
       } catch (decompressError) {
-        console.error('解压缩思维导图失败:', decompressError)
+        // console.error('解压缩思维导图失败:', decompressError)
         throw new Error('思维导图数据损坏或解压缩失败')
       }
     }
@@ -356,7 +356,7 @@ export const aiConfigApi = {
       .single()
 
     if (error) {
-      console.error('创建AI提供商配置失败:', error);
+      // console.error('创建AI提供商配置失败:', error);
       throw new Error(error.message || '创建AI配置失败')
     }
     
@@ -385,7 +385,7 @@ export const aiConfigApi = {
       .single()
 
     if (error) {
-      console.error('更新AI提供商配置失败:', error);
+      // console.error('更新AI提供商配置失败:', error);
       throw new Error(error.message || '更新AI配置失败')
     }
     
@@ -400,7 +400,7 @@ export const aiConfigApi = {
       .eq('id', configId)
 
     if (error) {
-      console.error('删除AI提供商配置失败:', error);
+      // console.error('删除AI提供商配置失败:', error);
       throw new Error(error.message || '删除AI配置失败')
     }
     
@@ -415,7 +415,7 @@ export const aiConfigApi = {
       .order('created_at', { ascending: false })
     
     if (error) {
-      console.error('获取AI提供商配置失败:', error);
+      // console.error('获取AI提供商配置失败:', error);
       throw new Error(error.message || '获取AI配置失败')
     }
     
@@ -433,7 +433,7 @@ export const aiConfigApi = {
       .single()
     
     if (userError) {
-      console.error('验证用户权限失败:', userError);
+      // console.error('验证用户权限失败:', userError);
       throw new Error('验证用户权限失败')
     }
     
@@ -459,7 +459,7 @@ export const aiConfigApi = {
     const { data, error } = await query
     
     if (error) {
-      console.error('获取可用AI配置失败:', error);
+      // console.error('获取可用AI配置失败:', error);
       throw new Error(error.message || '获取AI配置失败')
     }
     
@@ -481,7 +481,7 @@ export const aiConfigApi = {
       .eq('id', userId)
     
     if (error) {
-      console.error('更新密码失败:', error);
+      // console.error('更新密码失败:', error);
       throw new Error(error.message || '更新密码失败');
     }
     
@@ -526,7 +526,7 @@ export const aiConfigApi = {
       .eq('id', userId)
     
     if (error) {
-      console.error('更新用户AI配置选择失败:', error);
+      // console.error('更新用户AI配置选择失败:', error);
       throw new Error(error.message || '更新AI配置选择失败')
     }
     
@@ -604,11 +604,11 @@ export const aiConfigApi = {
     
     if (!proxyResponse.ok) {
       const errorText = await proxyResponse.text().catch(() => '')
-      console.error('AI代理请求失败:', {
-        status: proxyResponse.status,
-        statusText: proxyResponse.statusText,
-        error: errorText
-      })
+      // console.error('AI代理请求失败:', {
+      //   status: proxyResponse.status,
+      //   statusText: proxyResponse.statusText,
+      //   error: errorText
+      // })
       
       let errorData = {}
       try {

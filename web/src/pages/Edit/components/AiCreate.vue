@@ -99,6 +99,40 @@
         停止续写
       </el-button>
     </div>
+
+    <!-- 保存确认对话框 -->
+    <el-dialog
+      class="saveConfirmDialog"
+      title="AI生成完成"
+      :visible.sync="saveConfirmVisible"
+      width="420px"
+      append-to-body
+      :before-close="handleSaveConfirmClose"
+    >
+      <div class="confirm-content">
+        <div class="confirm-icon">
+          <i class="el-icon-warning" style="color: #E6A23C; font-size: 48px;"></i>
+        </div>
+        <div class="confirm-text">
+          <h3>是否保存当前思维导图后再生成？</h3>
+          <p class="current-title">当前思维导图：{{ currentMindMapTitle || '未命名思维导图' }}</p>
+          <p class="tip-text">选择"保存"将保存当前内容并应用AI生成结果</p>
+          <p class="tip-text">选择"覆盖"将直接替换当前内容（不保存）</p>
+        </div>
+      </div>
+      
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="handleOverwrite" type="info">
+          <i class="el-icon-refresh-left"></i>
+          覆盖
+        </el-button>
+        <el-button @click="handleSaveAndApply" type="primary">
+          <i class="el-icon-document"></i>
+          保存
+        </el-button>
+      </div>
+    </el-dialog>
+
     <AiConfigDialog v-model="aiConfigDialogVisible"></AiConfigDialog>
     <AiSelectionDialog v-model="aiSelectionDialogVisible"></AiSelectionDialog>
     <!-- AI续写 -->
@@ -174,7 +208,13 @@ export default {
       aiPartStartTime: null,   // AI续写开始时间
       aiPartElapsedTime: 0,    // AI续写已用时间（秒）
       timerInterval: null,     // 计时器ID
-      partTimerInterval: null  // AI续写计时器ID
+      partTimerInterval: null,  // AI续写计时器ID
+      
+      // 保存提示对话框相关
+      saveConfirmVisible: false,
+      generatedMindMapData: null, // 临时存储生成的思维导图数据
+      currentMindMapTitle: '',    // 当前思维导图标题
+      createContent: ''           // 保存用户输入的创建内容
     }
   },
   computed: {
@@ -306,11 +346,11 @@ export default {
             this.createDialogVisible = true
           } else {
             const errorText = await response.text()
-            console.error('AI API测试失败:', response.status, errorText)
+            // console.error('AI API测试失败:', response.status, errorText)
             this.$message.error(`${this.$t('ai.connectFailed')} (${response.status}): ${errorText}`)
           }
         } catch (error) {
-          console.error('AI API测试异常:', error)
+          // console.error('AI API测试异常:', error)
           this.$message.error(`${this.$t('ai.connectFailed')}: ${error.message}`)
         }
       } else {
@@ -324,7 +364,7 @@ export default {
           this.clientTipDialogVisible = false
           this.createDialogVisible = true
         } catch (error) {
-          console.error('代理服务测试失败:', error)
+          // console.error('代理服务测试失败:', error)
           this.$message.error(this.$t('ai.connectFailed'))
         }
       }
@@ -409,9 +449,17 @@ export default {
         return
       }
       
-
+      // 保存输入内容到实例变量
+      this.createContent = aiInputText
       
       this.closeAiCreateDialog()
+      
+      // 立即显示保存确认对话框
+      this.showSaveConfirmDialog()
+    },
+    
+    // 开始实际的AI创建过程
+    async startActualAiCreate() {
       this.aiCreatingMaskVisible = true
       // 发起请求
       this.isAiCreating = true
@@ -438,7 +486,7 @@ export default {
               role: 'user',
               content: `${this.$t(
                 'ai.aiCreateMsgPrefix'
-              )}${aiInputText}${this.$t('ai.aiCreateMsgPostfix')}`
+              )}${this.createContent}${this.$t('ai.aiCreateMsgPostfix')}`
             }
           ]
         }
@@ -460,7 +508,7 @@ export default {
         this.resetOnAiCreatingStop()
         this.$message.success(this.$t('ai.aiGenerationSuccess'))
       } catch (error) {
-        console.error('AI生成失败:', error)
+        // console.error('AI生成失败:', error)
         this.resetOnAiCreatingStop()
         this.resetOnRenderEnd()
         
@@ -590,14 +638,14 @@ export default {
         
         // 验证数据有效性
         if (!treeData || typeof treeData !== 'object') {
-          console.error('转换后的数据无效:', treeData)
+          // console.error('转换后的数据无效:', treeData)
           this.isLoopRendering = false
           return
         }
         
         this.addUid(treeData)
       } catch (error) {
-        console.error('数据转换失败:', error)
+        // console.error('数据转换失败:', error)
         this.isLoopRendering = false
         this.$message.error('AI内容解析失败: ' + error.message)
         return
@@ -615,6 +663,8 @@ export default {
           if (!this.isAiCreating && !this.aiCreatingContent) {
             this.mindMap.off('node_tree_render_end', onRenderEnd)
             this.latestUid = ''
+            this.resetOnRenderEnd()
+            this.$message.success(this.$t('ai.aiGenerationSuccess'))
             return
           }
 
@@ -645,7 +695,7 @@ export default {
             this.$message.success(this.$t('ai.aiGenerationSuccess'))
           }
         } catch (error) {
-          console.error('渲染过程出错:', error)
+          // console.error('渲染过程出错:', error)
           this.resetOnAiCreatingStop()
           this.resetOnRenderEnd()
         }
@@ -663,7 +713,7 @@ export default {
           }
         }, 100)
       } catch (error) {
-        console.error('设置思维导图数据失败:', error)
+        // console.error('设置思维导图数据失败:', error)
         this.isLoopRendering = false
         this.resetOnAiCreatingStop()
         this.resetOnRenderEnd()
@@ -804,6 +854,9 @@ export default {
 
     // AI生成部分
     async aiCreatePart() {
+      const originalMindMapId = this.$store.state.currentMindMapId;
+      // console.log('🔄 AiCreate - 开始AI续写，续写前ID:', originalMindMapId);
+      
       try {
         if (!this.beingCreatePartNode) {
           return
@@ -855,19 +908,22 @@ export default {
           this.aiPartCreating = false  // 结束AI续写加载动画
           this.stopPartTimer()
           this.resetAiCreatePartDialog()
+          // console.log('🔄 AiCreate - AI续写成功完成，续写后ID:', this.$store.state.currentMindMapId, '原始ID:', originalMindMapId);
           this.$message.success(this.$t('ai.aiGenerationSuccess'))
         } catch (error) {
-          console.error('AI续写失败:', error)
+          // console.error('AI续写失败:', error)
           // 为AI续写创建专门的错误处理
           this.isAiCreating = false
           this.aiPartCreating = false  // 结束AI续写加载动画
           this.stopPartTimer()
           this.resetAiCreatePartDialog()
           this.resetOnRenderEnd()
+          // console.log('🔄 AiCreate - AI续写失败，失败后ID:', this.$store.state.currentMindMapId, '原始ID:', originalMindMapId);
           this.$message.error(this.$t('ai.generationFailed') + ': ' + (error.message || '未知错误'))
         }
       } catch (error) {
         console.log(error)
+        // console.log('🔄 AiCreate - AI续写异常，异常后ID:', this.$store.state.currentMindMapId, '原始ID:', originalMindMapId);
       }
     },
 
@@ -894,6 +950,7 @@ export default {
 
     // 轮询进行部分渲染
     loopRenderOnAiCreatingPart() {
+      // console.log('🔄 AiCreate - 开始AI续写渲染，当前ID:', this.$store.state.currentMindMapId);
       if (!this.aiCreatingContent.trim() || this.isLoopRendering) return
       this.isLoopRendering = true
       const partData = transformMarkdownTo(this.aiCreatingContent)
@@ -909,41 +966,54 @@ export default {
 
       // 在当前渲染完成时再进行下一次渲染
       const onRenderEnd = () => {
-        // 处理超出画布的节点
-        this.checkNodeOuter()
+        try {
+          // 处理超出画布的节点
+          this.checkNodeOuter()
 
-        // 如果生成结束数据渲染完毕，那么解绑事件
-        if (!this.isAiCreating && !this.aiCreatingContent) {
-          this.mindMap.off('node_tree_render_end', onRenderEnd)
-          this.latestUid = ''
-          return
-        }
-
-        const partData = transformMarkdownTo(this.aiCreatingContent)
-        
-        // 修复transformMarkdownTo的父子文本合并问题
-        if (partData) {
-          this.fixParentChildTextMerge(partData)
-        }
-        
-        this.addUid(partData)
-        const treeData = this.addToTargetNode(partData.children || [])
-
-        if (this.isAiCreating) {
-          // 如果和上次数据一样则不触发重新渲染
-          const curPartData = JSON.stringify(partData)
-          if (curPartData === lastPartData) {
-            setTimeout(() => {
-              onRenderEnd()
-            }, 500)
+          // 如果生成结束数据渲染完毕，那么解绑事件
+          if (!this.isAiCreating && !this.aiCreatingContent) {
+            // AI续写结束，检查当前ID（续写不应该改变ID）
+            // console.log('🎯 AiCreate - AI续写结束，当前ID保持不变:', this.$store.state.currentMindMapId);
+            this.mindMap.off('node_tree_render_end', onRenderEnd)
+            this.latestUid = ''
             return
           }
-          lastPartData = curPartData
-          this.mindMap.updateData(treeData)
-        } else {
-          this.mindMap.updateData(treeData)
+
+          const partData = transformMarkdownTo(this.aiCreatingContent)
+          
+          // 修复transformMarkdownTo的父子文本合并问题
+          if (partData) {
+            this.fixParentChildTextMerge(partData)
+          }
+          
+          this.addUid(partData)
+          const treeData = this.addToTargetNode(partData.children || [])
+
+          if (this.isAiCreating) {
+            // 如果和上次数据一样则不触发重新渲染
+            const curPartData = JSON.stringify(partData)
+            if (curPartData === lastPartData) {
+              setTimeout(() => {
+                onRenderEnd()
+              }, 500)
+              return
+            }
+            lastPartData = curPartData
+            this.mindMap.updateData(treeData)
+          } else {
+            this.mindMap.updateData(treeData)
+            // AI续写成功完成，检查当前ID（续写不应该改变ID）
+            // console.log('🎯 AiCreate - AI续写成功完成，当前ID保持不变:', this.$store.state.currentMindMapId);
+            this.resetOnRenderEnd()
+            this.$message.success(this.$t('ai.aiGenerationSuccess'))
+          }
+        } catch (error) {
+          // console.error('🔄 AiCreate - AI续写渲染过程出错:', error);
+          // 续写出错时，当前ID也应保持不变
+          // console.log('🎯 AiCreate - AI续写渲染出错，当前ID保持不变:', this.$store.state.currentMindMapId);
+          // 解绑事件以避免循环调用
+          this.mindMap.off('node_tree_render_end', onRenderEnd)
           this.resetOnRenderEnd()
-          this.$message.success(this.$t('ai.aiGenerationSuccess'))
         }
       }
       this.mindMap.on('node_tree_render_end', onRenderEnd)
@@ -994,7 +1064,7 @@ export default {
           progress(content)
           end(content)
         } catch (error) {
-          console.error('AI对话失败:', error)
+          // console.error('AI对话失败:', error)
           err(error)
         } finally {
           this.isAiCreating = false
@@ -1008,6 +1078,198 @@ export default {
     // AI对话停止
     aiChatStop() {
       this.isAiCreating = false
+    },
+
+    // 显示保存确认对话框
+    showSaveConfirmDialog() {
+      // console.log('🎯 AiCreate - 显示保存确认对话框');
+      
+      // 获取当前思维导图的标题（从根节点获取）
+      this.getCurrentMindMapTitle();
+      
+      // 显示确认对话框
+      this.saveConfirmVisible = true;
+    },
+
+    // 生成思维导图数据
+    generateMindMapData() {
+      if (!this.aiCreatingContent.trim()) {
+        // console.error('❌ AiCreate - 没有生成内容');
+        return;
+      }
+      
+      try {
+        const treeData = transformMarkdownTo(this.aiCreatingContent);
+        
+        if (!treeData || typeof treeData !== 'object') {
+          throw new Error('思维导图转换失败：数据结构不完整');
+        }
+        
+        // 添加唯一标识
+        this.addUid(treeData);
+        
+        // 存储生成的数据
+        this.generatedMindMapData = treeData;
+        // console.log('✅ AiCreate - 思维导图数据生成完成');
+        
+      } catch (error) {
+        // console.error('❌ AiCreate - 思维导图数据生成失败:', error);
+        this.$message.error('思维导图内容解析失败: ' + error.message);
+        this.generatedMindMapData = null;
+      }
+    },
+
+    // 获取当前思维导图标题
+    getCurrentMindMapTitle() {
+      try {
+        if (this.mindMap && this.mindMap.renderer && this.mindMap.renderer.root) {
+          const rootData = this.mindMap.renderer.root.getData();
+          if (rootData && rootData.text) {
+            // 移除HTML标签，获取纯文本
+            this.currentMindMapTitle = rootData.text.replace(/<[^>]*>/g, '').trim();
+          } else {
+            this.currentMindMapTitle = '未命名思维导图';
+          }
+        } else {
+          this.currentMindMapTitle = '未命名思维导图';
+        }
+        // console.log('📝 AiCreate - 当前思维导图标题:', this.currentMindMapTitle);
+      } catch (error) {
+        // console.error('❌ AiCreate - 获取当前标题失败:', error);
+        this.currentMindMapTitle = '未命名思维导图';
+      }
+    },
+
+    // 处理保存并应用
+    async handleSaveAndApply() {
+      // console.log('💾 AiCreate - 保存当前思维导图，然后开始生成');
+      
+      try {
+        // 1. 先保存当前思维导图
+        await this.saveCurrentMindMap();
+        // console.log('✅ AiCreate - 当前思维导图已保存');
+        
+        // 2. 关闭确认对话框
+        this.saveConfirmVisible = false;
+        
+        // 3. 开始AI生成
+        await this.startActualAiCreate();
+        
+      } catch (error) {
+        // console.error('❌ AiCreate - 保存失败:', error);
+        this.$message.error('保存失败: ' + error.message);
+        this.saveConfirmVisible = false;
+      }
+    },
+
+    // 处理覆盖
+    async handleOverwrite() {
+      // console.log('🔄 AiCreate - 直接开始生成（不保存当前内容）');
+      
+      // 1. 关闭确认对话框
+      this.saveConfirmVisible = false;
+      
+      // 2. 直接开始AI生成
+      await this.startActualAiCreate();
+    },
+
+    // 保存当前思维导图
+    async saveCurrentMindMap() {
+      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentUser = this.$store.state.currentUser;
+      
+      // console.log('💾 AiCreate - 开始保存当前思维导图，当前ID:', currentMindMapId);
+      
+      if (!currentUser) {
+        throw new Error('用户未登录');
+      }
+
+      // 获取当前思维导图数据
+      const currentData = this.mindMap.getData(true);
+      
+      if (currentMindMapId) {
+        // 有ID，更新现有思维导图
+        // console.log('📝 AiCreate - 更新现有思维导图, ID:', currentMindMapId);
+        
+        await this.$store.dispatch('saveMindMap', {
+          id: currentMindMapId,
+          userId: currentUser.id,
+          title: this.currentMindMapTitle,
+          content: currentData,
+          isUpdate: true
+        });
+        
+        // 保存成功后，立即更新本地缓存
+        try {
+          const cacheKey = `mindmap_cache_${currentMindMapId}`;
+          localStorage.setItem(cacheKey, JSON.stringify(currentData));
+        } catch (error) {
+          // console.error('保存思维导图缓存失败:', error);
+        }
+        
+      } else {
+        // 无ID，创建新思维导图
+        // console.log('📝 AiCreate - 创建新思维导图（ID为空）');
+        
+        const result = await this.$store.dispatch('saveMindMap', {
+          userId: currentUser.id,
+          title: this.currentMindMapTitle,
+          content: currentData,
+          isUpdate: false
+        });
+        
+        // 更新当前思维导图ID
+        if (result && result.id) {
+          // console.log('🔄 AiCreate - 保存新思维导图后，ID设置为:', result.id);
+          this.$store.commit('setCurrentMindMapId', result.id);
+          // 对于新创建的思维导图，也更新本地缓存
+          try {
+            const cacheKey = `mindmap_cache_${result.id}`;
+            localStorage.setItem(cacheKey, JSON.stringify(currentData));
+          } catch (error) {
+            // console.error('保存新思维导图缓存失败:', error);
+          }
+        }
+      }
+      // console.log('💾 AiCreate - 保存操作完成，当前ID:', this.$store.state.currentMindMapId);
+    },
+
+    // 应用生成的数据
+    applyGeneratedData() {
+      if (!this.generatedMindMapData) {
+        // console.error('❌ AiCreate - 没有可应用的数据');
+        return;
+      }
+
+      try {
+        // console.log('🎯 AiCreate - 应用AI生成的数据');
+        
+        // 直接设置数据
+        this.mindMap.setData(this.generatedMindMapData);
+        
+        // 等待根节点创建完成后再居中
+        setTimeout(() => {
+          if (this.mindMap && this.mindMap.renderer && this.mindMap.renderer.root) {
+            this.mindMap.renderer.setRootNodeCenter();
+          }
+        }, 100);
+        
+        // 清空临时数据
+        this.generatedMindMapData = null;
+        this.resetOnRenderEnd();
+        
+      } catch (error) {
+        // console.error('❌ AiCreate - 应用数据失败:', error);
+        this.$message.error('应用AI生成数据失败: ' + error.message);
+      }
+    },
+
+    // 处理保存确认对话框关闭
+    handleSaveConfirmClose() {
+      // 用户直接关闭对话框，相当于取消操作
+      this.saveConfirmVisible = false;
+      this.generatedMindMapData = null;
+      this.$message.info('已取消应用AI生成结果');
     }
   }
 }
@@ -1146,5 +1408,139 @@ body.isDark .aiPartCreatingMask {
 body.isDark .ai-part-loading-icon {
   border: 3px solid rgba(255, 255, 255, 0.2);
   border-top: 3px solid #409eff;
+}
+
+// 保存确认对话框样式（复用 UnifiedAiCreateDialog 的样式）
+.saveConfirmDialog {
+  .confirm-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px 0;
+    
+    .confirm-icon {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      background: rgba(230, 162, 60, 0.1);
+      border-radius: 50%;
+    }
+    
+    .confirm-text {
+      flex: 1;
+      
+      h3 {
+        margin: 0 0 15px 0;
+        font-size: 18px;
+        color: #303133;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+      
+      .current-title {
+        margin: 10px 0;
+        padding: 8px 12px;
+        background: #f5f7fa;
+        border-radius: 4px;
+        color: #606266;
+        font-size: 14px;
+        font-weight: 500;
+        border-left: 3px solid #409EFF;
+      }
+      
+      .tip-text {
+        margin: 8px 0;
+        color: #909399;
+        font-size: 13px;
+        line-height: 1.5;
+        
+        &:first-of-type {
+          color: #67C23A;
+        }
+        
+        &:last-of-type {
+          color: #F56C6C;
+        }
+      }
+    }
+  }
+  
+  .dialog-footer {
+    text-align: right;
+    padding-top: 20px;
+    border-top: 1px solid #EBEEF5;
+    
+    .el-button {
+      margin-left: 12px;
+      
+      &:first-child {
+        margin-left: 0;
+      }
+      
+      i {
+        margin-right: 5px;
+      }
+    }
+  }
+}
+
+// 深色主题下的保存确认对话框
+body.isDark {
+  .saveConfirmDialog {
+    /deep/ .el-dialog {
+      background-color: #2b2f33;
+      border: 1px solid #404040;
+    }
+    
+    /deep/ .el-dialog__header {
+      background-color: #2b2f33;
+      border-bottom: 1px solid #404040;
+    }
+    
+    /deep/ .el-dialog__title {
+      color: hsla(0, 0%, 100%, 0.9);
+    }
+    
+    /deep/ .el-dialog__headerbtn .el-dialog__close {
+      color: hsla(0, 0%, 100%, 0.6);
+    }
+    
+    .confirm-content {
+      .confirm-icon {
+        background: rgba(230, 162, 60, 0.2);
+      }
+      
+      .confirm-text {
+        h3 {
+          color: hsla(0, 0%, 100%, 0.9);
+        }
+        
+        .current-title {
+          background: #363b3f;
+          color: hsla(0, 0%, 100%, 0.8);
+          border-left-color: #409EFF;
+        }
+        
+        .tip-text {
+          color: hsla(0, 0%, 100%, 0.6);
+          
+          &:first-of-type {
+            color: #67C23A;
+          }
+          
+          &:last-of-type {
+            color: #F56C6C;
+          }
+        }
+      }
+    }
+    
+    .dialog-footer {
+      border-top-color: #404040;
+    }
+  }
 }
 </style>

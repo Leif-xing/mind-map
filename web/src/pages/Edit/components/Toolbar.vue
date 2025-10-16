@@ -720,12 +720,49 @@ export default {
           return
         }
         
-        // 调用store中的保存方法
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        // console.log('💾 Toolbar - 开始保存思维导图，当前ID:', currentMindMapId, '用户ID:', currentUser.id);
+        
+        // 调用store中的保存方法，根据是否有ID决定是更新还是创建
         const result = await this.$store.dispatch('saveMindMap', {
+          id: currentMindMapId,  // 传递ID参数，如果有ID则更新，否则创建
           userId: currentUser.id,
           title: title,
           content: data
         })
+        
+        // console.log('💾 Toolbar - 保存完成，结果ID:', result?.id, '当前ID:', this.$store.state.currentMindMapId);
+        
+        // 保存完成后，确保当前思维导图ID设置正确
+        // 如果之前没有ID但保存后获得了ID，则更新当前ID
+        if (result && result.id) {
+          const updatedCurrentMindMapId = this.$store.state.currentMindMapId;
+          if (!updatedCurrentMindMapId) {
+            // console.log('🔄 Toolbar - 设置新ID:', result.id);
+            this.$store.commit('setCurrentMindMapId', result.id);
+          } else {
+            // console.log('🔄 Toolbar - 当前已有ID，保持为:', updatedCurrentMindMapId);
+          }
+          
+          // 保存成功后，立即更新本地缓存
+          try {
+            const cacheKey = `mindmap_cache_${result.id}`;
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+          } catch (error) {
+            // console.error('保存思维导图缓存失败:', error);
+          }
+        } else {
+          // 如果是更新操作，使用当前ID更新缓存
+          const currentMindMapId = this.$store.state.currentMindMapId;
+          if (currentMindMapId) {
+            try {
+              const cacheKey = `mindmap_cache_${currentMindMapId}`;
+              localStorage.setItem(cacheKey, JSON.stringify(data));
+            } catch (error) {
+              // console.error('更新思维导图缓存失败:', error);
+            }
+          }
+        }
         
         this.$message.success('思维导图保存成功')
       } catch (error) {
@@ -733,7 +770,7 @@ export default {
           // 用户取消操作，不显示错误消息
           return
         }
-        console.error('保存思维导图失败:', error)
+        // console.error('保存思维导图失败:', error)
         this.$message.error('保存思维导图失败: ' + error.message)
       }
     },
@@ -763,12 +800,48 @@ export default {
           autoSaveTitle = `${rootNodeText}_自动保存_${new Date().toISOString().replace(/[:.]/g, '-')}`
         }
         
-        // 调用store中的保存方法
-        await this.$store.dispatch('saveMindMap', {
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        // console.log('💾 Toolbar - 开始自动保存思维导图，当前ID:', currentMindMapId, '用户ID:', currentUser.id);
+        
+        // 调用store中的保存方法，根据是否有ID决定是更新还是创建
+        const result = await this.$store.dispatch('saveMindMap', {
+          id: currentMindMapId,  // 传递ID参数，如果有ID则更新，否则创建
           userId: currentUser.id,
           title: autoSaveTitle,
           content: data
         })
+        
+        // console.log('💾 Toolbar - 自动保存完成，结果ID:', result?.id, '当前ID:', this.$store.state.currentMindMapId);
+        
+        // 如果自动保存成功且获得了新ID（表示新建了思维导图），更新当前思维导图ID
+        if (result && result.id) {
+          const updatedCurrentMindMapId = this.$store.state.currentMindMapId;
+          if (!updatedCurrentMindMapId) {
+            // console.log('🔄 Toolbar - 自动保存设置新ID:', result.id);
+            this.$store.commit('setCurrentMindMapId', result.id);
+          } else {
+            // console.log('🔄 Toolbar - 自动保存，当前已有ID，保持为:', updatedCurrentMindMapId);
+          }
+          
+          // 自动保存成功后，立即更新本地缓存
+          try {
+            const cacheKey = `mindmap_cache_${result.id}`;
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+          } catch (error) {
+            // console.error('自动保存思维导图缓存失败:', error);
+          }
+        } else {
+          // 如果是更新操作，使用当前ID更新缓存
+          const currentMindMapId = this.$store.state.currentMindMapId;
+          if (currentMindMapId) {
+            try {
+              const cacheKey = `mindmap_cache_${currentMindMapId}`;
+              localStorage.setItem(cacheKey, JSON.stringify(data));
+            } catch (error) {
+              // console.error('自动更新思维导图缓存失败:', error);
+            }
+          }
+        }
       } catch (error) {
         // 自动保存失败时不显示错误消息，避免打扰用户
       }
@@ -868,15 +941,28 @@ export default {
             //   });
             // }
             this.mindMaps = mindMaps
+            // 同步到Vuex本地缓存
+            this.$store.commit('setLocalMindMaps', mindMaps)
+            
+            // 清空思维导图内容缓存，确保加载最新内容
+            const currentMindMapId = this.$store.state.currentMindMapId;
+            const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+            cacheKeys.forEach(key => {
+              if (currentMindMapId && !key.includes(currentMindMapId)) {
+                localStorage.removeItem(key);
+              } else if (!currentMindMapId) {
+                localStorage.removeItem(key);
+              }
+            });
           } catch (error) {
-            console.error('加载思维导图失败:', error)
+            // console.error('加载思维导图失败:', error)
             this.$message.error('加载思维导图失败: ' + error.message)
           } finally {
             this.mindMapLoading = false
           }
         }
       } catch (error) {
-        console.error('显示思维导图对话框失败:', error)
+        // console.error('显示思维导图对话框失败:', error)
         this.$message.error('显示思维导图对话框失败: ' + error.message)
       }
     },
@@ -1001,14 +1087,18 @@ export default {
     
     // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
     async getMindMapDataFromCache(mindMapId) {
+      // console.log('🔄 Toolbar - 尝试从缓存获取思维导图数据，ID:', mindMapId);
+      
       // 1. 先尝试从localStorage获取
       try {
         const cacheKey = `mindmap_cache_${mindMapId}`;
         const cachedData = localStorage.getItem(cacheKey);
         
         if (cachedData) {
+          // console.log('🔄 Toolbar - 从localStorage缓存获取到思维导图数据，ID:', mindMapId);
           return JSON.parse(cachedData);
         }
+        // console.log('🔄 Toolbar - localStorage缓存中未找到思维导图数据，ID:', mindMapId);
         
         // 2. 如果缓存中没有，从数据库获取
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -1016,20 +1106,24 @@ export default {
           return null;
         }
         
+        // console.log('🔄 Toolbar - 从数据库获取思维导图数据，ID:', mindMapId);
         const fullMindMapData = await this.$store.dispatch('getMindMapById', {
           mindMapId: mindMapId,
           userId: currentUser.id
         });
         
         if (fullMindMapData && fullMindMapData.content) {
+          // console.log('🔄 Toolbar - 从数据库获取到思维导图数据，ID:', mindMapId);
           // 保存到缓存供下次使用
           this.saveMindMapDataToCache(mindMapId, fullMindMapData.content);
           return fullMindMapData.content;
         } else {
+          // console.log('🔄 Toolbar - 从数据库未获取到思维导图数据，ID:', mindMapId);
           return null;
         }
         
       } catch (error) {
+        // console.error('🔄 Toolbar - 获取思维导图数据时出错，ID:', mindMapId, error);
         return null;
       }
     },
@@ -1086,12 +1180,15 @@ export default {
         }
         
         // 2. 从缓存中获取目标思维导图的数据
+        // console.log('🔄 Toolbar - 开始加载思维导图，ID:', mindMapToLoad.id, '标题:', mindMapToLoad.title);
         const contentToLoad = await this.getMindMapDataFromCache(mindMapToLoad.id);
         
         if (!contentToLoad) {
           this.$message.error('加载思维导图失败：无法获取数据');
           return;
         }
+        // console.log('🔄 Toolbar - 从缓存加载到的思维导图内容 - 根节点文本:', contentToLoad?.root?.data?.text || '无根节点');
+        // console.log('🔄 Toolbar - 从缓存加载到的思维导图内容 - 子节点数量:', contentToLoad?.root?.children?.length || 0);
         // console.log('加载的内容结构检查:', {
         //   hasRoot: !!contentToLoad?.root,
         //   rootData: contentToLoad?.root ? contentToLoad.root.data : null,
@@ -1162,12 +1259,29 @@ export default {
         
         this.$message.success('思维导图删除成功')
         
+        // 清理被删除思维导图的本地缓存
+        const deletedMindMapCacheKey = `mindmap_cache_${mindMap.id}`;
+        localStorage.removeItem(deletedMindMapCacheKey);
+        
         // 更新状态栏信息
         this.statusMessage = `已删除: ${mindMap.title}`
         
         // 重新加载思维导图列表
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
         this.mindMaps = updatedMindMaps
+        // 同步到Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', updatedMindMaps)
+        
+        // 删除操作后清空思维导图内容缓存
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        cacheKeys.forEach(key => {
+          if (currentMindMapId && !key.includes(currentMindMapId)) {
+            localStorage.removeItem(key);
+          } else if (!currentMindMapId) {
+            localStorage.removeItem(key);
+          }
+        });
         // console.log('删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
         
         // 设置状态消息在8秒后清除
@@ -1176,7 +1290,7 @@ export default {
         }, 8000)
       } catch (err) {
         if (err !== 'cancel') {
-          console.error('删除思维导图失败:', err)
+          // console.error('删除思维导图失败:', err)
           this.$message.error('删除思维导图失败: ' + err.message)
           this.statusMessage = `删除失败: ${mindMap.title} - ${err.message}`
           // 设置状态消息在8秒后清除
@@ -1211,6 +1325,19 @@ export default {
         // console.log('开始预加载思维导图列表...'); // 仅调试时使用
         const mindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
         this.mindMaps = mindMaps
+        // 同步到Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', mindMaps)
+        
+        // 预加载时也清空思维导图内容缓存，确保加载最新内容
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        cacheKeys.forEach(key => {
+          if (currentMindMapId && !key.includes(currentMindMapId)) {
+            localStorage.removeItem(key);
+          } else if (!currentMindMapId) {
+            localStorage.removeItem(key);
+          }
+        });
         // console.log('思维导图列表预加载完成，共', mindMaps.length, '个'); // 仅调试时使用
       } catch (error) {
         // console.log('思维导图预加载失败:', error.message); // 仅调试时使用
@@ -1238,9 +1365,6 @@ export default {
     // 刷新思维导图列表
     async refreshMindMaps() {
       try {
-        this.mindMapLoading = true; // 显示加载状态
-        this.statusMessage = '正在刷新思维导图列表...';
-        
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         if (!currentUser) {
           this.$message.error('用户未登录，无法刷新思维导图列表');
@@ -1251,19 +1375,123 @@ export default {
           }, 8000);
           return;
         }
+
+        // 检查当前思维导图是否有未保存的更改
+        let shouldSave = true;
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        if (currentMindMapId) {
+          try {
+            // 获取当前编辑的思维导图数据
+            const currentData = this.mindMap.getData(true);
+            // 获取数据库中存储的对应思维导图
+            const dbMindMap = await this.$store.dispatch('getMindMapById', {
+              mindMapId: currentMindMapId,
+              userId: currentUser.id
+            });
+            
+            if (dbMindMap && dbMindMap.content) {
+              // 比较当前数据与数据库数据，如果不同则提示保存
+              const dbContentStr = JSON.stringify(dbMindMap.content);
+              const currentContentStr = JSON.stringify(currentData);
+              
+              if (dbContentStr !== currentContentStr) {
+                // 数据不同，提示用户是否保存
+                try {
+                  await this.$confirm(
+                    '当前思维导图有未保存的更改，是否保存后再刷新？', 
+                    '提示',
+                    {
+                      confirmButtonText: '保存',
+                      cancelButtonText: '放弃',
+                      type: 'warning'
+                    }
+                  );
+                  // 用户选择保存
+                  shouldSave = true;
+                } catch (cancelError) {
+                  // 用户选择放弃
+                  shouldSave = false;
+                }
+              }
+            }
+          } catch (error) {
+            // console.error('检查思维导图更改时出错:', error);
+            // 如果检查失败，仍然询问用户
+            try {
+              await this.$confirm(
+                '无法确定当前思维导图是否有更改，是否保存后再刷新？', 
+                '提示',
+                {
+                  confirmButtonText: '保存',
+                  cancelButtonText: '放弃',
+                  type: 'warning'
+                }
+              );
+              shouldSave = true;
+            } catch (cancelError) {
+              shouldSave = false;
+            }
+          }
+        }
+
+        // 如果用户选择保存，则先保存当前思维导图
+        if (shouldSave && currentMindMapId) {
+          this.mindMapLoading = true;
+          this.statusMessage = '正在保存当前思维导图...';
+          
+          try {
+            const currentData = this.mindMap.getData(true);
+            const currentMindMapTitle = this.getCurrentMindMapTitleFromData(currentData);
+            
+            await this.$store.dispatch('saveMindMap', {
+              id: currentMindMapId,
+              userId: currentUser.id,
+              title: currentMindMapTitle,
+              content: currentData,
+              isUpdate: true
+            });
+            
+            this.$message.success('当前思维导图已保存');
+          } catch (saveError) {
+            // console.error('保存当前思维导图失败:', saveError);
+            this.$message.error('保存当前思维导图失败: ' + saveError.message);
+            // 即使保存失败，也继续刷新操作
+          }
+        }
+
+        // 开始刷新思维导图列表
+        this.mindMapLoading = true;
+        this.statusMessage = '正在刷新思维导图列表...';
         
         // console.log('开始刷新思维导图列表...'); // 仅调试时使用
         const mindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id);
         this.mindMaps = mindMaps;
         this.filteredMindMaps = mindMaps; // 同时更新过滤后的列表
         
+        // 同步到Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', mindMaps);
+        
+        // 清空所有思维导图内容缓存，确保后续加载使用最新的数据库数据
+        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        cacheKeys.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // 对于大型系统，我们通常不会在列表刷新时立即获取所有思维导图的完整内容
+        // 而是清空缓存，让getMindMapDataFromCache方法在需要时从数据库获取最新内容
+        // 这样可以避免一次性加载过多数据，提高性能
+
         // console.log('思维导图列表刷新完成，共', mindMaps.length, '个'); // 仅调试时使用
         this.$message.success(`思维导图列表刷新完成，共 ${mindMaps.length} 个`);
         this.statusMessage = `已更新 ${mindMaps.length} 个思维导图`;
       } catch (error) {
-        console.error('刷新思维导图列表失败:', error);
+        // console.error('刷新思维导图列表失败:', error);
         this.$message.error('刷新思维导图列表失败: ' + error.message);
         this.statusMessage = '刷新失败: ' + error.message;
+        // 8秒后清除状态消息
+        setTimeout(() => {
+          this.statusMessage = '';
+        }, 8000);
       } finally {
         this.mindMapLoading = false; // 隐藏加载状态
         // 8秒后清除状态消息
@@ -1271,6 +1499,17 @@ export default {
           this.statusMessage = '';
         }, 8000);
       }
+    },
+    
+    // 从思维导图数据中获取标题
+    getCurrentMindMapTitleFromData(data) {
+      if (data && data.root && data.root.data && data.root.data.text) {
+        // 移除HTML标签，获取纯文本
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = data.root.data.text;
+        return tempDiv.textContent || tempDiv.innerText || '未命名思维导图';
+      }
+      return '未命名思维导图';
     },
     
     // 处理搜索
@@ -1350,11 +1589,30 @@ export default {
         this.statusMessage = `已删除 ${this.selectedMindMaps.length} 个思维导图`
         
         // 清空选中状态
+        // 清理被删除思维导图的本地缓存
+        this.selectedMindMaps.forEach(mindMap => {
+          const deletedMindMapCacheKey = `mindmap_cache_${mindMap.id}`;
+          localStorage.removeItem(deletedMindMapCacheKey);
+        });
+        
         this.selectedMindMaps = []
         
         // 重新加载思维导图列表
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
         this.mindMaps = updatedMindMaps
+        // 同步到Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', updatedMindMaps)
+        
+        // 批量删除后清空思维导图内容缓存
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        cacheKeys.forEach(key => {
+          if (currentMindMapId && !key.includes(currentMindMapId)) {
+            localStorage.removeItem(key);
+          } else if (!currentMindMapId) {
+            localStorage.removeItem(key);
+          }
+        });
         // console.log('批量删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
         
         // 设置状态消息在8秒后清除
@@ -1363,7 +1621,7 @@ export default {
         }, 8000)
       } catch (err) {
         if (err !== 'cancel') {
-          console.error('批量删除思维导图失败:', err)
+          // console.error('批量删除思维导图失败:', err)
           this.$message.error('批量删除思维导图失败: ' + err.message)
           this.statusMessage = '批量删除失败: ' + err.message
           // 设置状态消息在8秒后清除
@@ -1435,6 +1693,8 @@ export default {
         // 清空选中状态和列表
         this.selectedMindMaps = []
         this.mindMaps = []
+        // 同步清空Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', [])
         
         // 设置状态消息在8秒后清除
         setTimeout(() => {
@@ -1442,7 +1702,7 @@ export default {
         }, 8000)
       } catch (err) {
         if (err !== 'cancel') {
-          console.error('一键删除思维导图失败:', err)
+          // console.error('一键删除思维导图失败:', err)
           this.$message.error('一键删除思维导图失败: ' + err.message)
           this.statusMessage = '一键删除失败: ' + err.message
           // 设置状态消息在8秒后清除
@@ -1611,7 +1871,7 @@ export default {
         // 重置表单数据
         this.resetPasswordFields();
       } catch (error) {
-        console.error('修改密码失败:', error);
+        // console.error('修改密码失败:', error);
         throw error;
       }
     },

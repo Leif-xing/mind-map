@@ -10,6 +10,7 @@ import VueViewer from 'v-viewer'
 import i18n from './i18n'
 import { getLang } from '@/api'
 import Message from './element-ui-config' // 导入禁用消息的配置
+import { dragDirective } from './element-ui-config' // 导入拖拽指令
 // import VConsole from 'vconsole'
 // const vConsole = new VConsole()
 
@@ -21,6 +22,7 @@ Vue.prototype.$bus = bus
 Vue.prototype.$message = Message // 使用禁用消息的配置
 Vue.use(ElementUI)
 Vue.use(VueViewer)
+Vue.directive('drag-dialog', dragDirective)
 
 const initApp = () => {
   i18n.locale = getLang()

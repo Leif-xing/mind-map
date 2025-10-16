@@ -79,7 +79,7 @@ export default {
           }
         }
       } catch (error) {
-        console.error('初始化认证状态失败:', error)
+        // console.error('初始化认证状态失败:', error)
         localStorage.removeItem('currentUser')
       }
     }
