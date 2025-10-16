@@ -495,6 +495,16 @@ export default {
     },
 
     onUnload(e) {
+      // 保存当前思维导图ID到localStorage，以便刷新后恢复
+      // 只有当ID存在时才保存，避免存储null值
+      const currentMindMapId = this.$store.state.currentMindMapId;
+      if (currentMindMapId) {
+        localStorage.setItem('REFRESH_ID', currentMindMapId);
+      } else {
+        // 如果当前没有ID（如新建的思维导图），清除可能存在的REFRESH_ID
+        localStorage.removeItem('REFRESH_ID');
+      }
+      
       if (this.waitingWriteToLocalFile) {
         const msg = '存在未保存的数据'
         e.returnValue = msg

@@ -62,6 +62,9 @@ export default {
     loading.close()
     this.setBodyDark()
     
+    // 检查并恢复刷新前的思维导图ID
+    this.checkAndRestoreMindMapId()
+    
     // 监听键盘事件来处理快捷键
     window.addEventListener('keydown', this.handleKeyDown)
     
@@ -69,7 +72,7 @@ export default {
     this.$bus.$on('logout', this.handleLogout)
   },
   methods: {
-    ...mapMutations(['setLocalConfig']),
+    ...mapMutations(['setLocalConfig', 'setCurrentMindMapId']),
 
     // 初始化本地配置
     initLocalConfig() {
@@ -79,6 +82,16 @@ export default {
           ...this.$store.state.localConfig,
           ...config
         })
+      }
+    },
+
+    // 检查并恢复刷新前的思维导图ID
+    checkAndRestoreMindMapId() {
+      const refreshId = localStorage.getItem('REFRESH_ID');
+      if (refreshId) {
+        this.setCurrentMindMapId(refreshId);
+        // 清除已使用的REFRESH_ID
+        localStorage.removeItem('REFRESH_ID');
       }
     },
 
