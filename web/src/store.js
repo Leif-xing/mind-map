@@ -297,17 +297,17 @@ const store = new Vuex.Store({
     
     // 保存思维导图（根据是否传入ID来决定是创建还是更新），并同步到本地缓存
     async saveMindMap({ commit, state }, { id, userId, title, content, isUpdate }) {
-      console.log('💾 Store - 开始保存思维导图，ID:', id, '标题:', title, '用户ID:', userId);
+      // console.log('💾 Store - 开始保存思维导图，ID:', id, '标题:', title, '用户ID:', userId);
       
       if (this.state.supabaseEnabled) {
         let result;
         if (id) {
           // 如果传入了ID，则更新现有思维导图
-          console.log('💾 Store - 更新现有思维导图，ID:', id);
+          // console.log('💾 Store - 更新现有思维导图，ID:', id);
           // 输出完整的思维导图内容以确认保存的是最新内容
-          console.log('💾 Store - 准备保存的思维导图内容:', JSON.stringify(content, null, 2));
+          // console.log('💾 Store - 准备保存的思维导图内容:', JSON.stringify(content, null, 2));
           result = await mindMapApi.updateMindMap(id, title, content);
-          console.log('💾 Store - 更新思维导图完成，结果ID:', result?.id);
+          // console.log('💾 Store - 更新思维导图完成，结果ID:', result?.id);
           
           // 同步到本地缓存 - 更新现有记录
           const updatedMindMap = {
@@ -328,11 +328,10 @@ const store = new Vuex.Store({
           
         } else {
           // 如果没有传入ID，则创建新思维导图
-          console.log('💾 Store - 创建新思维导图，用户ID:', userId);
-          // 输出完整的思维导图内容以确认保存的是最新内容
-          console.log('💾 Store - 准备创建的思维导图内容:', JSON.stringify(content, null, 2));
+          // console.log('💾 Store - 创建新思维导图，用户ID:', userId);
+
           result = await mindMapApi.saveMindMap(userId, title, content);
-          console.log('💾 Store - 创建思维导图完成，结果ID:', result?.id);
+          // console.log('💾 Store - 创建思维导图完成，结果ID:', result?.id);
           
           // 同步到本地缓存 - 添加新记录
           const newMindMap = {

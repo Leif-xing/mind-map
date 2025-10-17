@@ -146,12 +146,12 @@ export default {
   },
   watch: {
     visible(val) {
-      console.log('👁️ visible prop 变化:', val)
+      // console.log('👁️ visible prop 变化:', val)
       this.aiConfigDialogVisible = val
       if (val) {
         // 延迟更长时间确保DOM完全渲染
         setTimeout(() => {
-          console.log('🔄 通过 visible prop 触发拖拽初始化')
+          // console.log('🔄 通过 visible prop 触发拖拽初始化')
           this.initDragFunctionality()
         }, 300)
       } else {
@@ -159,14 +159,14 @@ export default {
       }
     },
     aiConfigDialogVisible(val, oldVal) {
-      console.log('👁️ aiConfigDialogVisible 变化:', val)
+      // console.log('👁️ aiConfigDialogVisible 变化:', val)
       if (!val && oldVal) {
         this.close()
       }
       if (val) {
         // 延迟更长时间确保DOM完全渲染
         setTimeout(() => {
-          console.log('🔄 通过 aiConfigDialogVisible 触发拖拽初始化')
+          // console.log('🔄 通过 aiConfigDialogVisible 触发拖拽初始化')
           this.initDragFunctionality()
         }, 300)
       } else {
@@ -178,7 +178,7 @@ export default {
     this.initFormData()
   },
   mounted() {
-    console.log('🔧 AiConfigDialog 组件已挂载')
+    // console.log('🔧 AiConfigDialog 组件已挂载')
   },
   beforeDestroy() {
     this.cleanupDragEvents()
@@ -239,18 +239,18 @@ export default {
 
     // 初始化拖拽功能（参考思维导图对话框实现）
     initDragFunctionality() {
-      console.log('=== 开始初始化AI配置对话框拖拽功能 ===')
+      // console.log('=== 开始初始化AI配置对话框拖拽功能 ===')
       
       // 记录当前页面所有对话框
       const allDialogs = document.querySelectorAll('.el-dialog')
-      console.log('页面总对话框数量:', allDialogs.length)
+      // console.log('页面总对话框数量:', allDialogs.length)
       
       allDialogs.forEach((dialog, index) => {
-        console.log(`对话框${index}:`, {
-          className: dialog.className,
-          display: window.getComputedStyle(dialog).display,
-          visible: dialog.style.display !== 'none'
-        })
+        // console.log(`对话框${index}:`, {
+        //   className: dialog.className,
+        //   display: window.getComputedStyle(dialog).display,
+        //   visible: dialog.style.display !== 'none'
+        // })
         const title = dialog.querySelector('.el-dialog__title')
         if (title) {
           console.log(`  标题: "${title.textContent}"`)
@@ -259,17 +259,17 @@ export default {
       
       // 尝试多种选择器
       let dialogEl = document.querySelector('.draggable-ai-config-dialog')
-      console.log('通过custom-class选择器找到:', !!dialogEl)
+      // console.log('通过custom-class选择器找到:', !!dialogEl)
       
       // 如果custom-class找不到，尝试原始class
       if (!dialogEl) {
         dialogEl = document.querySelector('.aiConfigDialog')
-        console.log('通过原始class选择器找到:', !!dialogEl)
+        // console.log('通过原始class选择器找到:', !!dialogEl)
       }
       
       // 如果还是找不到，通过标题查找
       if (!dialogEl) {
-        console.log('尝试通过标题查找...')
+        // console.log('尝试通过标题查找...')
         for (let dialog of allDialogs) {
           const title = dialog.querySelector('.el-dialog__title')
           if (title) {
@@ -277,7 +277,7 @@ export default {
             console.log(`检查标题: "${titleText}"`)
             if (titleText.includes('AI配置') || titleText.includes('AIConfiguration') || titleText.includes('AI Configuration')) {
               dialogEl = dialog
-              console.log('通过标题匹配找到对话框!')
+              // console.log('通过标题匹配找到对话框!')
               break
             }
           }
@@ -285,29 +285,29 @@ export default {
       }
       
       if (!dialogEl) {
-        console.log('❌ AI配置对话框未找到，所有选择器都失败')
+        // console.log('❌ AI配置对话框未找到，所有选择器都失败')
         return
       }
       
-      console.log('✅ 找到AI配置对话框:', dialogEl.className)
+      // console.log('✅ 找到AI配置对话框:', dialogEl.className)
       
       const headerEl = dialogEl.querySelector('.el-dialog__header')
       if (!headerEl) {
-        console.log('❌ AI配置对话框头部未找到')
+        // console.log('❌ AI配置对话框头部未找到')
         return
       }
       
-      console.log('✅ 找到AI配置对话框头部')
-      console.log('✅ AI配置对话框拖拽初始化成功!')
+      // console.log('✅ 找到AI配置对话框头部')
+      // console.log('✅ AI配置对话框拖拽初始化成功!')
       
       // 设置拖拽样式
       headerEl.style.cursor = 'move'
       headerEl.style.userSelect = 'none'
-      console.log('✅ 已设置拖拽样式')
+      // console.log('✅ 已设置拖拽样式')
       
       // 绑定拖拽事件
       headerEl.addEventListener('mousedown', this.startDrag)
-      console.log('✅ 已绑定拖拽事件')
+      // console.log('✅ 已绑定拖拽事件')
       
       this.dragHandler = {
         element: headerEl,
@@ -317,7 +317,7 @@ export default {
 
     // 开始拖拽
     startDrag(e) {
-      console.log('🚀 开始拖拽AI配置对话框')
+      // console.log('🚀 开始拖拽AI配置对话框')
       
       // 尝试多种方式找到对话框
       let dialogEl = document.querySelector('.draggable-ai-config-dialog')
@@ -334,11 +334,11 @@ export default {
       }
       
       if (!dialogEl) {
-        console.log('❌ 拖拽时找不到对话框元素')
+        // console.log('❌ 拖拽时找不到对话框元素')
         return
       }
       
-      console.log('✅ 拖拽时找到对话框:', dialogEl.className)
+      // console.log('✅ 拖拽时找到对话框:', dialogEl.className)
       
       // 记录初始位置
       this.dialogDragData = {
@@ -349,21 +349,21 @@ export default {
         initialTop: dialogEl.getBoundingClientRect().top
       }
       
-      console.log('📍 初始位置:', {
-        startX: this.dialogDragData.startX,
-        startY: this.dialogDragData.startY,
-        initialLeft: this.dialogDragData.initialLeft,
-        initialTop: this.dialogDragData.initialTop
-      })
+      // console.log('📍 初始位置:', {
+      //   startX: this.dialogDragData.startX,
+      //   startY: this.dialogDragData.startY,
+      //   initialLeft: this.dialogDragData.initialLeft,
+      //   initialTop: this.dialogDragData.initialTop
+      // })
       
       // 绑定移动和结束事件
       document.addEventListener('mousemove', this.onDrag)
       document.addEventListener('mouseup', this.endDrag)
-      console.log('✅ 已绑定mousemove和mouseup事件')
+      // console.log('✅ 已绑定mousemove和mouseup事件')
       
       // 添加拖拽样式
       dialogEl.classList.add('dragging')
-      console.log('✅ 已添加dragging样式类')
+      // console.log('✅ 已添加dragging样式类')
       
       // 防止选中文本
       e.preventDefault()
@@ -380,7 +380,7 @@ export default {
       }
       if (!dialogEl) return
       
-      console.log('🖱️ 拖拽中:', { x: e.clientX, y: e.clientY })
+      // console.log('🖱️ 拖拽中:', { x: e.clientX, y: e.clientY })
       
       // 计算新位置
       const deltaX = e.clientX - this.dialogDragData.startX

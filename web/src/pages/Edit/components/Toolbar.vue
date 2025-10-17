@@ -1097,7 +1097,7 @@ export default {
     
     // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
     async getMindMapDataFromCache(mindMapId) {
-      // console.log('🔄 Toolbar - 尝试从缓存获取思维导图数据，ID:', mindMapId);
+      // // console.log('🔄 Toolbar - 尝试从缓存获取思维导图数据，ID:', mindMapId);
       
       // 1. 先尝试从localStorage获取
       try {
@@ -1105,7 +1105,7 @@ export default {
         const cachedData = localStorage.getItem(cacheKey);
         
         if (cachedData) {
-          // console.log('🔄 Toolbar - 从localStorage缓存获取到思维导图数据，ID:', mindMapId);
+          // // console.log('🔄 Toolbar - 从localStorage缓存获取到思维导图数据，ID:', mindMapId);
           return JSON.parse(cachedData);
         }
         // console.log('🔄 Toolbar - localStorage缓存中未找到思维导图数据，ID:', mindMapId);
@@ -1116,19 +1116,19 @@ export default {
           return null;
         }
         
-        // console.log('🔄 Toolbar - 从数据库获取思维导图数据，ID:', mindMapId);
+        // // console.log('🔄 Toolbar - 从数据库获取思维导图数据，ID:', mindMapId);
         const fullMindMapData = await this.$store.dispatch('getMindMapById', {
           mindMapId: mindMapId,
           userId: currentUser.id
         });
         
         if (fullMindMapData && fullMindMapData.content) {
-          // console.log('🔄 Toolbar - 从数据库获取到思维导图数据，ID:', mindMapId);
+          // // console.log('🔄 Toolbar - 从数据库获取到思维导图数据，ID:', mindMapId);
           // 保存到缓存供下次使用
           this.saveMindMapDataToCache(mindMapId, fullMindMapData.content);
           return fullMindMapData.content;
         } else {
-          // console.log('🔄 Toolbar - 从数据库未获取到思维导图数据，ID:', mindMapId);
+          // // console.log('🔄 Toolbar - 从数据库未获取到思维导图数据，ID:', mindMapId);
           return null;
         }
         
@@ -1386,8 +1386,7 @@ export default {
           return;
         }
 
-        // 检查当前思维导图是否有未保存的更改
-        let shouldSave = true;
+        // 自动检查当前思维导图是否有未保存的更改并自动保存
         const currentMindMapId = this.$store.state.currentMindMapId;
         if (currentMindMapId) {
           try {
@@ -1400,72 +1399,52 @@ export default {
             });
             
             if (dbMindMap && dbMindMap.content) {
-              // 比较当前数据与数据库数据，如果不同则提示保存
+              // 比较当前数据与数据库数据，如果不同则自动保存
               const dbContentStr = JSON.stringify(dbMindMap.content);
               const currentContentStr = JSON.stringify(currentData);
               
               if (dbContentStr !== currentContentStr) {
-                // 数据不同，提示用户是否保存
-                try {
-                  await this.$confirm(
-                    '当前思维导图有未保存的更改，是否保存后再刷新？', 
-                    '提示',
-                    {
-                      confirmButtonText: '保存',
-                      cancelButtonText: '放弃',
-                      type: 'warning'
-                    }
-                  );
-                  // 用户选择保存
-                  shouldSave = true;
-                } catch (cancelError) {
-                  // 用户选择放弃
-                  shouldSave = false;
-                }
+                // 数据不同，自动保存
+                this.mindMapLoading = true;
+                this.statusMessage = '正在保存当前思维导图...';
+                
+                const currentMindMapTitle = this.getCurrentMindMapTitleFromData(currentData);
+                
+                await this.$store.dispatch('saveMindMap', {
+                  id: currentMindMapId,
+                  userId: currentUser.id,
+                  title: currentMindMapTitle,
+                  content: currentData,
+                  isUpdate: true
+                });
+                
+                this.$message.success('当前思维导图已自动保存');
               }
             }
           } catch (error) {
-            // console.error('检查思维导图更改时出错:', error);
-            // 如果检查失败，仍然询问用户
+            // console.error('检查思维导图更改或保存时出错:', error);
+            // 如果检查失败，仍然尝试保存当前内容
+            this.mindMapLoading = true;
+            this.statusMessage = '正在保存当前思维导图...';
+            
             try {
-              await this.$confirm(
-                '无法确定当前思维导图是否有更改，是否保存后再刷新？', 
-                '提示',
-                {
-                  confirmButtonText: '保存',
-                  cancelButtonText: '放弃',
-                  type: 'warning'
-                }
-              );
-              shouldSave = true;
-            } catch (cancelError) {
-              shouldSave = false;
+              const currentData = this.mindMap.getData(true);
+              const currentMindMapTitle = this.getCurrentMindMapTitleFromData(currentData);
+              
+              await this.$store.dispatch('saveMindMap', {
+                id: currentMindMapId,
+                userId: currentUser.id,
+                title: currentMindMapTitle,
+                content: currentData,
+                isUpdate: true
+              });
+              
+              this.$message.success('当前思维导图已自动保存');
+            } catch (saveError) {
+              // console.error('自动保存当前思维导图失败:', saveError);
+              this.$message.warning('自动保存当前思维导图失败: ' + saveError.message);
+              // 保存失败不影响刷新操作
             }
-          }
-        }
-
-        // 如果用户选择保存，则先保存当前思维导图
-        if (shouldSave && currentMindMapId) {
-          this.mindMapLoading = true;
-          this.statusMessage = '正在保存当前思维导图...';
-          
-          try {
-            const currentData = this.mindMap.getData(true);
-            const currentMindMapTitle = this.getCurrentMindMapTitleFromData(currentData);
-            
-            await this.$store.dispatch('saveMindMap', {
-              id: currentMindMapId,
-              userId: currentUser.id,
-              title: currentMindMapTitle,
-              content: currentData,
-              isUpdate: true
-            });
-            
-            this.$message.success('当前思维导图已保存');
-          } catch (saveError) {
-            // console.error('保存当前思维导图失败:', saveError);
-            this.$message.error('保存当前思维导图失败: ' + saveError.message);
-            // 即使保存失败，也继续刷新操作
           }
         }
 

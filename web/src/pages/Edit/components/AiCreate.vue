@@ -1314,11 +1314,11 @@ export default {
       }
 
       if (!dialogHeaderEl || !dragDom) {
-        console.log('AI创建对话框元素未找到，所有选择器都失败')
+        // console.log('AI创建对话框元素未找到，所有选择器都失败')
         return
       }
       
-      console.log('AI创建对话框拖拽初始化成功')
+      // console.log('AI创建对话框拖拽初始化成功')
 
         // 设置标题栏样式
         dialogHeaderEl.style.cursor = 'move'
@@ -1398,11 +1398,11 @@ export default {
       }
 
       if (!dialogHeaderEl || !dragDom) {
-        console.log('AI续写对话框元素未找到，所有选择器都失败')
+        // console.log('AI续写对话框元素未找到，所有选择器都失败')
         return
       }
       
-      console.log('AI续写对话框拖拽初始化成功')
+      // console.log('AI续写对话框拖拽初始化成功')
 
         // 设置标题栏样式
         dialogHeaderEl.style.cursor = 'move'
