@@ -166,7 +166,7 @@ export default {
         // 同步到Vuex本地缓存（只存储原始数据，不包含UI状态字段）
         this.$store.commit('setLocalMindMaps', mindMaps)
         
-        // 加载列表时清空思维导图内容缓存，确保加载最新内容
+        // 加载列表时清空非当前思维导图的内容缓存，确保加载最新内容
         const currentMindMapId = this.$store.state.currentMindMapId;
         const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
         cacheKeys.forEach(key => {
