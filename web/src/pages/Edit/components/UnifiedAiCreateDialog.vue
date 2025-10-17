@@ -73,20 +73,13 @@
       class="saveConfirmDialog"
       title="温馨提示"
       :visible.sync="saveConfirmVisible"
-      width="420px"
+      width="400px"
       append-to-body
       :before-close="handleSaveConfirmClose"
+      custom-class="draggable-save-confirm-dialog"
     >
       <div class="confirm-content">
-        <div class="confirm-icon">
-          <i class="el-icon-warning" style="color: #E6A23C; font-size: 48px;"></i>
-        </div>
-        <div class="confirm-text">
-          <h3>是否保存当前思维导图后再生成？</h3>
-          <p class="current-title">当前思维导图：{{ currentMindMapTitle || '未命名思维导图' }}</p>
-          <p class="tip-text">选择"保存"将保存当前内容并应用AI生成结果</p>
-          <p class="tip-text">选择"覆盖"将直接替换当前内容（不保存）</p>
-        </div>
+        <p class="confirm-text">是否保存当前思维导图后再生成？</p>
       </div>
       
       <div slot="footer" class="dialog-footer">
@@ -559,6 +552,13 @@ export default {
       
       // 显示确认对话框
       this.saveConfirmVisible = true;
+      
+      // 延迟初始化拖拽功能，确保DOM完全渲染
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.initDragForDialog('.draggable-save-confirm-dialog', '温馨提示');
+        }, 100);
+      });
     },
 
     // 生成思维导图数据
@@ -780,22 +780,25 @@ export default {
 
     // 初始化拖拽功能
     initDragFunctionality() {
+      // 对话框拖拽功能 - 处理主要的AI创建对话框
+      this.initDragForDialog('.draggable-unified-ai-create-dialog', 'AI创建思维导图')
+      
+      // 对话框拖拽功能 - 处理保存确认对话框
+      this.initDragForDialog('.draggable-save-confirm-dialog', '温馨提示')
+    },
+    
+    // 为指定对话框初始化拖拽功能
+    initDragForDialog(dialogClass, dialogTitle) {
       // 尝试多种选择器方式
-      let dialogHeaderEl = document.querySelector('.draggable-unified-ai-create-dialog .el-dialog__header')
-      let dragDom = document.querySelector('.draggable-unified-ai-create-dialog .el-dialog')
+      let dialogHeaderEl = document.querySelector(`${dialogClass} .el-dialog__header`)
+      let dragDom = document.querySelector(`${dialogClass} .el-dialog`)
       
       // 如果通过custom-class找不到，尝试通过class找
-      if (!dialogHeaderEl || !dragDom) {
-        dialogHeaderEl = document.querySelector('.unifiedAiCreateDialog .el-dialog__header')
-        dragDom = document.querySelector('.unifiedAiCreateDialog .el-dialog')
-      }
-      
-      // 如果还是找不到，尝试查找所有对话框中标题匹配的
       if (!dialogHeaderEl || !dragDom) {
         const allDialogs = document.querySelectorAll('.el-dialog')
         for (let dialog of allDialogs) {
           const title = dialog.querySelector('.el-dialog__title')
-          if (title && title.textContent.includes('AI创建思维导图')) {
+          if (title && title.textContent.includes(dialogTitle)) {
             dragDom = dialog
             dialogHeaderEl = dialog.querySelector('.el-dialog__header')
             break
@@ -804,68 +807,75 @@ export default {
       }
 
       if (!dialogHeaderEl || !dragDom) {
-        console.log('统一AI创建对话框元素未找到，尝试的选择器都失败了')
-        console.log('当前页面所有对话框:', document.querySelectorAll('.el-dialog').length)
+        // console.log(`${dialogTitle}对话框元素未找到`)
         return
       }
       
-      console.log('统一AI创建对话框拖拽初始化成功')
+      // console.log(`${dialogTitle}对话框拖拽初始化成功`)
 
-        // 设置标题栏样式
-        dialogHeaderEl.style.cursor = 'move'
-        dialogHeaderEl.style.userSelect = 'none'
+      // 设置标题栏样式
+      dialogHeaderEl.style.cursor = 'move'
+      dialogHeaderEl.style.userSelect = 'none'
 
-        let startX = 0
-        let startY = 0
-        let lastX = 0
-        let lastY = 0
+      let startX = 0
+      let startY = 0
+      let lastX = 0
+      let lastY = 0
 
-        const mousedownHandler = (e) => {
-          // 只有点击标题栏才触发拖拽
-          if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
-            return
-          }
-
-          startX = e.clientX
-          startY = e.clientY
-
-          // 获取当前transform值
-          const style = window.getComputedStyle(dragDom)
-          const transform = style.transform
-          if (transform && transform !== 'none') {
-            const matrix = new DOMMatrix(transform)
-            lastX = matrix.m41
-            lastY = matrix.m42
-          } else {
-            lastX = 0
-            lastY = 0
-          }
-
-          const mousemoveHandler = (e) => {
-            const offsetX = e.clientX - startX
-            const offsetY = e.clientY - startY
-            dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`
-            dragDom.style.willChange = 'transform' // 优化性能
-          }
-
-          const mouseupHandler = () => {
-            dragDom.style.willChange = 'auto'
-            document.removeEventListener('mousemove', mousemoveHandler)
-            document.removeEventListener('mouseup', mouseupHandler)
-          }
-
-          document.addEventListener('mousemove', mousemoveHandler)
-          document.addEventListener('mouseup', mouseupHandler)
-
-          e.preventDefault()
+      const mousedownHandler = (e) => {
+        // 只有点击标题栏才触发拖拽
+        if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+          return
         }
 
-        dialogHeaderEl.addEventListener('mousedown', mousedownHandler)
+        startX = e.clientX
+        startY = e.clientY
 
+        // 获取当前transform值
+        const style = window.getComputedStyle(dragDom)
+        const transform = style.transform
+        if (transform && transform !== 'none') {
+          const matrix = new DOMMatrix(transform)
+          lastX = matrix.m41
+          lastY = matrix.m42
+        } else {
+          lastX = 0
+          lastY = 0
+        }
+
+        const mousemoveHandler = (e) => {
+          const offsetX = e.clientX - startX
+          const offsetY = e.clientY - startY
+          dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`
+          dragDom.style.willChange = 'transform' // 优化性能
+        }
+
+        const mouseupHandler = () => {
+          dragDom.style.willChange = 'auto'
+          document.removeEventListener('mousemove', mousemoveHandler)
+          document.removeEventListener('mouseup', mouseupHandler)
+        }
+
+        document.addEventListener('mousemove', mousemoveHandler)
+        document.addEventListener('mouseup', mouseupHandler)
+
+        e.preventDefault()
+      }
+
+      dialogHeaderEl.addEventListener('mousedown', mousedownHandler)
+
+      // 为不同对话框设置不同的拖拽处理器
+      if (dialogTitle.includes('AI创建思维导图')) {
         this.dragHandler = {
           element: dialogHeaderEl,
           mousedownHandler: mousedownHandler
         }
+      } else if (dialogTitle.includes('温馨提示')) {
+        this.saveConfirmDragHandler = {
+          element: dialogHeaderEl,
+          mousedownHandler: mousedownHandler
+        }
+      }
     },
 
     // 清理拖拽事件
@@ -873,6 +883,11 @@ export default {
       if (this.dragHandler) {
         this.dragHandler.element.removeEventListener('mousedown', this.dragHandler.mousedownHandler)
         this.dragHandler = null
+      }
+      
+      if (this.saveConfirmDragHandler) {
+        this.saveConfirmDragHandler.element.removeEventListener('mousedown', this.saveConfirmDragHandler.mousedownHandler)
+        this.saveConfirmDragHandler = null
       }
     }
   },
@@ -909,73 +924,27 @@ export default {
 
 // 保存确认对话框样式
 .saveConfirmDialog {
+  margin-top: 115px;
+  
   .confirm-content {
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
-    padding: 20px 0;
-    
-    .confirm-icon {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 60px;
-      height: 60px;
-      background: rgba(230, 162, 60, 0.1);
-      border-radius: 50%;
-    }
+    padding: 10px 0;
     
     .confirm-text {
-      flex: 1;
-      
-      h3 {
-        margin: 0 0 15px 0;
-        font-size: 18px;
-        color: #303133;
-        font-weight: 600;
-        line-height: 1.4;
-      }
-      
-      .current-title {
-        margin: 10px 0;
-        padding: 8px 12px;
-        background: #f5f7fa;
-        border-radius: 4px;
-        color: #606266;
-        font-size: 14px;
-        font-weight: 500;
-        border-left: 3px solid #409EFF;
-      }
-      
-      .tip-text {
-        margin: 8px 0;
-        color: #909399;
-        font-size: 13px;
-        line-height: 1.5;
-        
-        &:first-of-type {
-          color: #67C23A;
-        }
-        
-        &:last-of-type {
-          color: #F56C6C;
-        }
-      }
+      margin: 0 0 15px 0;
+      font-size: 15px;
+      color: #606266;
+      line-height: 1.5;
+      text-align: center;
     }
   }
   
   .dialog-footer {
     text-align: right;
-    padding-top: 20px;
-    border-top: 1px solid #EBEEF5;
+    padding: 15px 20px 0 20px;
+    border-top: none;
     
     .el-button {
       margin-left: 12px;
-      
-      &:first-child {
-        margin-left: 0;
-      }
       
       i {
         margin-right: 5px;
@@ -1030,37 +999,13 @@ body.isDark {
     }
     
     .confirm-content {
-      .confirm-icon {
-        background: rgba(230, 162, 60, 0.2);
-      }
-      
       .confirm-text {
-        h3 {
-          color: hsla(0, 0%, 100%, 0.9);
-        }
-        
-        .current-title {
-          background: #363b3f;
-          color: hsla(0, 0%, 100%, 0.8);
-          border-left-color: #409EFF;
-        }
-        
-        .tip-text {
-          color: hsla(0, 0%, 100%, 0.6);
-          
-          &:first-of-type {
-            color: #67C23A;
-          }
-          
-          &:last-of-type {
-            color: #F56C6C;
-          }
-        }
+        color: hsla(0, 0%, 100%, 0.8);
       }
     }
     
     .dialog-footer {
-      border-top-color: #404040;
+      border-top: none;
     }
   }
 }
