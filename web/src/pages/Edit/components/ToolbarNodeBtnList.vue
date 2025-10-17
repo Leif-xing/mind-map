@@ -187,7 +187,7 @@
         @click="openAiConfig"
       >
         <span class="icon iconfont iconshezhi"></span>
-        <span class="text">AI配置</span>
+        <span class="text">{{ isCurrentUserAdmin ? 'AI配置' : 'AI选择' }}</span>
       </div>
       <div
         v-if="item === 'aiCreate'"
@@ -233,7 +233,8 @@ export default {
   },
   computed: {
     ...mapState({
-      isDark: state => state.localConfig.isDark
+      isDark: state => state.localConfig.isDark,
+      currentUser: state => state.currentUser
     }),
     hasRoot() {
       return (
@@ -254,6 +255,9 @@ export default {
         return item === 'annotation'
       })
       return index !== -1 && index < this.list.length - 1
+    },
+    isCurrentUserAdmin() {
+      return this.currentUser && this.currentUser.isAdmin;
     }
   },
   created() {

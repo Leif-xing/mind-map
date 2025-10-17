@@ -8,6 +8,7 @@
       width="500px"
       append-to-body
       @close="handleClose"
+      custom-class="draggable-unified-ai-create-dialog"
     >
       <!-- 当前配置显示 -->
       <div class="currentConfig">
@@ -170,6 +171,14 @@ export default {
     },
     visible(val) {
       this.$emit('input', val)
+      if (val) {
+        // 延迟更长时间确保DOM完全渲染
+        setTimeout(() => {
+          this.initDragFunctionality()
+        }, 200)
+      } else {
+        this.cleanupDragEvents()
+      }
     }
   },
   methods: {
@@ -767,11 +776,111 @@ export default {
       this.saveConfirmVisible = false;
       this.generatedMindMapData = null;
       this.$message.info('已取消应用AI生成结果');
+    },
+
+    // 初始化拖拽功能
+    initDragFunctionality() {
+      // 尝试多种选择器方式
+      let dialogHeaderEl = document.querySelector('.draggable-unified-ai-create-dialog .el-dialog__header')
+      let dragDom = document.querySelector('.draggable-unified-ai-create-dialog .el-dialog')
+      
+      // 如果通过custom-class找不到，尝试通过class找
+      if (!dialogHeaderEl || !dragDom) {
+        dialogHeaderEl = document.querySelector('.unifiedAiCreateDialog .el-dialog__header')
+        dragDom = document.querySelector('.unifiedAiCreateDialog .el-dialog')
+      }
+      
+      // 如果还是找不到，尝试查找所有对话框中标题匹配的
+      if (!dialogHeaderEl || !dragDom) {
+        const allDialogs = document.querySelectorAll('.el-dialog')
+        for (let dialog of allDialogs) {
+          const title = dialog.querySelector('.el-dialog__title')
+          if (title && title.textContent.includes('AI创建思维导图')) {
+            dragDom = dialog
+            dialogHeaderEl = dialog.querySelector('.el-dialog__header')
+            break
+          }
+        }
+      }
+
+      if (!dialogHeaderEl || !dragDom) {
+        console.log('统一AI创建对话框元素未找到，尝试的选择器都失败了')
+        console.log('当前页面所有对话框:', document.querySelectorAll('.el-dialog').length)
+        return
+      }
+      
+      console.log('统一AI创建对话框拖拽初始化成功')
+
+        // 设置标题栏样式
+        dialogHeaderEl.style.cursor = 'move'
+        dialogHeaderEl.style.userSelect = 'none'
+
+        let startX = 0
+        let startY = 0
+        let lastX = 0
+        let lastY = 0
+
+        const mousedownHandler = (e) => {
+          // 只有点击标题栏才触发拖拽
+          if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+            return
+          }
+
+          startX = e.clientX
+          startY = e.clientY
+
+          // 获取当前transform值
+          const style = window.getComputedStyle(dragDom)
+          const transform = style.transform
+          if (transform && transform !== 'none') {
+            const matrix = new DOMMatrix(transform)
+            lastX = matrix.m41
+            lastY = matrix.m42
+          } else {
+            lastX = 0
+            lastY = 0
+          }
+
+          const mousemoveHandler = (e) => {
+            const offsetX = e.clientX - startX
+            const offsetY = e.clientY - startY
+            dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`
+            dragDom.style.willChange = 'transform' // 优化性能
+          }
+
+          const mouseupHandler = () => {
+            dragDom.style.willChange = 'auto'
+            document.removeEventListener('mousemove', mousemoveHandler)
+            document.removeEventListener('mouseup', mouseupHandler)
+          }
+
+          document.addEventListener('mousemove', mousemoveHandler)
+          document.addEventListener('mouseup', mouseupHandler)
+
+          e.preventDefault()
+        }
+
+        dialogHeaderEl.addEventListener('mousedown', mousedownHandler)
+
+        this.dragHandler = {
+          element: dialogHeaderEl,
+          mousedownHandler: mousedownHandler
+        }
+    },
+
+    // 清理拖拽事件
+    cleanupDragEvents() {
+      if (this.dragHandler) {
+        this.dragHandler.element.removeEventListener('mousedown', this.dragHandler.mousedownHandler)
+        this.dragHandler = null
+      }
     }
   },
   beforeDestroy() {
     // 组件销毁时停止计时器
     this.stopTimer();
+    // 清理拖拽事件
+    this.cleanupDragEvents();
   }
 }
 </script>

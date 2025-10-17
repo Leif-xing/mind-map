@@ -39,6 +39,7 @@
       :visible.sync="createDialogVisible"
       width="450px"
       append-to-body
+      custom-class="draggable-ai-create-dialog"
     >
       <div class="inputBox">
         <el-input
@@ -142,9 +143,10 @@
       :visible.sync="createPartDialogVisible"
       width="450px"
       append-to-body
+      custom-class="draggable-ai-create-part-dialog"
     >
       <div class="inputBox">
-        <el-input type="textarea" :rows="5" v-model="aiPartInput"> </el-input>
+        <el-input type="textarea" :rows="8" v-model="aiPartInput"> </el-input>
       </div>
       <div slot="footer" class="dialog-footer">
         <el-button @click="closeAiCreatePartDialog">{{
@@ -249,6 +251,29 @@ export default {
   },
   mounted() {
     document.body.appendChild(this.$refs.aiCreatingMaskRef)
+    
+    // 监听对话框显示和隐藏事件
+    this.$watch('createDialogVisible', (newVal) => {
+      if (newVal) {
+        // 延迟更长时间确保DOM完全渲染
+        setTimeout(() => {
+          this.initCreateDialogDrag()
+        }, 200)
+      } else {
+        this.cleanupCreateDialogDragEvents()
+      }
+    })
+    
+    this.$watch('createPartDialogVisible', (newVal) => {
+      if (newVal) {
+        // 延迟更长时间确保DOM完全渲染
+        setTimeout(() => {
+          this.initPartDialogDrag()
+        }, 200)
+      } else {
+        this.cleanupPartDialogDragEvents()
+      }
+    })
   },
   beforeDestroy() {
     this.$bus.$off('ai_create_all', this.aiCrateAll)
@@ -260,6 +285,10 @@ export default {
     // 组件销毁时停止计时器
     this.stopTimer()
     this.stopPartTimer()
+    
+    // 清理拖拽事件
+    this.cleanupCreateDialogDragEvents()
+    this.cleanupPartDialogDragEvents()
   },
   methods: {
     // 预加载AI配置以提高打开对话框的速度
@@ -1270,6 +1299,182 @@ export default {
       this.saveConfirmVisible = false;
       this.generatedMindMapData = null;
       this.$message.info('已取消应用AI生成结果');
+    },
+
+    // 初始化创建对话框拖拽功能
+    initCreateDialogDrag() {
+      // 尝试多种选择器
+      let dialogHeaderEl = document.querySelector('.draggable-ai-create-dialog .el-dialog__header')
+      let dragDom = document.querySelector('.draggable-ai-create-dialog .el-dialog')
+
+      // 如果custom-class找不到，尝试原始class
+      if (!dialogHeaderEl || !dragDom) {
+        dialogHeaderEl = document.querySelector('.createDialog .el-dialog__header')
+        dragDom = document.querySelector('.createDialog .el-dialog')
+      }
+
+      if (!dialogHeaderEl || !dragDom) {
+        console.log('AI创建对话框元素未找到，所有选择器都失败')
+        return
+      }
+      
+      console.log('AI创建对话框拖拽初始化成功')
+
+        // 设置标题栏样式
+        dialogHeaderEl.style.cursor = 'move'
+        dialogHeaderEl.style.userSelect = 'none'
+
+        let startX = 0
+        let startY = 0
+        let lastX = 0
+        let lastY = 0
+
+        const mousedownHandler = (e) => {
+          // 只有点击标题栏才触发拖拽
+          if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+            return
+          }
+
+          startX = e.clientX
+          startY = e.clientY
+
+          // 获取当前transform值
+          const style = window.getComputedStyle(dragDom)
+          const transform = style.transform
+          if (transform && transform !== 'none') {
+            const matrix = new DOMMatrix(transform)
+            lastX = matrix.m41
+            lastY = matrix.m42
+          } else {
+            lastX = 0
+            lastY = 0
+          }
+
+          const mousemoveHandler = (e) => {
+            const offsetX = e.clientX - startX
+            const offsetY = e.clientY - startY
+            dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`
+            dragDom.style.willChange = 'transform' // 优化性能
+          }
+
+          const mouseupHandler = () => {
+            dragDom.style.willChange = 'auto'
+            document.removeEventListener('mousemove', mousemoveHandler)
+            document.removeEventListener('mouseup', mouseupHandler)
+          }
+
+          document.addEventListener('mousemove', mousemoveHandler)
+          document.addEventListener('mouseup', mouseupHandler)
+
+          e.preventDefault()
+        }
+
+        dialogHeaderEl.addEventListener('mousedown', mousedownHandler)
+
+        this.createDialogDragHandler = {
+          element: dialogHeaderEl,
+          mousedownHandler: mousedownHandler
+        }
+    },
+
+    // 初始化续写对话框拖拽功能
+    initPartDialogDrag() {
+      // 尝试多种选择器
+      let dialogHeaderEl = document.querySelector('.draggable-ai-create-part-dialog .el-dialog__header')
+      let dragDom = document.querySelector('.draggable-ai-create-part-dialog .el-dialog')
+
+      // 如果custom-class找不到，尝试原始class（续写对话框也使用createDialog class）
+      if (!dialogHeaderEl || !dragDom) {
+        // 查找所有createDialog中标题包含"续写"或"AI续写"的
+        const allDialogs = document.querySelectorAll('.createDialog .el-dialog')
+        for (let dialog of allDialogs) {
+          const title = dialog.querySelector('.el-dialog__title')
+          if (title && (title.textContent.includes('续写') || title.textContent.includes('AI续写'))) {
+            dragDom = dialog
+            dialogHeaderEl = dialog.querySelector('.el-dialog__header')
+            break
+          }
+        }
+      }
+
+      if (!dialogHeaderEl || !dragDom) {
+        console.log('AI续写对话框元素未找到，所有选择器都失败')
+        return
+      }
+      
+      console.log('AI续写对话框拖拽初始化成功')
+
+        // 设置标题栏样式
+        dialogHeaderEl.style.cursor = 'move'
+        dialogHeaderEl.style.userSelect = 'none'
+
+        let startX = 0
+        let startY = 0
+        let lastX = 0
+        let lastY = 0
+
+        const mousedownHandler = (e) => {
+          // 只有点击标题栏才触发拖拽
+          if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+            return
+          }
+
+          startX = e.clientX
+          startY = e.clientY
+
+          // 获取当前transform值
+          const style = window.getComputedStyle(dragDom)
+          const transform = style.transform
+          if (transform && transform !== 'none') {
+            const matrix = new DOMMatrix(transform)
+            lastX = matrix.m41
+            lastY = matrix.m42
+          } else {
+            lastX = 0
+            lastY = 0
+          }
+
+          const mousemoveHandler = (e) => {
+            const offsetX = e.clientX - startX
+            const offsetY = e.clientY - startY
+            dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`
+            dragDom.style.willChange = 'transform' // 优化性能
+          }
+
+          const mouseupHandler = () => {
+            dragDom.style.willChange = 'auto'
+            document.removeEventListener('mousemove', mousemoveHandler)
+            document.removeEventListener('mouseup', mouseupHandler)
+          }
+
+          document.addEventListener('mousemove', mousemoveHandler)
+          document.addEventListener('mouseup', mouseupHandler)
+
+          e.preventDefault()
+        }
+
+        dialogHeaderEl.addEventListener('mousedown', mousedownHandler)
+
+        this.partDialogDragHandler = {
+          element: dialogHeaderEl,
+          mousedownHandler: mousedownHandler
+        }
+    },
+
+    // 清理创建对话框拖拽事件
+    cleanupCreateDialogDragEvents() {
+      if (this.createDialogDragHandler) {
+        this.createDialogDragHandler.element.removeEventListener('mousedown', this.createDialogDragHandler.mousedownHandler)
+        this.createDialogDragHandler = null
+      }
+    },
+
+    // 清理续写对话框拖拽事件
+    cleanupPartDialogDragEvents() {
+      if (this.partDialogDragHandler) {
+        this.partDialogDragHandler.element.removeEventListener('mousedown', this.partDialogDragHandler.mousedownHandler)
+        this.partDialogDragHandler = null
+      }
     }
   }
 }
@@ -1301,6 +1506,63 @@ export default {
       color: #f56c6c;
     }
   }
+}
+
+// 设置AI创建和AI续写对话框中的文本输入框为不同背景色
+// AI创建对话框的输入框使用白色背景
+.draggable-ai-create-dialog .el-textarea__inner {
+  background-color: #fff !important;
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+// AI续写对话框的输入框使用浅灰色背景
+.draggable-ai-create-part-dialog .el-textarea__inner {
+  background-color: #f5f7fa !important;  /* 浅灰色背景 */
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+// 使用深度选择器确保样式传播到子组件
+::v-deep .draggable-ai-create-dialog .el-textarea .el-textarea__inner {
+  background-color: #fff !important;
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+::v-deep .draggable-ai-create-part-dialog .el-textarea .el-textarea__inner {
+  background-color: #f5f7fa !important;  /* 浅灰色背景 */
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+// 兼容旧版Vue的/deep/写法
+/deep/ .draggable-ai-create-dialog .el-textarea .el-textarea__inner {
+  background-color: #fff !important;
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+/deep/ .draggable-ai-create-part-dialog .el-textarea .el-textarea__inner {
+  background-color: #f5f7fa !important;  /* 浅灰色背景 */
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+
+// AI续写对话框使用更高优先级的选择器
+.createDialog.draggable-ai-create-part-dialog .el-textarea__inner {
+  background-color: #f5f7fa !important;  /* 浅灰色背景 */
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+
+// 使用最高优先级的深度选择器
+/deep/ .createDialog.draggable-ai-create-part-dialog .el-textarea .el-textarea__inner {
+  background-color: #f5f7fa !important;  /* 浅灰色背景 */
+  border-color: #dcdfe6 !important;
+  color: #606266 !important;
+}
+
+// AI续写对话框 - 使用scoped样式和深度选择器
+::v-deep .draggable-ai-create-part-dialog .el-textarea .el-textarea__inner {
+  background-color: #2a2d3a !important;  /* 深灰蓝色背景 */
+  border-color: #4a4e5c !important;
+  color: #e4e7ed !important;
 }
 
 .aiCreatingMask {

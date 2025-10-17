@@ -76,7 +76,7 @@
           <span class="text">{{ $t('toolbar.export') }}</span>
         </div>
         <!-- 用户下拉菜单 -->
-        <el-dropdown class="user-dropdown" popper-class="user-dropdown-popper" @command="handleUserCommand" trigger="click">
+        <el-dropdown class="user-dropdown" popper-class="user-dropdown-popper" @command="handleUserCommand" @visible-change="onDropdownVisibilityChange" trigger="click">
           <div class="toolbarBtn user-menu-btn">
             <i class="el-icon-user-solid icon"></i>
             <span class="text">{{ currentUser ? currentUser.username || currentUser.email || currentUser.id : '用户' }}</span>
@@ -1890,6 +1890,20 @@ export default {
       this.currentPassword = '';
       this.newPassword = '';
       this.confirmNewPassword = '';
+    },
+
+    // 处理下拉菜单显示/隐藏，动态添加深色主题样式
+    onDropdownVisibilityChange(visible) {
+      if (visible && this.isDark) {
+        // 下拉菜单显示时，如果是深色主题，添加深色主题类
+        this.$nextTick(() => {
+          const dropdownEl = document.querySelector('.user-dropdown-popper')
+          if (dropdownEl) {
+            dropdownEl.classList.add('dropdown-dark-theme')
+            console.log('为用户下拉菜单添加深色主题样式')
+          }
+        })
+      }
     }
   }
 }
@@ -2445,5 +2459,116 @@ export default {
 
 .toolbarContainer.isDark .user-menu-btn:hover .icon {
   background: hsla(0, 0%, 100%, 0.05);
+}
+
+/* 深色主题下的下拉菜单项样式 - 使用深度选择器穿透scoped */
+/deep/ .toolbarContainer.isDark .el-dropdown-menu {
+  background-color: #2c2f33 !important;
+  border-color: #4a4e52 !important;
+}
+
+/deep/ .toolbarContainer.isDark .el-dropdown-menu .el-dropdown-menu__item {
+  color: #e4e7ed !important; /* 醒目的浅色文字 */
+  font-weight: 500 !important; /* 稍微加粗 */
+}
+
+/deep/ .toolbarContainer.isDark .el-dropdown-menu .el-dropdown-menu__item:hover {
+  background-color: #409EFF !important; /* 悬停时使用醒目的蓝色背景 */
+  color: #ffffff !important; /* 悬停时使用白色文字 */
+}
+
+/deep/ .toolbarContainer.isDark .el-dropdown-menu .el-dropdown-menu__item:focus {
+  background-color: #409EFF !important; /* 选中时使用醒目的蓝色背景 */
+  color: #ffffff !important; /* 选中时使用白色文字 */
+}
+
+/* 深色主题下的下拉菜单项图标样式 */
+/deep/ .toolbarContainer.isDark .el-dropdown-menu .el-dropdown-menu__item i {
+  color: #67C23A !important; /* 图标使用醒目的绿色 */
+  margin-right: 8px;
+}
+
+/deep/ .toolbarContainer.isDark .el-dropdown-menu .el-dropdown-menu__item:hover i {
+  color: #ffffff !important; /* 悬停时图标变为白色 */
+}
+
+/deep/ .toolbarContainer.isDark .el-dropdown-menu .el-dropdown-menu__item:focus i {
+  color: #ffffff !important; /* 选中时图标变为白色 */
+}
+
+/* 全局深色主题下拉菜单样式 - 通过data属性检测深色主题 */
+/deep/ .user-dropdown-popper {
+  /* 当父容器是深色主题时 */
+  &[data-theme="dark"],
+  body[data-theme="dark"] &,
+  .isDark ~ & {
+    background-color: #2c2f33 !important;
+    border-color: #4a4e52 !important;
+    
+    .el-dropdown-menu__item {
+      color: #e4e7ed !important;
+      font-weight: 500 !important;
+      
+      &:hover {
+        background-color: #409EFF !important;
+        color: #ffffff !important;
+        
+        i {
+          color: #ffffff !important;
+        }
+      }
+      
+      &:focus {
+        background-color: #409EFF !important;
+        color: #ffffff !important;
+        
+        i {
+          color: #ffffff !important;
+        }
+      }
+      
+      i {
+        color: #67C23A !important;
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+/* 备用方案：使用CSS变量和全局样式 */
+/deep/ .el-dropdown-menu[data-popper-reference-hidden="false"] {
+  /* 通过JavaScript动态添加dark类 */
+  &.dropdown-dark-theme {
+    background-color: #2c2f33 !important;
+    border-color: #4a4e52 !important;
+    
+    .el-dropdown-menu__item {
+      color: #e4e7ed !important;
+      font-weight: 500 !important;
+      
+      &:hover {
+        background-color: #409EFF !important;
+        color: #ffffff !important;
+        
+        i {
+          color: #ffffff !important;
+        }
+      }
+      
+      &:focus {
+        background-color: #409EFF !important;
+        color: #ffffff !important;
+        
+        i {
+          color: #ffffff !important;
+        }
+      }
+      
+      i {
+        color: #67C23A !important;
+        margin-right: 8px;
+      }
+    }
+  }
 }
 </style>

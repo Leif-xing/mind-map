@@ -5,6 +5,7 @@
     :visible.sync="visible"
     width="600px"
     append-to-body
+    custom-class="draggable-ai-selection-dialog"
   >
     <div class="aiSelectionBox">
       <!-- 管理员视图：管理AI配置 -->
@@ -162,7 +163,8 @@ export default {
           { required: true, message: '请输入模型名称', trigger: 'blur' }
         ]
         // apiKey验证将动态处理
-      }
+      },
+      selectionDialogDragHandler: null // 拖拽事件处理器
     }
   },
   computed: {
@@ -187,7 +189,29 @@ export default {
     },
     visible(val) {
       this.$emit('input', val)
+      if (val) {
+        // 延迟更长时间确保DOM完全渲染，特别是ElementUI对话框动画完成后
+        setTimeout(() => {
+          this.initSelectionDialogDrag()
+        }, 500)
+        // 如果第一次失败，再尝试一次
+        setTimeout(() => {
+          if (!this.selectionDialogDragHandler) {
+            console.log('第二次尝试初始化AI选择对话框拖拽')
+            this.initSelectionDialogDrag()
+          }
+        }, 1000)
+      } else {
+        this.cleanupSelectionDialogDragEvents()
+      }
     }
+  },
+  mounted() {
+    // 监听对话框显示和隐藏事件（通过watch已处理）
+  },
+  beforeDestroy() {
+    // 清理拖拽事件
+    this.cleanupSelectionDialogDragEvents()
   },
   methods: {
     ...mapActions(['fetchAvailableAiConfigs', 'selectAiConfig']),
@@ -423,6 +447,134 @@ export default {
         } else {
           this.$message.error('保存配置失败: ' + error.message);
         }
+      }
+    },
+
+    // 初始化AI选择对话框拖拽功能
+    initSelectionDialogDrag() {
+      // 更精确的选择器：查找带有特定aria-label的对话框
+      let dialogHeaderEl = null
+      let dragDom = null
+      
+      // 方法1：通过aria-label查找
+      const dialogsByLabel = document.querySelectorAll('[aria-label="选择AI服务"], [aria-label="AI服务管理"]')
+      if (dialogsByLabel.length > 0) {
+        for (let dialog of dialogsByLabel) {
+          if (dialog.style.display !== 'none' && dialog.offsetParent !== null) {
+            dragDom = dialog
+            dialogHeaderEl = dialog.querySelector('.el-dialog__header')
+            break
+          }
+        }
+      }
+      
+      // 方法2：通过custom-class查找（如果方法1失败）
+      if (!dialogHeaderEl || !dragDom) {
+        const customDialogs = document.querySelectorAll('.draggable-ai-selection-dialog')
+        if (customDialogs.length > 0) {
+          for (let dialog of customDialogs) {
+            if (dialog.style.display !== 'none' && dialog.offsetParent !== null) {
+              dragDom = dialog
+              dialogHeaderEl = dialog.querySelector('.el-dialog__header')
+              break
+            }
+          }
+        }
+      }
+      
+      // 方法3：通过标题文本查找（最后的备选方案）
+      if (!dialogHeaderEl || !dragDom) {
+        const allDialogs = document.querySelectorAll('.el-dialog')
+        for (let dialog of allDialogs) {
+          const titleEl = dialog.querySelector('.el-dialog__title')
+          if (titleEl && (titleEl.textContent.includes('选择AI服务') || titleEl.textContent.includes('AI服务管理'))) {
+            if (dialog.style.display !== 'none' && dialog.offsetParent !== null) {
+              dragDom = dialog
+              dialogHeaderEl = dialog.querySelector('.el-dialog__header')
+              break
+            }
+          }
+        }
+      }
+
+      if (!dialogHeaderEl || !dragDom) {
+        console.log('AI选择对话框元素未找到，所有选择器都失败')
+        console.log('可见的对话框数量:', document.querySelectorAll('.el-dialog').length)
+        console.log('draggable-ai-selection-dialog元素数量:', document.querySelectorAll('.draggable-ai-selection-dialog').length)
+        return
+      }
+      
+      console.log('AI选择对话框拖拽初始化成功，找到对话框:', dragDom.className)
+
+      // 设置标题栏样式
+      dialogHeaderEl.style.cursor = 'move'
+      dialogHeaderEl.style.userSelect = 'none'
+
+      let startX = 0
+      let startY = 0
+      let lastX = 0
+      let lastY = 0
+
+      const mousedownHandler = (e) => {
+        // 只有点击标题栏才触发拖拽，避免与关闭按钮冲突
+        if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+          return
+        }
+        
+        // 避免与关闭按钮的点击事件冲突
+        if (e.target.classList.contains('el-dialog__headerbtn') || 
+            e.target.classList.contains('el-dialog__close') ||
+            e.target.closest('.el-dialog__headerbtn')) {
+          return
+        }
+
+        startX = e.clientX
+        startY = e.clientY
+
+        // 获取当前transform值
+        const style = window.getComputedStyle(dragDom)
+        const transform = style.transform
+        if (transform && transform !== 'none') {
+          const matrix = new DOMMatrix(transform)
+          lastX = matrix.m41
+          lastY = matrix.m42
+        } else {
+          lastX = 0
+          lastY = 0
+        }
+
+        const mousemoveHandler = (e) => {
+          const offsetX = e.clientX - startX
+          const offsetY = e.clientY - startY
+          dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`
+          dragDom.style.willChange = 'transform' // 优化性能
+        }
+
+        const mouseupHandler = () => {
+          dragDom.style.willChange = 'auto'
+          document.removeEventListener('mousemove', mousemoveHandler)
+          document.removeEventListener('mouseup', mouseupHandler)
+        }
+
+        document.addEventListener('mousemove', mousemoveHandler)
+        document.addEventListener('mouseup', mouseupHandler)
+
+        e.preventDefault()
+      }
+
+      dialogHeaderEl.addEventListener('mousedown', mousedownHandler)
+
+      this.selectionDialogDragHandler = {
+        element: dialogHeaderEl,
+        mousedownHandler: mousedownHandler
+      }
+    },
+
+    // 清理AI选择对话框拖拽事件
+    cleanupSelectionDialogDragEvents() {
+      if (this.selectionDialogDragHandler) {
+        this.selectionDialogDragHandler.element.removeEventListener('mousedown', this.selectionDialogDragHandler.mousedownHandler)
+        this.selectionDialogDragHandler = null
       }
     }
   }
