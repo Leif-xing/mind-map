@@ -255,20 +255,14 @@
             </div>
             
             <div class="mindmap-bottom">
-              <!-- 选择框 -->
-              <div class="mindmap-checkbox">
-                <el-checkbox
-                  :value="isSelected(mindMap.id)"
-                  @change="toggleSelection(mindMap.id)"
-                  @click.stop
-                />
-              </div>
-              
-              <!-- 操作按钮 -->
+              <!-- 操作按钮 - 定位到右下角 -->
               <div class="mindmap-actions">
                 <el-button size="mini" type="danger" @click.stop="deleteMindMap(mindMap)">删除</el-button>
               </div>
             </div>
+            
+            <!-- 隐藏的思维导图ID -->
+            <div :id="'mindmap-id-' + mindMap.id" style="display: none;">{{ mindMap.id }}</div>
           </div>
         </div>
         </div>
@@ -1089,9 +1083,9 @@ export default {
       }
     },
     
-    // 处理卡片单击事件（用于调试）
+    // 处理卡片单击事件（切换选中状态）
     handleCardClick(mindMap) {
-      // 移除调试日志
+      this.toggleSelection(mindMap.id);
     },
     
     // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
@@ -1364,8 +1358,6 @@ export default {
     
     // 刷新思维导图列表
     async refreshMindMaps() {
-
-
       try {
         // 1. 获取当前用户
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -1375,8 +1367,6 @@ export default {
           return;
         }
 
-
-
         // 2. 调用缓存同步函数，补全内容缓存
         await this.$store.dispatch('syncMindMapCacheIncrementally', currentUser.id);
 
@@ -1384,11 +1374,22 @@ export default {
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id);
         this.mindMaps = updatedMindMaps;
 
-
         this.$message.success('刷新完成');
+        this.statusMessage = `刷新完成，共 ${updatedMindMaps.length} 个思维导图`;
+        
+        // 5秒后清除状态信息
+        setTimeout(() => {
+          this.statusMessage = '';
+        }, 5000);
       } catch (error) {
         console.error('🔄 Toolbar - 刷新失败:', error);
         this.$message.error('刷新失败: ' + error.message);
+        this.statusMessage = `刷新失败: ${error.message}`;
+        
+        // 5秒后清除状态信息
+        setTimeout(() => {
+          this.statusMessage = '';
+        }, 5000);
       }
     },
 
@@ -1888,7 +1889,7 @@ export default {
 .mindmap-card {
   border: 1px solid #ebeef5;
   border-radius: 8px;
-  padding: 15px;
+  padding: 10px;
   background-color: #f5f7fa;  /* 改善背景色，更柔和 */
   transition: all 0.3s;
   cursor: pointer;  /* 改为pointer提示可双击 */
@@ -1902,16 +1903,31 @@ export default {
   }
 }
 
+/* 选中状态的卡片样式 */
+.mindmap-card.selected {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+  box-shadow: 0 0 8px rgba(64, 158, 255, 0.5);
+}
+
 /* 深色主题下的样式 */
 .toolbarContainer.isDark .mindmap-card {
   background-color: #3a3f45;  /* 深色主题下更柔和的背景 */
   border-color: #54595f;
   color: #e4e7ed;
+  padding: 10px;
   
   &:hover {
     background-color: #4a5056;
     border-color: #409eff;
   }
+}
+
+/* 深色主题下选中状态的卡片样式 */
+.toolbarContainer.isDark .mindmap-card.selected {
+  background-color: #4a5056;
+  border-color: #409eff;
+  box-shadow: 0 0 8px rgba(64, 158, 255, 0.3);
 }
 
 .toolbarContainer.isDark .mindmap-title {
@@ -1925,13 +1941,11 @@ export default {
 .mindmap-card-content {
   display: flex;
   flex-direction: column;
+  position: relative;
+  padding-bottom: 30px; /* 为底部操作按钮预留空间，根据整体padding调整 */
 }
 
 .mindmap-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
 }
 
 .mindmap-checkbox {
@@ -1998,9 +2012,12 @@ export default {
 }
 
 .mindmap-actions {
+  position: absolute;
+  bottom: 5px;
+  right: 10px;
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  gap: 6px;
+  z-index: 1; /* 确保按钮在顶层 */
 }
 
 .mindmap-actions button {

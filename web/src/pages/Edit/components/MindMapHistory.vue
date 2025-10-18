@@ -39,12 +39,13 @@
     <div class="content">
       <el-table
         :data="filteredMindMaps"
-        @selection-change="handleSelectionChange"
         v-loading="loading"
         style="width: 100%"
+        @row-click="handleRowClick"
+        @row-dblclick="handleRowDblclick"
+        :row-class-name="tableRowClassName"
         ref="tableRef"
       >
-        <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column prop="title" label="标题" width="300">
           <template slot-scope="scope">
             <el-input
@@ -181,15 +182,41 @@ export default {
       this.selectAll = selection.length === this.filteredMindMaps.length
     },
     
+    // 单击行处理函数
+    handleRowClick(row) {
+      // 检查该行是否已被选中
+      const index = this.selectedMindMaps.findIndex(map => map.id === row.id)
+      if (index > -1) {
+        // 如果已选中，则取消选中
+        this.selectedMindMaps.splice(index, 1)
+      } else {
+        // 如果未选中，则添加到选中列表
+        this.selectedMindMaps.push(row)
+      }
+      
+      // 更新全选状态
+      this.selectAll = this.selectedMindMaps.length === this.filteredMindMaps.length
+    },
+    
+    // 为表格行添加类名以显示选中状态
+    tableRowClassName({ row }) {
+      const isSelected = this.selectedMindMaps.some(map => map.id === row.id)
+      return isSelected ? 'selected-row' : ''
+    },
+    
+    // 双击行处理函数 - 用于切换思维导图
+    handleRowDblclick(row) {
+      this.loadMindMap(row);
+    },
+    
     toggleSelectAll() {
       if (this.selectAll) {
-        this.$refs.tableRef?.clearSelection()
+        this.selectedMindMaps = []
       } else {
         // 选择当前页所有项
-        this.filteredMindMaps.forEach(row => {
-          this.$refs.tableRef?.toggleRowSelection(row, true)
-        })
+        this.selectedMindMaps = [...this.filteredMindMaps]
       }
+      this.selectAll = !this.selectAll
     },
     
     async deleteMindMap(mindMap) {
@@ -441,6 +468,10 @@ export default {
       margin-top: 20px;
       text-align: center;
     }
+  }
+  
+  /deep/ .el-table .selected-row {
+    background-color: #f0f9ff !important; /* 选中行的背景色 */
   }
 }
 </style>
