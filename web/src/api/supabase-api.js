@@ -239,7 +239,6 @@ export const mindMapApi = {
 
   // 获取用户的思维导图列表
   async getUserMindMaps(userId) {
-    // console.log('API - 开始获取用户思维导图列表，用户ID:', userId); // 隐私保护：不输出用户ID
     // 只获取元数据，不获取内容（内容在单独获取时才解压缩）
     const { data: mindMaps, error } = await supabase
       .from('mind_maps')
@@ -248,11 +247,9 @@ export const mindMapApi = {
       .order('updated_at', { ascending: false })
 
     if (error) {
-      // console.error('API - 获取思维导图列表失败:', error);
       throw new Error(error.message || '获取思维导图列表失败')
     }
 
-    // console.log('API - 获取到的思维导图列表:', mindMaps); // 隐私保护：不输出思维导图数据
     return mindMaps
   },
 
@@ -280,6 +277,60 @@ export const mindMapApi = {
     }
 
     return mindMap
+  },
+
+  // 批量获取思维导图
+  async getMindMapsByIds(mindMapIds, userId) {
+    if (!mindMapIds || mindMapIds.length === 0) {
+      return [];
+    }
+
+
+    // 验证ID格式
+    for (let i = 0; i < Math.min(5, mindMapIds.length); i++) {
+      const id = mindMapIds[i];
+    }
+
+    // 按批次处理，避免超出数据库查询限制
+    const batchSize = 100; // Supabase IN查询建议的限制
+    const allResults = [];
+
+    for (let i = 0; i < mindMapIds.length; i += batchSize) {
+      const batchIds = mindMapIds.slice(i, i + batchSize);
+      
+      // 额外验证批次ID
+      
+      // 输出模拟的 SQL 查询语句
+      const quotedIds = batchIds.map(id => `'${id}'`).join(', ');
+      
+      const { data: mindMaps, error } = await supabase
+        .from('mind_maps')
+        .select('*')
+        .in('id', batchIds)
+        .eq('user_id', userId)
+
+      if (error) {
+        throw new Error(`批量获取思维导图失败: ${error.message || error.code || '未知错误'}`);
+      }
+
+
+      // 解压缩每个思维导图的内容
+      for (const mindMap of mindMaps) {
+        if (mindMap && mindMap.content) {
+          try {
+            mindMap.content = decompressMindMap(mindMap.content)
+          } catch (decompressError) {
+            // 跳过解压失败的项，继续处理其他项
+            continue;
+          }
+        }
+      }
+
+      allResults.push(...mindMaps);
+    }
+
+    
+    return allResults;
   },
 
   // 删除思维导图

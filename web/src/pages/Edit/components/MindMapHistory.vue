@@ -156,26 +156,18 @@ export default {
       
       this.loading = true
       try {
-        const mindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
+        // 使用新的增量同步函数同步数据库与内容缓存
+        await this.$store.dispatch('syncMindMapCacheIncrementally', this.currentUser.id);
+        
+        // 从数据库获取最新的元数据用于界面显示
+        const mindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id);
+        
         // 添加editingTitle和tempTitle字段用于重命名功能
         this.mindMaps = mindMaps.map(mindMap => ({
           ...mindMap,
           editingTitle: false,
           tempTitle: mindMap.title
         }))
-        // 同步到Vuex本地缓存（只存储原始数据，不包含UI状态字段）
-        this.$store.commit('setLocalMindMaps', mindMaps)
-        
-        // 加载列表时清空非当前思维导图的内容缓存，确保加载最新内容
-        const currentMindMapId = this.$store.state.currentMindMapId;
-        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-        cacheKeys.forEach(key => {
-          if (currentMindMapId && !key.includes(currentMindMapId)) {
-            localStorage.removeItem(key);
-          } else if (!currentMindMapId) {
-            localStorage.removeItem(key);
-          }
-        });
       } catch (error) {
         // console.error('加载思维导图失败:', error)
         this.$message.error('加载思维导图失败: ' + error.message)

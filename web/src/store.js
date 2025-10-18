@@ -324,14 +324,14 @@ const store = new Vuex.Store({
             mindMap.id === id ? updatedMindMap : mindMap
           );
           commit('setLocalMindMaps', updatedLocalList);
-          console.log('💾 Store - 本地缓存已更新，列表长度:', updatedLocalList.length);
+          
           
         } else {
           // 如果没有传入ID，则创建新思维导图
-          // console.log('💾 Store - 创建新思维导图，用户ID:', userId);
+          
 
           result = await mindMapApi.saveMindMap(userId, title, content);
-          // console.log('💾 Store - 创建思维导图完成，结果ID:', result?.id);
+
           
           // 同步到本地缓存 - 添加新记录
           const newMindMap = {
@@ -346,12 +346,12 @@ const store = new Vuex.Store({
           // 将新记录添加到本地缓存列表的开头
           const updatedLocalList = [newMindMap, ...state.localMindMaps];
           commit('setLocalMindMaps', updatedLocalList);
-          console.log('💾 Store - 本地缓存已更新，列表长度:', updatedLocalList.length);
+          
         }
         
         return result;
       } else {
-        console.log('💾 Store - Supabase未启用，使用本地保存逻辑');
+        
         // 本地保存逻辑
         return null;
       }
@@ -571,6 +571,83 @@ const store = new Vuex.Store({
       } catch (error) {
         // console.error('AI服务调用失败:', error)
         throw error
+      }
+    },
+
+    // 批量获取思维导图内容
+    async getMindMapsByIds({ dispatch }, { mindMapIds, userId }) {
+      if (!mindMapIds || mindMapIds.length === 0) {
+        return [];
+      }
+      
+      
+      try {
+        const result = await mindMapApi.getMindMapsByIds(mindMapIds, userId);
+        return result;
+      } catch (error) {
+        
+        console.error({
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        throw error;
+      }
+    },
+
+    // 通用的增量同步函数：检测并同步数据库与内容缓存的差异
+    async syncMindMapCacheIncrementally({ dispatch }, userId) {
+      try {
+        
+        // 步骤1：获取数据库中的元数据
+        const databaseMindMaps = await dispatch('getUserMindMaps', userId);
+        
+        // 步骤2：检测差异
+        // 获取内容缓存中的所有key
+        const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        // 提取缓存中的思维导图ID
+        const cachedMindMapIds = allCacheKeys.map(key => key.replace('mindmap_cache_', ''));
+        
+        // 找出内容缓存中缺失的思维导图ID，过滤掉无效ID
+        const missingIds = databaseMindMaps
+          .filter(mindMap => mindMap && mindMap.id && !cachedMindMapIds.includes(mindMap.id))
+          .map(mindMap => mindMap.id);
+        
+        const needUpdateIds = [...missingIds];
+        
+        
+        if (needUpdateIds.length === 0) {
+          // 仍然需要同步元数据到Vuex
+          this.commit('setLocalMindMaps', databaseMindMaps);
+          return 0; // 没有更新任何内容
+        }
+        
+        // 步骤3：批量获取需要更新的思维导图内容
+        try {
+          const fullMindMapDataList = await dispatch('getMindMapsByIds', {
+            mindMapIds: needUpdateIds,
+            userId: userId
+          });
+          
+          // 步骤4：更新内容缓存
+          let totalUpdated = 0;
+          for (const fullMindMapData of fullMindMapDataList) {
+            if (fullMindMapData && fullMindMapData.content) {
+              const cacheKey = `mindmap_cache_${fullMindMapData.id}`;
+              localStorage.setItem(cacheKey, JSON.stringify(fullMindMapData.content));
+              totalUpdated++;
+            }
+          }
+          
+          // 同步元数据到Vuex
+          this.commit('setLocalMindMaps', databaseMindMaps);
+          
+          return totalUpdated;
+        } catch (error) {
+          throw error;
+        }
+      } catch (error) {
+        throw error; // 抛出错误以便调用者处理
       }
     }
   },
