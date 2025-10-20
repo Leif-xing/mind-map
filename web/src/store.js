@@ -649,6 +649,82 @@ const store = new Vuex.Store({
       } catch (error) {
         throw error; // 抛出错误以便调用者处理
       }
+    },
+    
+    // 判断当前思维导图是否需要保存
+    async needsSave({ dispatch }, { currentMindMap }) {
+      // 如果当前思维导图ID为空，则需要保存
+      if (!currentMindMap || !currentMindMap.id) {
+        console.log('当前思维导图ID为空，需要保存');
+        return true;
+      }
+      
+      // console.log('🔍 开始检查思维导图是否需要保存...'); // 调试日志，可移除
+      // console.log('📊 当前思维导图ID:', currentMindMap.id); // 调试日志，可移除
+      // console.log('📊 zdcy当前思维导图数据:', currentMindMap.data.root); // 调试日志，可移除
+      
+      try {
+        // 从内容缓存中根据ID获取对应的思维导图数据
+        const cachedMindMap = await dispatch('getMindMapContent', currentMindMap.id);
+        // console.log('📊 xlf从缓存获取到的数据:', cachedMindMap.root); // 调试日志，可移除
+        
+        // 如果缓存中没有找到对应数据，则需要保存
+        if (!cachedMindMap) {
+          console.log('缓存中未找到对应思维导图数据，需要保存');
+          return true;
+        }
+        
+        // 比较当前思维导图数据与缓存中的数据，只比较root部分
+        const currentRootStr = JSON.stringify(currentMindMap.data.root);
+        const cachedRootStr = JSON.stringify(cachedMindMap.root);
+        
+        // console.log('当前思维导图root:', currentMindMap.root); // 调试日志，可移除
+        // console.log('缓存中思维导图root:', cachedMindMap.root); // 调试日志，可移除
+        // console.log('当前root字符串长度:', currentRootStr.length); // 调试日志，可移除
+        // console.log('缓存root字符串长度:', cachedRootStr.length); // 调试日志，可移除
+        // console.log('root数据是否相等:', currentRootStr === cachedRootStr); // 调试日志，可移除
+        
+        // 如果数据不同，则需要保存
+        return currentRootStr !== cachedRootStr;
+      } catch (error) {
+        console.error('比较思维导图数据时出错:', error);
+        // 出错时保守地返回需要保存
+        return true;
+      }
+    },
+    
+    // 从缓存中获取思维导图内容
+    async getMindMapContent({ }, mindMapId) {
+      // console.log('🔍 开始从缓存获取思维导图内容，ID:', mindMapId); // 调试日志，可移除
+      
+      if (!mindMapId) {
+        // console.log('❌ 思维导图ID为空，返回null'); // 调试日志，可移除
+        return null;
+      }
+      
+      try {
+        const cacheKey = `mindmap_cache_${mindMapId}`;
+        // console.log('🔍 检查缓存键:', cacheKey); // 调试日志，可移除
+        
+        // 检查localStorage中所有以mindmap_cache_开头的键
+        const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        // console.log('📋 所有思维导图缓存键:', allCacheKeys); // 调试日志，可移除
+        
+        const cachedContent = localStorage.getItem(cacheKey);
+        // console.log('💾 获取到的缓存内容:', cachedContent); // 调试日志，可移除
+        
+        if (!cachedContent) {
+          // console.log('❌ 缓存中未找到对应内容，返回null'); // 调试日志，可移除
+          return null;
+        }
+        
+        const parsedContent = JSON.parse(cachedContent);
+        // console.log('✅ 成功解析缓存内容:', parsedContent); // 调试日志，可移除
+        return parsedContent;
+      } catch (error) {
+        // console.error('❌ 从缓存获取思维导图内容时出错:', error); // 调试日志，可移除
+        return null;
+      }
     }
   },
   getters: {

@@ -481,10 +481,40 @@ export default {
       // 保存输入内容到实例变量
       this.createContent = aiInputText
       
-      this.closeAiCreateDialog()
-      
-      // 立即显示保存确认对话框
-      this.showSaveConfirmDialog()
+      // 首先检查当前思维导图是否需要保存
+      try {
+        // console.log('开始检查思维导图是否需要保存...') // 调试日志，可移除
+        const currentMindMapId = this.$store.state.currentMindMapId
+        const currentData = this.mindMap.getData(true)
+        // console.log('当前思维导图ID:', currentMindMapId) // 调试日志，可移除
+        // console.log('当前思维导图数据:', currentData) // 调试日志，可移除
+        
+        const needsSave = await this.$store.dispatch('needsSave', {
+          currentMindMap: {
+            id: currentMindMapId,
+            data: currentData
+          }
+        })
+        
+        // console.log('是否需要保存:', needsSave) // 调试日志，可移除
+        
+        if (needsSave) {
+          // 需要保存，显示保存确认对话框
+          // console.log('思维导图有变化，显示保存确认对话框') // 调试日志，可移除
+          this.closeAiCreateDialog()
+          this.showSaveConfirmDialog()
+        } else {
+          // 不需要保存，直接开始AI生成
+          // console.log('思维导图无变化，直接开始AI生成') // 调试日志，可移除
+          this.closeAiCreateDialog()
+          await this.startActualAiCreate()
+        }
+      } catch (error) {
+        console.error('检查思维导图是否需要保存时出错:', error)
+        // 出错时按需要保存处理
+        this.closeAiCreateDialog()
+        this.showSaveConfirmDialog()
+      }
     },
     
     // 开始实际的AI创建过程
@@ -1200,6 +1230,13 @@ export default {
       
       // 2. 直接开始AI生成
       await this.startActualAiCreate();
+    },
+
+    // 处理取消
+    handleCancel() {
+      // 关闭确认对话框
+      this.saveConfirmVisible = false;
+      this.$message.info('已取消AI生成');
     },
 
     // 保存当前思维导图

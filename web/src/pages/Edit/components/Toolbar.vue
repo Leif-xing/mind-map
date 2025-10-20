@@ -1445,6 +1445,8 @@ export default {
       }, 8000)
     },
     
+
+    
     // 批量删除思维导图
     async batchDeleteMindMaps() {
       if (this.selectedMindMaps.length === 0) {
