@@ -245,8 +245,8 @@
           :key="mindMap.id" 
           class="mindmap-card"
           :class="{ 'selected': isSelected(mindMap.id) }"
-          @dblclick.stop="loadMindMap(mindMap)"
-          @click="handleCardClick(mindMap)"
+          @dblclick.stop="loadMindMap(mindMap, $event)"
+          @click.stop="handleCardClick(mindMap, $event)"
         >
           <div class="mindmap-card-content">
             <div class="mindmap-info">
@@ -269,7 +269,7 @@
       </div>
       <!-- 状态栏作为对话框footer，填满整个footer区域 -->
       <div slot="footer" class="mindmap-status-bar" style="margin: 0; padding: 0; width: 100%; height: 100%;">
-        <span class="status-text">{{ statusMessage || '就绪' }}</span>
+        <span class="status-text">{{ statusMessage }}</span>
       </div>
     </el-dialog>
   </div>
@@ -972,7 +972,17 @@ export default {
     
     // 关闭思维导图对话框
     closeMindMapDialog(done) {
+      // 重置对话框位置和样式
       this.showMindMapDialog = false
+      const dialogEl = document.querySelector('.draggable-dialog')
+      if (dialogEl) {
+        // 恢复默认样式
+        dialogEl.style.position = ''
+        dialogEl.style.left = ''
+        dialogEl.style.top = ''
+        dialogEl.style.marginLeft = ''
+        dialogEl.style.marginTop = ''
+      }
       if (done) {
         done()
       }
@@ -1063,6 +1073,9 @@ export default {
       const dialogEl = document.querySelector('.draggable-dialog')
       if (dialogEl) {
         dialogEl.classList.remove('dragging')
+        // 确保拖拽后的位置被正确应用
+        dialogEl.style.marginLeft = '0'
+        dialogEl.style.marginTop = '0'
       }
       
       // 移除事件监听
@@ -1084,8 +1097,21 @@ export default {
     },
     
     // 处理卡片单击事件（切换选中状态）
-    handleCardClick(mindMap) {
+    handleCardClick(mindMap, event) {
       this.toggleSelection(mindMap.id);
+      // 阻止事件冒泡，防止触发对话框的其他行为
+      if (event) {
+        event.stopPropagation();
+      }
+      // 确保对话框保持在拖拽后的位置，而不是跳回居中
+      this.$nextTick(() => {
+        const dialogEl = document.querySelector('.draggable-dialog');
+        if (dialogEl && dialogEl.style.position === 'fixed') {
+          // 如果是拖拽后的位置，保持fixed定位
+          dialogEl.style.marginLeft = '0';
+          dialogEl.style.marginTop = '0';
+        }
+      });
     },
     
     // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
@@ -1142,7 +1168,11 @@ export default {
     },
     
     // 加载思维导图
-    async loadMindMap(selectedMindMap) {
+    async loadMindMap(selectedMindMap, event) {
+      // 阻止事件冒泡
+      if (event) {
+        event.stopPropagation();
+      }
 
       
       // 保存一份副本以避免引用问题
@@ -1234,6 +1264,15 @@ export default {
         
         // 等待思维导图加载完成后再关闭对话框
         await loadPromise;
+        // 保持对话框位置再关闭
+        this.$nextTick(() => {
+          const dialogEl = document.querySelector('.draggable-dialog');
+          if (dialogEl && dialogEl.style.position === 'fixed') {
+            // 如果是拖拽后的位置，保持fixed定位
+            dialogEl.style.marginLeft = '0';
+            dialogEl.style.marginTop = '0';
+          }
+        });
         // console.log('思维导图已加载，关闭对话框'); // 仅调试时使用
         this.closeMindMapDialog();
         // console.log('思维导图加载完成'); // 仅调试时使用
@@ -1287,25 +1326,25 @@ export default {
         });
         // console.log('删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
         
-        // 设置状态消息在8秒后清除
-        setTimeout(() => {
-          this.statusMessage = ''
-        }, 8000)
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = ''
+        // }, 8000)
       } catch (err) {
         if (err !== 'cancel') {
           // console.error('删除思维导图失败:', err)
           this.$message.error('删除思维导图失败: ' + err.message)
           this.statusMessage = `删除失败: ${mindMap.title} - ${err.message}`
-          // 设置状态消息在8秒后清除
-          setTimeout(() => {
-            this.statusMessage = ''
-          }, 8000)
+          // 移除自动重置为就绪的逻辑，保持状态信息不变
+          // setTimeout(() => {
+          //   this.statusMessage = ''
+          // }, 8000)
         } else {
           this.statusMessage = `用户取消删除: ${mindMap.title}`
-          // 设置状态消息在8秒后清除
-          setTimeout(() => {
-            this.statusMessage = ''
-          }, 8000)
+          // 移除自动重置为就绪的逻辑，保持状态信息不变
+          // setTimeout(() => {
+          //   this.statusMessage = ''
+          // }, 8000)
         }
       }
     },
@@ -1377,19 +1416,19 @@ export default {
         this.$message.success('刷新完成');
         this.statusMessage = `刷新完成，共 ${updatedMindMaps.length} 个思维导图`;
         
-        // 5秒后清除状态信息
-        setTimeout(() => {
-          this.statusMessage = '';
-        }, 5000);
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = '';
+        // }, 5000);
       } catch (error) {
         console.error('🔄 Toolbar - 刷新失败:', error);
         this.$message.error('刷新失败: ' + error.message);
         this.statusMessage = `刷新失败: ${error.message}`;
         
-        // 5秒后清除状态信息
-        setTimeout(() => {
-          this.statusMessage = '';
-        }, 5000);
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = '';
+        // }, 5000);
       }
     },
 
@@ -1414,10 +1453,10 @@ export default {
       const count = this.filteredMindMaps.length
       this.statusMessage = `共检索出 ${count} 个思维导图`
       
-      // 设置状态消息在8秒后清除
-      setTimeout(() => {
-        this.statusMessage = ''
-      }, 8000)
+      // 移除自动重置为就绪的逻辑，保持状态信息不变
+      // setTimeout(() => {
+      //   this.statusMessage = ''
+      // }, 8000)
     },
     
     // 检查是否选中
@@ -1439,10 +1478,10 @@ export default {
         this.statusMessage = `已选中: ${mindMapTitle}`
       }
       
-      // 设置状态消息在8秒后清除
-      setTimeout(() => {
-        this.statusMessage = ''
-      }, 8000)
+      // 移除自动重置为就绪的逻辑，保持状态信息不变
+      // setTimeout(() => {
+      //   this.statusMessage = ''
+      // }, 8000)
     },
     
 
@@ -1452,10 +1491,10 @@ export default {
       if (this.selectedMindMaps.length === 0) {
         this.$message.warning('请选择要删除的思维导图')
         this.statusMessage = '未选择任何思维导图，无法执行批量删除'
-        // 设置状态消息在8秒后清除
-        setTimeout(() => {
-          this.statusMessage = ''
-        }, 8000)
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = ''
+        // }, 8000)
         return
       }
       
@@ -1510,25 +1549,25 @@ export default {
         });
         // console.log('批量删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
         
-        // 设置状态消息在8秒后清除
-        setTimeout(() => {
-          this.statusMessage = ''
-        }, 8000)
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = ''
+        // }, 8000)
       } catch (err) {
         if (err !== 'cancel') {
           // console.error('批量删除思维导图失败:', err)
           this.$message.error('批量删除思维导图失败: ' + err.message)
           this.statusMessage = '批量删除失败: ' + err.message
-          // 设置状态消息在8秒后清除
-          setTimeout(() => {
-            this.statusMessage = ''
-          }, 8000)
+          // 移除自动重置为就绪的逻辑，保持状态信息不变
+          // setTimeout(() => {
+          //   this.statusMessage = ''
+          // }, 8000)
         } else {
           this.statusMessage = '用户取消了批量删除操作'
-          // 设置状态消息在8秒后清除
-          setTimeout(() => {
-            this.statusMessage = ''
-          }, 8000)
+          // 移除自动重置为就绪的逻辑，保持状态信息不变
+          // setTimeout(() => {
+          //   this.statusMessage = ''
+          // }, 8000)
         }
       }
     },
@@ -1538,10 +1577,10 @@ export default {
       if (this.mindMaps.length === 0) {
         this.$message.warning('没有思维导图可以删除')
         this.statusMessage = '没有思维导图可以删除'
-        // 设置状态消息在8秒后清除
-        setTimeout(() => {
-          this.statusMessage = ''
-        }, 8000)
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = ''
+        // }, 8000)
         return
       }
       
@@ -1591,25 +1630,25 @@ export default {
         // 同步清空Vuex本地缓存
         this.$store.commit('setLocalMindMaps', [])
         
-        // 设置状态消息在8秒后清除
-        setTimeout(() => {
-          this.statusMessage = ''
-        }, 8000)
+        // 移除自动重置为就绪的逻辑，保持状态信息不变
+        // setTimeout(() => {
+        //   this.statusMessage = ''
+        // }, 8000)
       } catch (err) {
         if (err !== 'cancel') {
           // console.error('一键删除思维导图失败:', err)
           this.$message.error('一键删除思维导图失败: ' + err.message)
           this.statusMessage = '一键删除失败: ' + err.message
-          // 设置状态消息在8秒后清除
-          setTimeout(() => {
-            this.statusMessage = ''
-          }, 8000)
+          // 移除自动重置为就绪的逻辑，保持状态信息不变
+          // setTimeout(() => {
+          //   this.statusMessage = ''
+          // }, 8000)
         } else {
           this.statusMessage = '用户取消了一键删除操作'
-          // 设置状态消息在8秒后清除
-          setTimeout(() => {
-            this.statusMessage = ''
-          }, 8000)
+          // 移除自动重置为就绪的逻辑，保持状态信息不变
+          // setTimeout(() => {
+          //   this.statusMessage = ''
+          // }, 8000)
         }
       }
     },
@@ -1824,12 +1863,12 @@ export default {
   overflow-y: auto !important;
   padding: 0 24px !important;
   display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
+  grid-template-columns: repeat(2, 1fr) !important;
   gap: 16px !important;
 }
 
 /* 为第一行的卡片增加上边距 */
-.mindmap-list-container .mindmap-card:nth-child(-n+3) {
+.mindmap-list-container .mindmap-card:nth-child(-n+2) {
   margin-top: 5px !important;
 }
 
@@ -1877,7 +1916,7 @@ export default {
   overflow-y: auto !important;
   padding: 0 24px !important;
   display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
+  grid-template-columns: repeat(2, 1fr) !important;
   gap: 16px !important;
   flex: 1; /* 占据可用空间 */
 }
@@ -1907,9 +1946,12 @@ export default {
 
 /* 选中状态的卡片样式 */
 .mindmap-card.selected {
-  border-color: #409eff;
-  background-color: #ecf5ff;
-  box-shadow: 0 0 8px rgba(64, 158, 255, 0.5);
+  border-color: #409eff !important;
+  background-color: #e6f7ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.3) !important;
+  transform: translateY(-2px); /* 稍微上移以增强选中效果 */
+  position: relative;
+  z-index: 2; /* 确保选中卡片在其他卡片之上 */
 }
 
 /* 深色主题下的样式 */
@@ -1927,9 +1969,13 @@ export default {
 
 /* 深色主题下选中状态的卡片样式 */
 .toolbarContainer.isDark .mindmap-card.selected {
-  background-color: #4a5056;
-  border-color: #409eff;
-  box-shadow: 0 0 8px rgba(64, 158, 255, 0.3);
+  background-color: #409eff !important; /* 蓝色背景 */
+  border-color: #66b1ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.4) !important;
+  color: #ffffff !important; /* 确保文字在深色背景上可读 */
+  transform: translateY(-2px); /* 稍微上移以增强选中效果 */
+  position: relative;
+  z-index: 2; /* 确保选中卡片在其他卡片之上 */
 }
 
 .toolbarContainer.isDark .mindmap-title {
