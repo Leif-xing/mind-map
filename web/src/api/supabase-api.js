@@ -416,16 +416,30 @@ export const aiConfigApi = {
   
   // 管理员更新AI提供商配置
   async updateAiProviderConfig(configId, configData) {
+    // 获取现有配置以确保所有必需字段都存在
+    const { data: existingConfig, error: fetchError } = await supabase
+      .from('ai_provider_configs')
+      .select('api_key_encrypted')
+      .eq('id', configId)
+      .single()
+
+    if (fetchError) {
+      throw new Error('获取现有配置失败: ' + fetchError.message)
+    }
+
     const updateData = {
       provider_name: configData.providerName,
       api_endpoint: configData.apiEndpoint,
       model_name: configData.modelName,
-      is_active: configData.isActive
+      is_active: configData.isActive !== undefined ? configData.isActive : existingConfig.is_active
     }
     
-    // 只有在提供了新API密钥时才更新
+    // 如果提供了新API密钥，则使用新密钥，否则保留现有密钥以满足数据库约束
     if (configData.apiKey) {
       updateData.api_key_encrypted = await encryptApiKey(configData.apiKey)
+    } else {
+      // 保留现有的加密密钥，以避免违反数据库的非空约束
+      updateData.api_key_encrypted = existingConfig.api_key_encrypted
     }
     
     const { data: aiConfig, error } = await supabase
@@ -619,6 +633,44 @@ export const aiConfigApi = {
     return config
   },
   
+  // 根据API接口获取AI提供商配置
+  async getAiProviderConfigsByEndpoint(apiEndpoint) {
+    // 首先验证管理员权限
+    // 注意：此方法仅在管理员上下文中使用，需确保调用方已验证权限
+    
+    // 确保API端点是有效的URL格式
+    if (!apiEndpoint || typeof apiEndpoint !== 'string') {
+      throw new Error('API端点必须是有效的字符串')
+    }
+    
+    // 检查API端点是否是完整URL
+    let validatedEndpoint = apiEndpoint.trim();
+    if (!validatedEndpoint.startsWith('http://') && !validatedEndpoint.startsWith('https://')) {
+      throw new Error('API端点必须是完整URL（以http://或https://开头）')
+    }
+    
+    try {
+      const { data: configs, error } = await supabase
+        .from('ai_provider_configs')
+        .select('*')
+        .eq('api_endpoint', validatedEndpoint)  // 根据API接口匹配
+      
+      if (error) {
+        console.error('根据API接口获取AI提供商配置失败:', error); // 添加详细错误日志
+        throw new Error(error.message || '获取AI配置失败')
+      }
+      
+      // 转换数据格式以适配前端使用
+      return configs.map(config => transformAiConfigForFrontend(config));
+    } catch (error) {
+      console.error('查询AI提供商配置时发生错误:', {
+        apiEndpoint: validatedEndpoint,
+        error: error
+      }); // 详细错误日志
+      throw error;
+    }
+  },
+
   // 通过后端代理调用AI服务（基于数据库配置）
   async callAiService(userId, aiPayload) {
     // console.log('开始AI服务调用:', { userId, hasPayload: !!aiPayload }); // 隐私保护：不输出用户ID和请求负载

@@ -86,6 +86,7 @@
 
     <div slot="footer" class="dialog-footer">
       <el-button @click="handleClose">取消</el-button>
+      <el-button @click="updateApiKey" :loading="updating">更新密钥</el-button>
       <el-button @click="testConnection" :loading="testing">测试连接</el-button>
       <el-button type="primary" @click="saveConfig" :loading="saving">保存配置</el-button>
     </div>
@@ -117,6 +118,7 @@ export default {
       },
       testing: false,
       saving: false,
+      updating: false,
       addModelDialogVisible: false, // 已移除添加模型功能
       newModelName: '', // 已移除添加模型功能
       rules: {
@@ -337,6 +339,83 @@ export default {
     handleClose() {
       this.visible = false
       // 不再重置配置，保留输入内容供下次使用
+    },
+
+    async updateApiKey() {
+      this.updating = true;
+      try {
+        // 获取当前用户信息
+        const currentUser = this.$store.state.currentUser;
+        
+        if (!currentUser) {
+          this.$message.error('请先登录');
+          return;
+        }
+        
+        // 检查用户是否为管理员
+        if (!currentUser.isAdmin) {
+          this.$message.error('只有管理员可以更新API密钥');
+          return;
+        }
+        
+        let apiEndpoint = this.config.api;
+        const newApiKey = this.config.key;
+        
+        if (!apiEndpoint) {
+          this.$message.error('API接口不能为空');
+          return;
+        }
+        
+        if (!newApiKey) {
+          this.$message.error('新密钥不能为空');
+          return;
+        }
+        
+        // 确保API端点URL被正确处理（去除可能的额外字符）
+        apiEndpoint = apiEndpoint.trim();
+        
+        // 调用API更新所有匹配API接口的配置的密钥
+        // 首先通过API获取所有匹配该API接口的配置
+        let configsToUpdate = [];
+        try {
+          configsToUpdate = await aiConfigApi.getAiProviderConfigsByEndpoint(apiEndpoint);
+        } catch (error) {
+          console.error('获取API配置失败:', error);
+          this.$message.error(`获取API配置失败: ${error.message}`);
+          return;
+        }
+        
+        if (!configsToUpdate || configsToUpdate.length === 0) {
+          this.$message.warning('未找到匹配该API接口的配置');
+          return;
+        }
+        
+        // 对每个匹配的配置更新密钥（使用加密方式）
+        const updatePromises = configsToUpdate.map(async (config) => {
+          // 准备更新数据，仅更新密钥字段，使用后端方法期望的字段名
+          const updateData = {
+            providerName: config.providerName || '', // 确保字段存在
+            apiEndpoint: config.apiEndpoint || '',   // 确保字段存在
+            modelName: config.modelName || '',       // 确保字段存在
+            apiKey: newApiKey, // 这将触发后端的密钥加密和更新
+            isActive: config.isActive !== undefined ? config.isActive : true
+          };
+          
+          return aiConfigApi.updateAiProviderConfig(config.id, updateData);
+        });
+        
+        await Promise.all(updatePromises);
+        
+        this.$message.success(`成功更新了 ${configsToUpdate.length} 个配置的API密钥`);
+        
+        // 清空密钥字段以保持安全
+        this.config.key = '';
+      } catch (error) {
+        // console.error('更新API密钥失败:', error);
+        this.$message.error('更新API密钥失败: ' + error.message);
+      } finally {
+        this.updating = false;
+      }
     },
     
     // 初始化拖拽功能
