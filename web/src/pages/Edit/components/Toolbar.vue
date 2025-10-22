@@ -165,113 +165,10 @@
     <Import ref="ImportRef"></Import>
     
     <!-- 思维导图历史对话框 -->
-    <el-dialog
-      title="思维导图"
+    <MindMapHistory 
       :visible.sync="showMindMapDialog"
-      width="600px"
-      :modal-append-to-body="false"
-      :close-on-click-modal="false"
-      :before-close="closeMindMapDialog"
-      :destroy-on-close="false"
-      custom-class="draggable-dialog"
-      ref="mindMapDialog"
-    >
-      <!-- 统一容器 -->
-      <div class="mindmap-content-wrapper">
-        <!-- 功能操作栏 -->
-        <div class="mindmap-toolbar-container">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索思维导图..."
-            size="small"
-            clearable
-            prefix-icon="el-icon-search"
-            style="width: 240px;"
-            @input="handleSearch"
-          />
-          
-          <div class="mindmap-toolbar-buttons">
-            <el-button
-              size="small"
-              type="primary"
-              plain
-              @click="refreshMindMaps"
-              icon="el-icon-refresh"
-            >
-              刷新
-            </el-button>
-            
-            <el-button
-              size="small"
-              type="danger"
-              :disabled="selectedMindMaps.length === 0"
-              @click="batchDeleteMindMaps"
-              icon="el-icon-delete"
-            >
-              批量删除 ({{ selectedMindMaps.length }})
-            </el-button>
-            
-            <el-button
-              size="small"
-              type="danger"
-              plain
-              @click="deleteAllMindMaps"
-              icon="el-icon-delete-solid"
-            >
-              一键删除
-            </el-button>
-          </div>
-        </div>
-        
-        <!-- 思维导图列表 -->
-        <div class="mindmap-list-container">
-        <!-- 加载状态 -->
-        <div v-if="mindMapLoading" class="loading-container">
-          <div class="loading-spinner">
-            <i class="el-icon-loading"></i>
-            <span>正在加载思维导图...</span>
-          </div>
-        </div>
-        
-        <!-- 无数据状态 -->
-        <div v-else-if="mindMaps.length === 0" class="no-mindmaps">
-          暂无思维导图
-        </div>
-        
-        <!-- 思维导图列表 -->
-        <div 
-          v-else
-          v-for="mindMap in filteredMindMaps" 
-          :key="mindMap.id" 
-          class="mindmap-card"
-          :class="{ 'selected': isSelected(mindMap.id) }"
-          @dblclick.stop="loadMindMap(mindMap, $event)"
-          @click.stop="handleCardClick(mindMap, $event)"
-        >
-          <div class="mindmap-card-content">
-            <div class="mindmap-info">
-              <div class="mindmap-title" :title="mindMap.title">{{ mindMap.title }}</div>
-              <div class="mindmap-date">{{ formatDate(mindMap.updated_at) }}</div>
-            </div>
-            
-            <div class="mindmap-bottom">
-              <!-- 操作按钮 - 定位到右下角 -->
-              <div class="mindmap-actions">
-                <el-button size="mini" type="danger" @click.stop="deleteMindMap(mindMap)">删除</el-button>
-              </div>
-            </div>
-            
-            <!-- 隐藏的思维导图ID -->
-            <div :id="'mindmap-id-' + mindMap.id" style="display: none;">{{ mindMap.id }}</div>
-          </div>
-        </div>
-        </div>
-      </div>
-      <!-- 状态栏作为对话框footer，填满整个footer区域 -->
-      <div slot="footer" class="mindmap-status-bar" style="margin: 0; padding: 0; width: 100%; height: 100%;">
-        <span class="status-text">{{ statusMessage }}</span>
-      </div>
-    </el-dialog>
+      @load-mind-map="handleLoadMindMap"
+    />
   </div>
 </template>
 
@@ -283,6 +180,7 @@ import NodeNote from './NodeNote.vue'
 import NodeTag from './NodeTag.vue'
 import Export from './Export.vue'
 import Import from './Import.vue'
+import MindMapHistory from './MindMapHistory.vue'
 import { mapState } from 'vuex'
 import { Notification } from 'element-ui'
 import exampleData from 'simple-mind-map/example/exampleData'
@@ -323,7 +221,8 @@ export default {
     NodeTag,
     Export,
     Import,
-    ToolbarNodeBtnList
+    ToolbarNodeBtnList,
+    MindMapHistory
   },
   data() {
     return {
@@ -343,20 +242,6 @@ export default {
       waitingWriteToLocalFile: false,
       // 思维导图历史相关
       showMindMapDialog: false,
-      mindMaps: [],
-      mindMapLoading: false,
-      searchKeyword: '',
-      selectedMindMaps: [],
-      // 对话框拖拽相关
-      dialogDragData: {
-        isDragging: false,
-        startX: 0,
-        startY: 0,
-        initialLeft: 0,
-        initialTop: 0
-      },
-      // 状态栏消息
-      statusMessage: '',
       // 密码修改相关
       currentPassword: '',
       newPassword: '',
@@ -387,17 +272,6 @@ export default {
       return res
     },
 
-    // 过滤后的思维导图列表
-    filteredMindMaps() {
-      if (!this.searchKeyword.trim()) {
-        return this.mindMaps
-      }
-      
-      const keyword = this.searchKeyword.toLowerCase()
-      return this.mindMaps.filter(mindMap => {
-        return mindMap.title.toLowerCase().includes(keyword)
-      })
-    }
   },
   watch: {
     isHandleLocalFile(val) {
@@ -445,8 +319,6 @@ export default {
     window.removeEventListener('keydown', this.handleKeyDown)
     // 移除保存当前思维导图事件监听
     this.$bus.$off('saveCurrentMindMap', this.saveToDatabase)
-    // 清理拖拽事件监听
-    this.cleanupDragEvents()
   },
   methods: {
     // 计算工具按钮如何显示
@@ -917,202 +789,63 @@ export default {
           return
         }
         
-        // 立即显示对话框
+        // 显示对话框
         this.showMindMapDialog = true
-        
-        // 设置状态栏提示信息
-        this.statusMessage = '双击卡片切换所选思维导图'
-        
-        // 初始化拖拽功能
-        this.initDialogDrag()
-        
-        // 如果已有预加载的数据，直接使用
-        if (this.mindMaps.length > 0) {
-          // console.log('使用预加载的思维导图数据，共', this.mindMaps.length, '个'); // 仅调试时使用
-          this.mindMapLoading = false
-        } else {
-          // 没有预加载数据，显示加载状态并获取
-          this.mindMapLoading = true
-          
-          try {
-            const mindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
-            // console.log('获取到的思维导图列表:', mindMaps); // 隐私保护：不输出用户数据
-            // console.log('思维导图列表详情:'); // 隐私保护：不输出用户数据
-            // if (mindMaps && mindMaps.length > 0) {
-            //   mindMaps.forEach((map, index) => {
-            //     console.log(`  ${index + 1}. ID: ${map.id}, 标题: ${map.title}, 内容预览: ${map.content ? (map.content.root ? map.content.root.data.text : '无根节点') : '无内容'}`); // 隐私保护：不输出用户数据
-            //   });
-            // }
-            this.mindMaps = mindMaps
-            // 同步到Vuex本地缓存
-            this.$store.commit('setLocalMindMaps', mindMaps)
-            
-            // 清空思维导图内容缓存，确保加载最新内容
-            const currentMindMapId = this.$store.state.currentMindMapId;
-            const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-            cacheKeys.forEach(key => {
-              if (currentMindMapId && !key.includes(currentMindMapId)) {
-                localStorage.removeItem(key);
-              } else if (!currentMindMapId) {
-                localStorage.removeItem(key);
-              }
-            });
-          } catch (error) {
-            // console.error('加载思维导图失败:', error)
-            this.$message.error('加载思维导图失败: ' + error.message)
-          } finally {
-            this.mindMapLoading = false
-          }
-        }
       } catch (error) {
-        // console.error('显示思维导图对话框失败:', error)
         this.$message.error('显示思维导图对话框失败: ' + error.message)
       }
     },
     
-    // 关闭思维导图对话框
-    closeMindMapDialog(done) {
-      // 重置对话框位置和样式
-      this.showMindMapDialog = false
-      const dialogEl = document.querySelector('.draggable-dialog')
-      if (dialogEl) {
-        // 恢复默认样式
-        dialogEl.style.position = ''
-        dialogEl.style.left = ''
-        dialogEl.style.top = ''
-        dialogEl.style.marginLeft = ''
-        dialogEl.style.marginTop = ''
-      }
-      if (done) {
-        done()
-      }
-    },
-    
-    // 初始化对话框拖拽功能
-    initDialogDrag() {
-      this.$nextTick(() => {
-        const dialogEl = document.querySelector('.draggable-dialog')
-        if (!dialogEl) return
-        
-        const headerEl = dialogEl.querySelector('.el-dialog__header')
-        if (!headerEl) return
-        
-        // 设置拖拽样式
-        headerEl.style.cursor = 'move'
-        headerEl.style.userSelect = 'none'
-        
-        // 绑定拖拽事件
-        headerEl.addEventListener('mousedown', this.startDrag)
-      })
-    },
-    
-    // 开始拖拽
-    startDrag(e) {
-      const dialogEl = document.querySelector('.draggable-dialog')
-      if (!dialogEl) return
+    // 处理从 MindMapHistory 组件传来的加载思维导图事件
+    async handleLoadMindMap(mindMap) {
+      // 保存一份副本以避免引用问题
+      const mindMapToLoad = JSON.parse(JSON.stringify(mindMap));
       
-      // 记录初始位置
-      this.dialogDragData.isDragging = true
-      this.dialogDragData.startX = e.clientX
-      this.dialogDragData.startY = e.clientY
-      
-      // 获取当前对话框位置
-      const rect = dialogEl.getBoundingClientRect()
-      this.dialogDragData.initialLeft = rect.left
-      this.dialogDragData.initialTop = rect.top
-      
-      // 绑定移动和结束事件
-      document.addEventListener('mousemove', this.onDrag)
-      document.addEventListener('mouseup', this.endDrag)
-      
-      // 添加拖拽样式
-      dialogEl.classList.add('dragging')
-      
-      // 防止选中文本
-      e.preventDefault()
-    },
-    
-    // 拖拽中
-    onDrag(e) {
-      if (!this.dialogDragData.isDragging) return
-      
-      const dialogEl = document.querySelector('.draggable-dialog')
-      if (!dialogEl) return
-      
-      // 计算新位置
-      const deltaX = e.clientX - this.dialogDragData.startX
-      const deltaY = e.clientY - this.dialogDragData.startY
-      
-      const newLeft = this.dialogDragData.initialLeft + deltaX
-      const newTop = this.dialogDragData.initialTop + deltaY
-      
-      // 获取窗口尺寸，确保对话框不会拖出视口
-      const windowWidth = window.innerWidth
-      const windowHeight = window.innerHeight
-      const dialogRect = dialogEl.getBoundingClientRect()
-      
-      const maxLeft = windowWidth - dialogRect.width
-      const maxTop = windowHeight - dialogRect.height
-      
-      const finalLeft = Math.max(0, Math.min(newLeft, maxLeft))
-      const finalTop = Math.max(0, Math.min(newTop, maxTop))
-      
-      // 应用新位置
-      dialogEl.style.position = 'fixed'
-      dialogEl.style.left = finalLeft + 'px'
-      dialogEl.style.top = finalTop + 'px'
-      dialogEl.style.marginLeft = '0'
-      dialogEl.style.marginTop = '0'
-    },
-    
-    // 结束拖拽
-    endDrag() {
-      this.dialogDragData.isDragging = false
-      
-      // 移除拖拽样式
-      const dialogEl = document.querySelector('.draggable-dialog')
-      if (dialogEl) {
-        dialogEl.classList.remove('dragging')
-        // 确保拖拽后的位置被正确应用
-        dialogEl.style.marginLeft = '0'
-        dialogEl.style.marginTop = '0'
-      }
-      
-      // 移除事件监听
-      document.removeEventListener('mousemove', this.onDrag)
-      document.removeEventListener('mouseup', this.endDrag)
-    },
-    
-    // 清理拖拽事件监听
-    cleanupDragEvents() {
-      // 移除可能残留的事件监听
-      document.removeEventListener('mousemove', this.onDrag)
-      document.removeEventListener('mouseup', this.endDrag)
-      
-      // 清理对话框头部的事件监听
-      const headerEl = document.querySelector('.draggable-dialog .el-dialog__header')
-      if (headerEl) {
-        headerEl.removeEventListener('mousedown', this.startDrag)
-      }
-    },
-    
-    // 处理卡片单击事件（切换选中状态）
-    handleCardClick(mindMap, event) {
-      this.toggleSelection(mindMap.id);
-      // 阻止事件冒泡，防止触发对话框的其他行为
-      if (event) {
-        event.stopPropagation();
-      }
-      // 确保对话框保持在拖拽后的位置，而不是跳回居中
-      this.$nextTick(() => {
-        const dialogEl = document.querySelector('.draggable-dialog');
-        if (dialogEl && dialogEl.style.position === 'fixed') {
-          // 如果是拖拽后的位置，保持fixed定位
-          dialogEl.style.marginLeft = '0';
-          dialogEl.style.marginTop = '0';
+      try {
+        // 1. 先保存当前思维导图的数据到缓存（如果有修改）
+        if (this.$getCurrentData) {
+          const currentData = this.$getCurrentData();
+          const currentMindMapId = this.$store.state.currentMindMapId || 'current';
+          this.saveMindMapDataToCache(currentMindMapId, currentData);
         }
-      });
+        
+        // 2. 从缓存中获取目标思维导图的数据
+        const contentToLoad = await this.getMindMapDataFromCache(mindMapToLoad.id);
+        
+        if (!contentToLoad) {
+          this.$message.error('加载思维导图失败：无法获取数据');
+          return;
+        }
+        
+        // 创建一个Promise来确保数据加载完成
+        const loadPromise = new Promise((resolve) => {
+          // 监听一个自定义事件，当思维导图渲染完成时触发
+          const listener = () => {
+            this.$bus.$off('mindMapLoaded', listener);
+            resolve();
+          };
+          this.$bus.$on('mindMapLoaded', listener);
+          
+          // 发送加载数据事件
+          this.$bus.$emit('loadMindMapData', { content: contentToLoad });
+          
+          // 更新当前思维导图ID到store
+          this.$store.commit('setCurrentMindMapId', mindMapToLoad.id);
+          
+          // 设置超时，确保即使没有收到完成事件也能继续
+          setTimeout(() => {
+            this.$bus.$off('mindMapLoaded', listener);
+            resolve();
+          }, 100);
+        });
+        
+        // 等待思维导图加载完成
+        await loadPromise;
+      } catch (err) {
+        this.$message.error('加载思维导图失败');
+      }
     },
+    
     
     // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
     async getMindMapDataFromCache(mindMapId) {
@@ -1167,194 +900,6 @@ export default {
       }
     },
     
-    // 加载思维导图
-    async loadMindMap(selectedMindMap, event) {
-      // 阻止事件冒泡
-      if (event) {
-        event.stopPropagation();
-      }
-
-      
-      // 保存一份副本以避免引用问题
-      // 使用更深层的复制方法，确保所有属性都被复制
-      const mindMapToLoad = JSON.parse(JSON.stringify(selectedMindMap));
-      // console.log('复制后的思维导图子节点检查:', {
-      //   hasContent: !!mindMapToLoad.content,
-      //   hasRoot: !!mindMapToLoad.content?.root,
-      //   hasChildren: !!mindMapToLoad.content?.root?.children,
-      //   childCount: mindMapToLoad.content?.root?.children ? mindMapToLoad.content.root.children.length : 0,
-      //   childrenPreview: mindMapToLoad.content?.root?.children?.slice(0, 2).map(child => ({
-      //     text: child.data?.text,
-      //     childCount: child.children?.length || 0
-      //   }))
-      // }); // 隐私保护：不输出用户数据
-      // console.log('复制后的思维导图:', mindMapToLoad); // 隐私保护：不输出用户数据
-      
-      try {
-        // 加载思维导图
-        // console.log('发送加载思维导图事件，数据:', { content: mindMapToLoad.content }); // 隐私保护：不输出用户数据
-        // console.log('即将加载的思维导图ID:', mindMapToLoad.id); // 隐私保护：不输出用户数据
-        // console.log('即将加载的思维导图标题:', mindMapToLoad.title); // 隐私保护：不输出用户数据
-        
-        // 正确的逻辑：从缓存中获取思维导图数据
-
-        
-        // 1. 先保存当前思维导图的数据到缓存（如果有修改）
-
-        if (this.$getCurrentData) {
-          const currentData = this.$getCurrentData();
-
-          
-          // 获取当前思维导图的ID（需要从store或其他地方获取）
-          const currentMindMapId = this.$store.state.currentMindMapId || 'current';
-          this.saveMindMapDataToCache(currentMindMapId, currentData);
-        } else {
-
-        }
-        
-        // 2. 从缓存中获取目标思维导图的数据
-        // console.log('🔄 Toolbar - 开始加载思维导图，ID:', mindMapToLoad.id, '标题:', mindMapToLoad.title);
-        const contentToLoad = await this.getMindMapDataFromCache(mindMapToLoad.id);
-        
-        if (!contentToLoad) {
-          this.$message.error('加载思维导图失败：无法获取数据');
-          return;
-        }
-        // console.log('🔄 Toolbar - 从缓存加载到的思维导图内容 - 根节点文本:', contentToLoad?.root?.data?.text || '无根节点');
-        // console.log('🔄 Toolbar - 从缓存加载到的思维导图内容 - 子节点数量:', contentToLoad?.root?.children?.length || 0);
-        // console.log('加载的内容结构检查:', {
-        //   hasRoot: !!contentToLoad?.root,
-        //   rootData: contentToLoad?.root ? contentToLoad.root.data : null,
-        //   contentKeys: contentToLoad ? Object.keys(contentToLoad) : null
-        // }); // 隐私保护：不输出用户数据
-        
-        // 创建一个Promise来确保数据加载完成
-        const loadPromise = new Promise((resolve) => {
-          // 监听一个自定义事件，当思维导图渲染完成时触发
-          const listener = () => {
-            this.$bus.$off('mindMapLoaded', listener);
-            // console.log('接收到思维导图加载完成事件'); // 仅调试时使用
-            resolve();
-          };
-          this.$bus.$on('mindMapLoaded', listener);
-          
-          // 检查 contentToLoad 是否包含完整的子节点数据
-          // console.log('准备发送的思维导图数据检查:', {
-          //   hasRoot: !!contentToLoad?.root,
-          //   hasChildren: !!contentToLoad?.root?.children,
-          //   childCount: contentToLoad?.root?.children ? contentToLoad.root.children.length : 0,
-          //   childrenPreview: contentToLoad?.root?.children?.slice(0, 2).map(child => ({
-          //     text: child.data?.text,
-          //     childCount: child.children?.length || 0
-          //   }))
-          // }); // 隐私保护：不输出用户数据
-          
-          // 发送加载数据事件
-          this.$bus.$emit('loadMindMapData', { content: contentToLoad });
-          
-          // 更新当前思维导图ID到store
-          this.$store.commit('setCurrentMindMapId', mindMapToLoad.id);
-          
-          // 设置超时，确保即使没有收到完成事件也能继续
-          setTimeout(() => {
-            this.$bus.$off('mindMapLoaded', listener);
-            resolve();
-          }, 100);
-        });
-        
-        // 等待思维导图加载完成后再关闭对话框
-        await loadPromise;
-        // 保持对话框位置再关闭
-        this.$nextTick(() => {
-          const dialogEl = document.querySelector('.draggable-dialog');
-          if (dialogEl && dialogEl.style.position === 'fixed') {
-            // 如果是拖拽后的位置，保持fixed定位
-            dialogEl.style.marginLeft = '0';
-            dialogEl.style.marginTop = '0';
-          }
-        });
-        // console.log('思维导图已加载，关闭对话框'); // 仅调试时使用
-        this.closeMindMapDialog();
-        // console.log('思维导图加载完成'); // 仅调试时使用
-      } catch (err) {
-        // 加载思维导图异常
-      }
-    },
-    
-    // 删除思维导图
-    async deleteMindMap(mindMap) {
-      // console.log('准备删除思维导图:', mindMap); // 隐私保护：不输出用户数据
-      try {
-        await this.$confirm(`确定要删除思维导图 "${mindMap.title}" 吗？`, '删除确认', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        })
-        
-        this.statusMessage = `正在删除: ${mindMap.title}`
-        
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
-        await this.$store.dispatch('deleteMindMap', {
-          mindMapId: mindMap.id,
-          userId: currentUser.id
-        })
-        
-        this.$message.success('思维导图删除成功')
-        
-        // 清理被删除思维导图的本地缓存
-        const deletedMindMapCacheKey = `mindmap_cache_${mindMap.id}`;
-        localStorage.removeItem(deletedMindMapCacheKey);
-        
-        // 更新状态栏信息
-        this.statusMessage = `已删除: ${mindMap.title}`
-        
-        // 重新加载思维导图列表
-        const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', currentUser.id)
-        this.mindMaps = updatedMindMaps
-        // 同步到Vuex本地缓存
-        this.$store.commit('setLocalMindMaps', updatedMindMaps)
-        
-        // 删除操作后清空思维导图内容缓存
-        const currentMindMapId = this.$store.state.currentMindMapId;
-        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-        cacheKeys.forEach(key => {
-          if (currentMindMapId && !key.includes(currentMindMapId)) {
-            localStorage.removeItem(key);
-          } else if (!currentMindMapId) {
-            localStorage.removeItem(key);
-          }
-        });
-        // console.log('删除后更新思维导图列表，共', updatedMindMaps.length, '个'); // 仅调试时使用
-        
-        // 移除自动重置为就绪的逻辑，保持状态信息不变
-        // setTimeout(() => {
-        //   this.statusMessage = ''
-        // }, 8000)
-      } catch (err) {
-        if (err !== 'cancel') {
-          // console.error('删除思维导图失败:', err)
-          this.$message.error('删除思维导图失败: ' + err.message)
-          this.statusMessage = `删除失败: ${mindMap.title} - ${err.message}`
-          // 移除自动重置为就绪的逻辑，保持状态信息不变
-          // setTimeout(() => {
-          //   this.statusMessage = ''
-          // }, 8000)
-        } else {
-          this.statusMessage = `用户取消删除: ${mindMap.title}`
-          // 移除自动重置为就绪的逻辑，保持状态信息不变
-          // setTimeout(() => {
-          //   this.statusMessage = ''
-          // }, 8000)
-        }
-      }
-    },
-    
-    // 格式化日期
-    formatDate(dateString) {
-      if (!dateString) return ''
-      const date = new Date(dateString)
-      return date.toLocaleString('zh-CN')
-    },
     
     // 预加载思维导图列表
     async preloadMindMaps() {

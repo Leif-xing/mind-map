@@ -1,102 +1,113 @@
 <template>
-  <div class="mind-map-history-container">
-    <div class="header">
-      <h3>思维导图历史</h3>
-      <div class="actions">
+  <!-- 思维导图历史对话框 -->
+  <el-dialog
+    title="思维导图"
+    :visible.sync="visible"
+    width="800px"
+    :modal-append-to-body="false"
+    :close-on-click-modal="false"
+    :before-close="handleClose"
+    :destroy-on-close="false"
+    custom-class="draggable-dialog mind-map-history-dialog"
+    :class="{ isDark: isDark }"
+    ref="mindMapDialog"
+  >
+    <!-- 统一容器 -->
+    <div class="mindmap-content-wrapper">
+      <!-- 功能操作栏 -->
+      <div class="mindmap-toolbar-container">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索思维导图"
-          prefix-icon="el-icon-search"
+          placeholder="搜索思维导图..."
           size="small"
-          style="width: 200px; margin-right: 10px;"
+          clearable
+          prefix-icon="el-icon-search"
+          style="width: 240px;"
+          @input="handleSearch"
         />
-        <el-checkbox 
-          v-model="selectAll" 
-          @change="toggleSelectAll"
-          :disabled="!mindMaps || mindMaps.length === 0"
-        >
-          全选
-        </el-checkbox>
-        <el-button 
-          type="danger" 
-          size="small" 
-          @click="batchDelete"
-          :disabled="selectedMindMaps.length === 0"
-        >
-          批量删除
-        </el-button>
-        <el-button 
-          type="info" 
-          size="small" 
-          @click="clearAll"
-          :disabled="!mindMaps || mindMaps.length === 0"
-        >
-          清空全部
-        </el-button>
+        
+        <div class="mindmap-toolbar-buttons">
+          <el-button
+            size="small"
+            type="primary"
+            plain
+            @click="refreshMindMaps"
+            icon="el-icon-refresh"
+          >
+            刷新
+          </el-button>
+          
+          <el-button
+            size="small"
+            type="danger"
+            :disabled="selectedMindMaps.length === 0"
+            @click="batchDelete"
+            icon="el-icon-delete"
+          >
+            批量删除 ({{ selectedMindMaps.length }})
+          </el-button>
+          
+          <el-button
+            size="small"
+            type="danger"
+            plain
+            @click="clearAll"
+            icon="el-icon-delete-solid"
+          >
+            一键删除
+          </el-button>
+        </div>
       </div>
-    </div>
-    
-    <div class="content">
-      <el-table
-        :data="filteredMindMaps"
-        v-loading="loading"
-        style="width: 100%"
-        @row-click="handleRowClick"
-        @row-dblclick="handleRowDblclick"
-        :row-class-name="tableRowClassName"
-        ref="tableRef"
-      >
-        <el-table-column prop="title" label="标题" width="300">
-          <template slot-scope="scope">
-            <el-input
-              v-if="scope.row.editingTitle"
-              v-model="scope.row.tempTitle"
-              @blur="updateTitle(scope.row)"
-              @keyup.enter.native="updateTitle(scope.row)"
-              size="small"
-            ></el-input>
-            <span 
-              v-else 
-              @dblclick="startEditingTitle(scope.row)"
-              class="title-span"
-            >
-              {{ scope.row.title }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template slot-scope="scope">
-            {{ formatDate(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="updated_at" label="更新时间" width="180">
-          <template slot-scope="scope">
-            {{ formatDate(scope.row.updated_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200">
-          <template slot-scope="scope">
-            <el-button size="mini" type="primary" @click="loadMindMap(scope.row)">加载</el-button>
-            <el-button size="mini" type="warning" @click="startEditingTitle(scope.row)">重命名</el-button>
-            <el-button size="mini" type="danger" @click="deleteMindMap(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
       
-      <div class="pagination" v-if="filteredMindMaps.length > 0">
-        <el-pagination
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          :current-page="currentPage"
-          :page-sizes="[5, 10, 20, 50]"
-          :page-size="pageSize"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="filteredMindMaps.length"
+      <!-- 思维导图列表 -->
+      <div class="mindmap-list-container">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-spinner">
+            <i class="el-icon-loading"></i>
+            <span>正在加载思维导图...</span>
+          </div>
+        </div>
+        
+        <!-- 无数据状态 -->
+        <div v-else-if="mindMaps.length === 0" class="no-mindmaps">
+          暂无思维导图
+        </div>
+        
+        <!-- 思维导图列表 -->
+        <div 
+          v-else
+          v-for="mindMap in filteredMindMaps" 
+          :key="mindMap.id" 
+          class="mindmap-card"
+          :class="{ 'selected': isSelected(mindMap.id) }"
+          @dblclick.stop="loadMindMap(mindMap, $event)"
+          @click.stop="handleCardClick(mindMap, $event)"
         >
-        </el-pagination>
+          <div class="mindmap-card-content">
+            <div class="mindmap-info">
+              <div class="mindmap-title" :title="mindMap.title">{{ mindMap.title }}</div>
+              <div class="mindmap-date">{{ formatDate(mindMap.updated_at) }}</div>
+            </div>
+            
+            <div class="mindmap-bottom">
+              <!-- 操作按钮 - 定位到右下角 -->
+              <div class="mindmap-actions">
+                <el-button size="mini" type="danger" @click.stop="deleteMindMap(mindMap)">删除</el-button>
+              </div>
+            </div>
+            
+            <!-- 隐藏的思维导图ID -->
+            <div :id="'mindmap-id-' + mindMap.id" style="display: none;">{{ mindMap.id }}</div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+    <!-- 状态栏作为对话框footer，填满整个footer区域 -->
+    <div slot="footer" class="mindmap-status-bar" style="margin: 0; padding: 0; width: 100%; height: 100%;">
+      <span class="status-text">{{ statusMessage }}</span>
+    </div>
+  </el-dialog>
 </template>
 
 <script>
@@ -104,42 +115,63 @@ import { mapState } from 'vuex'
 
 export default {
   name: 'MindMapHistory',
+  props: {
+    visible: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
     return {
       mindMaps: [],
       loading: false,
       searchQuery: '',
       selectedMindMaps: [],
-      selectAll: false,
-      currentPage: 1,
-      pageSize: 10,
-      currentUser: null
+      currentUser: null,
+      // 对话框拖拽相关
+      dialogDragData: {
+        isDragging: false,
+        startX: 0,
+        startY: 0,
+        initialLeft: 0,
+        initialTop: 0
+      },
+      // 状态栏消息
+      statusMessage: ''
     }
   },
   computed: {
     ...mapState({
-      supabaseEnabled: state => state.supabaseEnabled
+      supabaseEnabled: state => state.supabaseEnabled,
+      isDark: state => state.localConfig.isDark
     }),
     
     filteredMindMaps() {
-      let result = this.mindMaps || []
-      
-      // 搜索过滤
-      if (this.searchQuery) {
-        result = result.filter(mindMap => 
-          mindMap.title.toLowerCase().includes(this.searchQuery.toLowerCase())
-        )
+      if (!this.searchQuery.trim()) {
+        return this.mindMaps
       }
       
-      // 分页
-      const start = (this.currentPage - 1) * this.pageSize
-      const end = start + this.pageSize
-      return result.slice(start, end)
+      const keyword = this.searchQuery.toLowerCase()
+      return this.mindMaps.filter(mindMap => {
+        return mindMap.title.toLowerCase().includes(keyword)
+      })
     }
   },
-  created() {
-    this.loadCurrentUser()
-    this.loadMindMaps()
+  watch: {
+    visible(newVal) {
+      if (newVal) {
+        this.loadCurrentUser()
+        this.loadMindMaps()
+        this.selectedMindMaps = []
+        this.updateStatusMessage()
+        // 初始化拖拽功能
+        this.initDialogDrag()
+      }
+    }
+  },
+  beforeDestroy() {
+    // 清理拖拽事件监听
+    this.cleanupDragEvents()
   },
   methods: {
     loadCurrentUser() {
@@ -163,60 +195,217 @@ export default {
         // 从数据库获取最新的元数据用于界面显示
         const mindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id);
         
-        // 添加editingTitle和tempTitle字段用于重命名功能
-        this.mindMaps = mindMaps.map(mindMap => ({
-          ...mindMap,
-          editingTitle: false,
-          tempTitle: mindMap.title
-        }))
+        this.mindMaps = mindMaps
+        // 同步到Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', mindMaps)
       } catch (error) {
-        // console.error('加载思维导图失败:', error)
         this.$message.error('加载思维导图失败: ' + error.message)
       } finally {
         this.loading = false
       }
     },
     
-    handleSelectionChange(selection) {
-      this.selectedMindMaps = selection
-      this.selectAll = selection.length === this.filteredMindMaps.length
+    // 关闭对话框
+    handleClose(done) {
+      // 重置对话框位置和样式
+      const dialogEl = document.querySelector('.mind-map-history-dialog')
+      if (dialogEl) {
+        // 恢复默认样式
+        dialogEl.style.position = ''
+        dialogEl.style.left = ''
+        dialogEl.style.top = ''
+        dialogEl.style.marginLeft = ''
+        dialogEl.style.marginTop = ''
+      }
+      this.$emit('update:visible', false)
+      if (done) {
+        done()
+      }
     },
     
-    // 单击行处理函数
-    handleRowClick(row) {
-      // 检查该行是否已被选中
-      const index = this.selectedMindMaps.findIndex(map => map.id === row.id)
-      if (index > -1) {
-        // 如果已选中，则取消选中
-        this.selectedMindMaps.splice(index, 1)
-      } else {
-        // 如果未选中，则添加到选中列表
-        this.selectedMindMaps.push(row)
+    // 初始化对话框拖拽功能
+    initDialogDrag() {
+      this.$nextTick(() => {
+        const dialogEl = document.querySelector('.mind-map-history-dialog')
+        if (!dialogEl) return
+        
+        const headerEl = dialogEl.querySelector('.el-dialog__header')
+        if (!headerEl) return
+        
+        // 设置拖拽样式
+        headerEl.style.cursor = 'move'
+        headerEl.style.userSelect = 'none'
+        
+        // 绑定拖拽事件
+        headerEl.addEventListener('mousedown', this.startDrag)
+      })
+    },
+    
+    // 开始拖拽
+    startDrag(e) {
+      const dialogEl = document.querySelector('.mind-map-history-dialog')
+      if (!dialogEl) return
+      
+      // 记录初始位置
+      this.dialogDragData.isDragging = true
+      this.dialogDragData.startX = e.clientX
+      this.dialogDragData.startY = e.clientY
+      
+      // 获取当前对话框位置
+      const rect = dialogEl.getBoundingClientRect()
+      this.dialogDragData.initialLeft = rect.left
+      this.dialogDragData.initialTop = rect.top
+      
+      // 绑定移动和结束事件
+      document.addEventListener('mousemove', this.onDrag)
+      document.addEventListener('mouseup', this.endDrag)
+      
+      // 添加拖拽样式
+      dialogEl.classList.add('dragging')
+      
+      // 防止选中文本
+      e.preventDefault()
+    },
+    
+    // 拖拽中
+    onDrag(e) {
+      if (!this.dialogDragData.isDragging) return
+      
+      const dialogEl = document.querySelector('.mind-map-history-dialog')
+      if (!dialogEl) return
+      
+      // 计算新位置
+      const deltaX = e.clientX - this.dialogDragData.startX
+      const deltaY = e.clientY - this.dialogDragData.startY
+      
+      const newLeft = this.dialogDragData.initialLeft + deltaX
+      const newTop = this.dialogDragData.initialTop + deltaY
+      
+      // 获取窗口尺寸，确保对话框不会拖出视口
+      const windowWidth = window.innerWidth
+      const windowHeight = window.innerHeight
+      const dialogRect = dialogEl.getBoundingClientRect()
+      
+      const maxLeft = windowWidth - dialogRect.width
+      const maxTop = windowHeight - dialogRect.height
+      
+      const finalLeft = Math.max(0, Math.min(newLeft, maxLeft))
+      const finalTop = Math.max(0, Math.min(newTop, maxTop))
+      
+      // 应用新位置
+      dialogEl.style.position = 'fixed'
+      dialogEl.style.left = finalLeft + 'px'
+      dialogEl.style.top = finalTop + 'px'
+      dialogEl.style.marginLeft = '0'
+      dialogEl.style.marginTop = '0'
+    },
+    
+    // 结束拖拽
+    endDrag() {
+      this.dialogDragData.isDragging = false
+      
+      // 移除拖拽样式
+      const dialogEl = document.querySelector('.mind-map-history-dialog')
+      if (dialogEl) {
+        dialogEl.classList.remove('dragging')
+        // 确保拖拽后的位置被正确应用
+        dialogEl.style.marginLeft = '0'
+        dialogEl.style.marginTop = '0'
       }
       
-      // 更新全选状态
-      this.selectAll = this.selectedMindMaps.length === this.filteredMindMaps.length
+      // 移除事件监听
+      document.removeEventListener('mousemove', this.onDrag)
+      document.removeEventListener('mouseup', this.endDrag)
     },
     
-    // 为表格行添加类名以显示选中状态
-    tableRowClassName({ row }) {
-      const isSelected = this.selectedMindMaps.some(map => map.id === row.id)
-      return isSelected ? 'selected-row' : ''
-    },
-    
-    // 双击行处理函数 - 用于切换思维导图
-    handleRowDblclick(row) {
-      this.loadMindMap(row);
-    },
-    
-    toggleSelectAll() {
-      if (this.selectAll) {
-        this.selectedMindMaps = []
-      } else {
-        // 选择当前页所有项
-        this.selectedMindMaps = [...this.filteredMindMaps]
+    // 清理拖拽事件监听
+    cleanupDragEvents() {
+      // 移除可能残留的事件监听
+      document.removeEventListener('mousemove', this.onDrag)
+      document.removeEventListener('mouseup', this.endDrag)
+      
+      // 清理对话框头部的事件监听
+      const headerEl = document.querySelector('.mind-map-history-dialog .el-dialog__header')
+      if (headerEl) {
+        headerEl.removeEventListener('mousedown', this.startDrag)
       }
-      this.selectAll = !this.selectAll
+    },
+    
+    // 处理卡片单击事件（切换选中状态）
+    handleCardClick(mindMap, event) {
+      // 检查当前是否已选中该思维导图
+      const isSelectedBefore = this.isSelected(mindMap.id);
+      this.toggleSelection(mindMap.id);
+      
+      // 更新状态栏信息
+      if (isSelectedBefore) {
+        this.statusMessage = `已取消选中 ${mindMap.title} 思维导图`;
+      } else {
+        this.statusMessage = `已选中 ${mindMap.title} 思维导图`;
+      }
+      
+      // 阻止事件冒泡，防止触发对话框的其他行为
+      if (event) {
+        event.stopPropagation();
+      }
+      // 确保对话框保持在拖拽后的位置，而不是跳回居中
+      this.$nextTick(() => {
+        const dialogEl = document.querySelector('.mind-map-history-dialog');
+        if (dialogEl && dialogEl.style.position === 'fixed') {
+          // 如果是拖拽后的位置，保持fixed定位
+          dialogEl.style.marginLeft = '0';
+          dialogEl.style.marginTop = '0';
+        }
+      });
+    },
+    
+    // 切换选中状态
+    toggleSelection(mindMapId) {
+      const index = this.selectedMindMaps.findIndex(item => item.id === mindMapId)
+      if (index > -1) {
+        this.selectedMindMaps.splice(index, 1)
+      } else {
+        const mindMap = this.mindMaps.find(item => item.id === mindMapId)
+        if (mindMap) {
+          this.selectedMindMaps.push(mindMap)
+        }
+      }
+    },
+    
+    // 更新状态栏信息
+    updateStatusMessage() {
+      if (this.selectedMindMaps.length === 0) {
+        this.statusMessage = '双击卡片切换所选思维导图'
+      } else if (this.selectedMindMaps.length === 1) {
+        this.statusMessage = `已选中 ${this.selectedMindMaps[0].title} 思维导图`
+      } else {
+        this.statusMessage = `已选中 ${this.selectedMindMaps.length} 个思维导图`
+      }
+    },
+    
+    // 检查是否被选中
+    isSelected(mindMapId) {
+      return this.selectedMindMaps.some(item => item.id === mindMapId)
+    },
+    
+    // 处理搜索
+    handleSearch() {
+      // 搜索时清空选中状态
+      this.selectedMindMaps = []
+      // 更新状态栏，显示搜索结果数量
+      const searchResultsCount = this.filteredMindMaps.length;
+      this.statusMessage = `已找到 ${searchResultsCount} 个思维导图`;
+    },
+    
+    // 刷新思维导图列表
+    async refreshMindMaps() {
+      await this.loadMindMaps()
+      this.selectedMindMaps = []
+      this.statusMessage = `刷新完成，共获取 ${this.mindMaps.length} 个思维导图`
+      // 延时后恢复默认状态栏信息
+      setTimeout(() => {
+        this.updateStatusMessage()
+      }, 2000)
     },
     
     async deleteMindMap(mindMap) {
@@ -227,17 +416,31 @@ export default {
           type: 'warning'
         })
         
+        this.statusMessage = `正在删除: ${mindMap.title}`
+        
         await this.$store.dispatch('deleteMindMap', {
           mindMapId: mindMap.id,
           userId: this.currentUser.id
         })
         
         this.$message.success('思维导图删除成功')
-        this.loadMindMaps() // 重新加载列表
+        this.statusMessage = `已删除: ${mindMap.title}`
+        
+        // 清理被删除思维导图的本地缓存
+        const deletedMindMapCacheKey = `mindmap_cache_${mindMap.id}`;
+        localStorage.removeItem(deletedMindMapCacheKey);
+        
+        // 重新加载思维导图列表
+        const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
+        this.mindMaps = updatedMindMaps
+        // 同步到Vuex本地缓存
+        this.$store.commit('setLocalMindMaps', updatedMindMaps)
       } catch (error) {
         if (error !== 'cancel') {
-          // console.error('删除思维导图失败:', error)
           this.$message.error('删除思维导图失败: ' + error.message)
+          this.statusMessage = `删除失败: ${mindMap.title} - ${error.message}`
+        } else {
+          this.statusMessage = `用户取消删除: ${mindMap.title}`
         }
       }
     },
@@ -255,6 +458,8 @@ export default {
           type: 'warning'
         })
         
+        this.statusMessage = `正在批量删除 ${this.selectedMindMaps.length} 个思维导图...`
+        
         const deletePromises = this.selectedMindMaps.map(mindMap => 
           this.$store.dispatch('deleteMindMap', {
             mindMapId: mindMap.id,
@@ -265,13 +470,19 @@ export default {
         await Promise.all(deletePromises)
         
         this.$message.success(`成功删除了 ${this.selectedMindMaps.length} 个思维导图`)
-        this.selectedMindMaps = [] // 清空选择
-        this.selectAll = false
-        this.loadMindMaps() // 重新加载列表
+        this.statusMessage = `共删除 ${this.selectedMindMaps.length} 个思维导图`
+        this.selectedMindMaps = []
+        await this.loadMindMaps()
+        // 延时后恢复默认状态栏信息
+        setTimeout(() => {
+          this.updateStatusMessage()
+        }, 3000)
       } catch (error) {
         if (error !== 'cancel') {
-          // console.error('批量删除思维导图失败:', error)
           this.$message.error('批量删除思维导图失败: ' + error.message)
+          this.statusMessage = `批量删除失败: ${error.message}`
+        } else {
+          this.statusMessage = '用户取消批量删除操作'
         }
       }
     },
@@ -289,6 +500,8 @@ export default {
           type: 'warning'
         })
         
+        this.statusMessage = `正在清空所有思维导图...`
+        
         const deletePromises = this.mindMaps.map(mindMap => 
           this.$store.dispatch('deleteMindMap', {
             mindMapId: mindMap.id,
@@ -299,124 +512,32 @@ export default {
         await Promise.all(deletePromises)
         
         this.$message.success('所有思维导图已清空')
+        this.statusMessage = '已清理全部思维导图'
         this.selectedMindMaps = []
-        this.selectAll = false
-        this.loadMindMaps() // 重新加载列表
+        await this.loadMindMaps()
+        // 延时后恢复默认状态栏信息
+        setTimeout(() => {
+          this.updateStatusMessage()
+        }, 3000)
       } catch (error) {
         if (error !== 'cancel') {
-          // console.error('清空思维导图失败:', error)
           this.$message.error('清空思维导图失败: ' + error.message)
+          this.statusMessage = `清空失败: ${error.message}`
+        } else {
+          this.statusMessage = '用户取消清空操作'
         }
       }
     },
     
-    async loadMindMap(mindMap) {
-      // 首先检查当前思维导图是否被修改
-      this.$bus.$emit('checkMindMapModified');
-      
-      // 监听修改状态响应
-      const checkStatus = new Promise((resolve) => {
-        const listener = (isModified) => {
-          this.$bus.$off('mindMapModifiedStatus', listener);
-          resolve(isModified);
-        };
-        this.$bus.$on('mindMapModifiedStatus', listener);
-      });
-      
-      const isModified = await checkStatus;
-      
-      if (isModified) {
-        // 当前思维导图被修改，询问用户是否保存
-        try {
-          const action = await this.$confirm(
-            '当前思维导图有未保存的更改，是否保存后再加载新思维导图？',
-            '思维导图已修改',
-            {
-              confirmButtonText: '保存并加载',
-              cancelButtonText: '不保存，直接加载',
-              type: 'warning',
-              distinguishCancelAndClose: true
-            }
-          );
-          
-          // 如果用户选择"保存并加载"，先触发保存操作
-          if (action === 'confirm') {
-            // 触发保存操作
-            this.$bus.$emit('saveCurrentMindMap');
-            
-            // 简单延时确保保存完成
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          
-          // 无论是否保存，都加载新思维导图
-          this.$emit('load-mind-map', mindMap);
-        } catch (cancelAction) {
-          // 用户点击"取消"或关闭对话框，不执行任何操作
-          if (cancelAction === 'cancel') {
-            // console.log('用户取消加载思维导图'); // 仅调试时使用
-          } else {
-            // 用户选择"不保存，直接加载"
-            this.$emit('load-mind-map', mindMap);
-          }
-        }
-      } else {
-        // 当前思维导图未被修改，直接加载新思维导图
-        this.$emit('load-mind-map', mindMap);
-      }
-    },
-    
-    startEditingTitle(mindMap) {
-      mindMap.editingTitle = true
-      mindMap.tempTitle = mindMap.title
-      this.$nextTick(() => {
-        // 获取输入框并聚焦
-        const input = this.$el.querySelector(`input[value="${mindMap.tempTitle}"]`)
-        if (input) {
-          input.focus()
-        }
-      })
-    },
-    
-    async updateTitle(mindMap) {
-      if (!mindMap.tempTitle.trim()) {
-        this.$message.error('标题不能为空')
-        mindMap.tempTitle = mindMap.title // 恢复原值
-        mindMap.editingTitle = false
-        return
+    async loadMindMap(mindMap, event) {
+      // 阻止事件冒泡
+      if (event) {
+        event.stopPropagation();
       }
       
-      if (mindMap.tempTitle === mindMap.title) {
-        mindMap.editingTitle = false
-        return
-      }
-      
-      try {
-        // 调用更新标题的API
-        const updatedMindMap = await this.$store.dispatch('updateMindMapTitle', {
-          mindMapId: mindMap.id,
-          userId: this.currentUser.id,
-          title: mindMap.tempTitle
-        })
-        
-        mindMap.title = updatedMindMap.title
-        mindMap.updated_at = updatedMindMap.updated_at
-        this.$message.success('标题更新成功')
-      } catch (error) {
-        // console.error('更新标题失败:', error)
-        this.$message.error('标题更新失败: ' + error.message)
-        mindMap.tempTitle = mindMap.title // 恢复原值
-      } finally {
-        mindMap.editingTitle = false
-      }
-    },
-    
-    handleSizeChange(val) {
-      this.pageSize = val
-      this.currentPage = 1 // 重置到第一页
-    },
-    
-    handleCurrentChange(val) {
-      this.currentPage = val
+      this.$emit('load-mind-map', mindMap);
+      // 关闭对话框
+      this.handleClose();
     },
     
     formatDate(dateString) {
@@ -429,49 +550,282 @@ export default {
 </script>
 
 <style lang="less" scoped>
-.mind-map-history-container {
-  padding: 20px;
-  height: 100%;
-  overflow: auto;
+// 思维导图对话框基础样式
+.mindmap-content-wrapper {
+  padding: 0;
+  min-height: 400px;
   
-  .header {
+  .mindmap-toolbar-container {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ebeef5;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 24px;
+    border-bottom: none;
     
-    h3 {
-      margin: 0;
-      color: #303133;
-    }
-    
-    .actions {
+    .mindmap-toolbar-buttons {
       display: flex;
+      gap: 8px;
       align-items: center;
-      gap: 10px;
+      flex-wrap: nowrap;
+      margin-left: auto;
     }
   }
   
-  .content {
-    .title-span {
-      cursor: pointer;
-      transition: color 0.3s;
+  .mindmap-list-container {
+    max-height: 50vh !important;
+    overflow-y: auto;
+    padding: 0 24px;
+    
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
       
-      &:hover {
-        color: #409eff;
+      .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: #606266;
+        
+        i {
+          font-size: 24px;
+          animation: rotating 2s linear infinite;
+        }
+        
+        span {
+          font-size: 14px;
+        }
       }
     }
     
-    .pagination {
-      margin-top: 20px;
-      text-align: center;
+    .no-mindmaps {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+      color: #909399;
+      font-size: 14px;
+    }
+  }
+}
+
+// 状态栏样式
+.mindmap-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #ebeef5;
+  min-height: 32px;
+  margin: 0 !important;
+  
+  .status-text {
+    font-size: 12px;
+    color: #606266;
+    line-height: 1.2;
+  }
+}
+
+// 思维导图卡片样式 - 三列布局
+.mindmap-card {
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f5f5f5;
+  width: calc(33.333% - 7px);
+  display: inline-block;
+  vertical-align: top;
+  
+  &:not(:nth-child(3n)) {
+    margin-right: 10px;
+  }
+  
+  &:hover {
+    border-color: #409eff;
+    box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
+    transform: translateY(-1px);
+  }
+  
+  &.selected {
+    border-color: #409eff;
+    background-color: #ecf5ff;
+    box-shadow: 0 2px 8px 0 rgba(64, 158, 255, 0.2);
+  }
+  
+  .mindmap-card-content {
+    padding: 12px;
+    position: relative;
+    
+    .mindmap-info {
+      margin-bottom: 8px;
+      
+      .mindmap-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: #303133;
+        margin-bottom: 4px;
+        line-height: 1.4;
+        word-break: break-word;
+        max-width: calc(100% - 60px);
+      }
+      
+      .mindmap-date {
+        font-size: 11px;
+        color: #909399;
+        line-height: 1.2;
+      }
+    }
+    
+    .mindmap-bottom {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      
+      .mindmap-actions {
+        display: flex;
+        gap: 4px;
+      }
+    }
+  }
+}
+
+// 动画
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 滚动条样式
+.mindmap-list-container {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 transparent;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1;
+    border-radius: 3px;
+    
+    &:hover {
+      background-color: #a8a8a8;
+    }
+  }
+}
+</style>
+
+// 非scoped样式用于深色主题
+<style lang="less">
+// 移除对话框body的默认padding
+.mind-map-history-dialog .el-dialog__body {
+  padding: 0 !important;
+}
+
+// 深色主题样式 - 需要更高的优先级
+.toolbarContainer.isDark .mind-map-history-dialog {
+  .el-dialog {
+    background-color: #262a2e !important;
+    
+    .el-dialog__header {
+      border-bottom: 1px solid hsla(0, 0%, 100%, 0.1) !important;
+    }
+    
+    .el-dialog__title {
+      color: hsla(0, 0%, 100%, 0.9) !important;
+    }
+    
+    .el-dialog__body {
+      background-color: #262a2e !important;
+    }
+    
+    .el-dialog__footer {
+      border-top: 1px solid hsla(0, 0%, 100%, 0.1) !important;
     }
   }
   
-  /deep/ .el-table .selected-row {
-    background-color: #f0f9ff !important; /* 选中行的背景色 */
+  .mindmap-content-wrapper {
+    .mindmap-toolbar-container {
+      border-bottom: none !important;
+    }
+    
+    .mindmap-list-container {
+      .loading-container .loading-spinner {
+        color: hsla(0, 0%, 100%, 0.6) !important;
+      }
+      
+      .no-mindmaps {
+        color: hsla(0, 0%, 100%, 0.4) !important;
+      }
+      
+      // 深色主题滚动条
+      scrollbar-color: hsla(0, 0%, 100%, 0.3) transparent;
+      
+      &::-webkit-scrollbar-thumb {
+        background-color: hsla(0, 0%, 100%, 0.3) !important;
+        
+        &:hover {
+          background-color: hsla(0, 0%, 100%, 0.5) !important;
+        }
+      }
+    }
+  }
+  
+  .mindmap-status-bar {
+    background-color: #363b3f !important;
+    border-top-color: hsla(0, 0%, 100%, 0.1) !important;
+    
+    .status-text {
+      color: hsla(0, 0%, 100%, 0.6) !important;
+    }
+  }
+  
+  .mindmap-card {
+    background-color: #363b3f !important;
+    border-color: hsla(0, 0%, 100%, 0.1) !important;
+    
+    &:hover {
+      border-color: #409eff !important;
+      background-color: #363b3f !important;
+    }
+    
+    &.selected {
+      background-color: rgba(64, 158, 255, 0.15) !important;
+      border-color: #409eff !important;
+    }
+    
+    .mindmap-card-content {
+      .mindmap-info {
+        .mindmap-title {
+          color: hsla(0, 0%, 100%, 0.9) !important;
+        }
+        
+        .mindmap-date {
+          color: hsla(0, 0%, 100%, 0.4) !important;
+        }
+      }
+    }
+  }
+}
+
+// 拖拽时的样式
+.mind-map-history-dialog.dragging {
+  .el-dialog__header {
+    cursor: move !important;
   }
 }
 </style>
