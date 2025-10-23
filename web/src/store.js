@@ -239,7 +239,6 @@ const store = new Vuex.Store({
   actions: {
     // 用户注册（使用Supabase）
     async registerUser({ commit }, { username, password, email }) {
-      // console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled); // 仅调试时使用
       if (this.state.supabaseEnabled) {
         // 使用Supabase进行注册
         const user = await userApi.register(username, password, email)
@@ -252,7 +251,6 @@ const store = new Vuex.Store({
     
     // 用户登录（使用Supabase）
     async loginUser({ commit }, { username, password }) {
-      // console.log('Register User - Supabase Enabled:', this.state.supabaseEnabled); // 仅调试时使用
       let user;
       if (this.state.supabaseEnabled) {
         // 使用Supabase进行登录
@@ -287,7 +285,6 @@ const store = new Vuex.Store({
     async getUserMindMaps({ commit }, userId) {
       if (this.state.supabaseEnabled) {
         const mindMaps = await mindMapApi.getUserMindMaps(userId)
-        // console.log('从Supabase获取到的思维导图列表:', mindMaps); // 隐私保护：不输出用户数据
         return mindMaps
       } else {
         // 返回本地存储的思维导图数据
@@ -297,18 +294,10 @@ const store = new Vuex.Store({
     
     // 保存思维导图（根据是否传入ID来决定是创建还是更新），并同步到本地缓存
     async saveMindMap({ commit, state }, { id, userId, title, content, isUpdate }) {
-      // console.log('💾 Store - 开始保存思维导图，ID:', id, '标题:', title, '用户ID:', userId);
-      
       if (this.state.supabaseEnabled) {
         let result;
         if (id) {
-          // 如果传入了ID，则更新现有思维导图
-          // console.log('💾 Store - 更新现有思维导图，ID:', id);
-          // 输出完整的思维导图内容以确认保存的是最新内容
-          // console.log('💾 Store - 准备保存的思维导图内容:', JSON.stringify(content, null, 2));
           result = await mindMapApi.updateMindMap(id, title, content);
-          // console.log('💾 Store - 更新思维导图完成，结果ID:', result?.id);
-          
           // 同步到本地缓存 - 更新现有记录
           const updatedMindMap = {
             id: result.id,
@@ -325,14 +314,17 @@ const store = new Vuex.Store({
           );
           commit('setLocalMindMaps', updatedLocalList);
           
+          // 更新内容缓存 (mindmap_cache_${id})
+          try {
+            const cacheKey = `mindmap_cache_${id}`;
+            localStorage.setItem(cacheKey, JSON.stringify(content));
+          } catch (error) {
+            console.error('更新思维导图内容缓存失败:', error);
+          }
           
         } else {
           // 如果没有传入ID，则创建新思维导图
-          
-
           result = await mindMapApi.saveMindMap(userId, title, content);
-
-          
           // 同步到本地缓存 - 添加新记录
           const newMindMap = {
             id: result.id,
@@ -347,12 +339,16 @@ const store = new Vuex.Store({
           const updatedLocalList = [newMindMap, ...state.localMindMaps];
           commit('setLocalMindMaps', updatedLocalList);
           
+          // 更新内容缓存 (mindmap_cache_${newId})
+          try {
+            const cacheKey = `mindmap_cache_${result.id}`;
+            localStorage.setItem(cacheKey, JSON.stringify(content));
+          } catch (error) {
+            console.error('创建思维导图内容缓存失败:', error);
+          }
         }
-        
         return result;
       } else {
-        
-        // 本地保存逻辑
         return null;
       }
     },
@@ -403,9 +399,6 @@ const store = new Vuex.Store({
         // 使用 Supabase API 更新密码
         try {
           await userApi.updatePassword(userId, newPassword);
-          // 注意：出于安全考虑，实际的密码更新需要使用专门的API
-          // 这里仅作为占位符，实际实现需要根据你的 Supabase 配置进行调整
-          // console.log('通过Supabase更新密码成功'); // 仅调试时使用
         } catch (error) {
           // console.error('更新数据库密码失败:', error);
           throw error;
@@ -470,13 +463,10 @@ const store = new Vuex.Store({
           aiConfigApi.selectAiConfig(userId, configId)
             .then(success => {
               if (success) {
-                // console.log('AI配置选择已同步到数据库:', configId); // 仅调试时使用
               } else {
-                // console.error('AI配置选择同步到数据库失败:', configId);
               }
             })
             .catch(error => {
-              // console.error('异步更新AI配置选择到数据库失败:', error);
             });
           
           return true;
@@ -508,7 +498,6 @@ const store = new Vuex.Store({
               commit('setLocalConfig', { aiSystem: newAiSystem })
               
               // 添加调试信息
-              // console.log('选择AI配置成功 - 新的AI系统状态:', newAiSystem); // 隐私保护：不输出系统状态
             } else {
               // 如果获取不到配置详情，至少更新当前选择
               const newAiSystem = {
@@ -516,9 +505,6 @@ const store = new Vuex.Store({
                 currentProvider: configId
               }
               commit('setLocalConfig', { aiSystem: newAiSystem })
-              
-              // 添加调试信息
-              // console.log('选择AI配置成功 - 但未获取到配置详情，AI系统状态:', newAiSystem); // 隐私保护：不输出系统状态
             }
             
             return success
@@ -655,35 +641,21 @@ const store = new Vuex.Store({
     async needsSave({ dispatch }, { currentMindMap }) {
       // 如果当前思维导图ID为空，则需要保存
       if (!currentMindMap || !currentMindMap.id) {
-        console.log('当前思维导图ID为空，需要保存');
         return true;
       }
-      
-      // console.log('🔍 开始检查思维导图是否需要保存...'); // 调试日志，可移除
-      // console.log('📊 当前思维导图ID:', currentMindMap.id); // 调试日志，可移除
-      // console.log('📊 zdcy当前思维导图数据:', currentMindMap.data.root); // 调试日志，可移除
       
       try {
         // 从内容缓存中根据ID获取对应的思维导图数据
         const cachedMindMap = await dispatch('getMindMapContent', currentMindMap.id);
-        // console.log('📊 xlf从缓存获取到的数据:', cachedMindMap.root); // 调试日志，可移除
         
         // 如果缓存中没有找到对应数据，则需要保存
         if (!cachedMindMap) {
-          console.log('缓存中未找到对应思维导图数据，需要保存');
           return true;
         }
         
         // 比较当前思维导图数据与缓存中的数据，只比较root部分
         const currentRootStr = JSON.stringify(currentMindMap.data.root);
         const cachedRootStr = JSON.stringify(cachedMindMap.root);
-        
-        // console.log('当前思维导图root:', currentMindMap.root); // 调试日志，可移除
-        // console.log('缓存中思维导图root:', cachedMindMap.root); // 调试日志，可移除
-        // console.log('当前root字符串长度:', currentRootStr.length); // 调试日志，可移除
-        // console.log('缓存root字符串长度:', cachedRootStr.length); // 调试日志，可移除
-        // console.log('root数据是否相等:', currentRootStr === cachedRootStr); // 调试日志，可移除
-        
         // 如果数据不同，则需要保存
         return currentRootStr !== cachedRootStr;
       } catch (error) {
@@ -695,34 +667,21 @@ const store = new Vuex.Store({
     
     // 从缓存中获取思维导图内容
     async getMindMapContent({ }, mindMapId) {
-      // console.log('🔍 开始从缓存获取思维导图内容，ID:', mindMapId); // 调试日志，可移除
-      
       if (!mindMapId) {
-        // console.log('❌ 思维导图ID为空，返回null'); // 调试日志，可移除
         return null;
       }
       
       try {
         const cacheKey = `mindmap_cache_${mindMapId}`;
-        // console.log('🔍 检查缓存键:', cacheKey); // 调试日志，可移除
-        
         // 检查localStorage中所有以mindmap_cache_开头的键
         const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-        // console.log('📋 所有思维导图缓存键:', allCacheKeys); // 调试日志，可移除
-        
         const cachedContent = localStorage.getItem(cacheKey);
-        // console.log('💾 获取到的缓存内容:', cachedContent); // 调试日志，可移除
-        
         if (!cachedContent) {
-          // console.log('❌ 缓存中未找到对应内容，返回null'); // 调试日志，可移除
           return null;
         }
-        
         const parsedContent = JSON.parse(cachedContent);
-        // console.log('✅ 成功解析缓存内容:', parsedContent); // 调试日志，可移除
         return parsedContent;
       } catch (error) {
-        // console.error('❌ 从缓存获取思维导图内容时出错:', error); // 调试日志，可移除
         return null;
       }
     }

@@ -755,7 +755,7 @@ export default {
             // 使用通知提示保存成功
             this.$notify({
               title: '保存成功',
-              message: '原思维导图已保存 (ID: ' + (result?.id || currentMindMapId) + ')',
+              message: '原思维导图已保存!',
               type: 'success',
               duration: 3000
             });

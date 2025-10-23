@@ -631,16 +631,10 @@ export default {
             }
             this.$notify({
               title: '保存成功',
-              message: '当前思维导图已保存 (ID: ' + result.id + ')',
+              message: '当前思维导图已保存!',
               type: 'success',
               duration: 5000
             });
-            this.statusMessage = '✓ 当前思维导图已保存 (ID: ' + result.id + ')';
-            setTimeout(() => {
-              if (this.statusMessage.includes('✓ 当前思维导图已保存')) {
-                this.statusMessage = '';
-              }
-            }, 5000);
           })
           .catch(error => {
             this.$notify({
@@ -649,12 +643,6 @@ export default {
               type: 'error',
               duration: 5000
             });
-            this.statusMessage = '✗ 当前思维导图保存失败: ' + error.message;
-            setTimeout(() => {
-              if (this.statusMessage.includes('✗ 当前思维导图保存失败')) {
-                this.statusMessage = '';
-              }
-            }, 5000);
           })
           .finally(() => {
             this.mindMapLoading = false;
