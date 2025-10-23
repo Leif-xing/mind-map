@@ -1,6 +1,7 @@
 <template>
-  <!-- 思维导图历史对话框 -->
-  <el-dialog
+  <div>
+    <!-- 思维导图历史对话框 -->
+    <el-dialog
     title="思维导图"
     :visible.sync="visible"
     width="800px"
@@ -107,7 +108,52 @@
     <div slot="footer" class="mindmap-status-bar" style="margin: 0; padding: 0; width: 100%; height: 100%;">
       <span class="status-text">{{ statusMessage }}</span>
     </div>
-  </el-dialog>
+    </el-dialog>
+
+    <!-- 保存确认对话框 -->
+  <el-dialog
+    title="温馨提示"
+    :visible.sync="saveConfirmVisible"
+    width="500px"
+    :modal-append-to-body="false"
+    :close-on-click-modal="false"
+    :before-close="handleSaveConfirmClose"
+    custom-class="draggable-save-confirm-dialog saveConfirmDialog"
+    :class="{ isDark: isDark }"
+  >
+    <div class="confirm-content">
+      <p class="confirm-text">
+        检测到当前思维导图"<strong>{{ currentMindMapTitle }}</strong>"已发生变化，是否需要保存？
+      </p>
+    </div>
+    
+    <div slot="footer" class="dialog-footer">
+      <el-button 
+        size="small" 
+        @click="handleCancelSwitch"
+        icon="el-icon-close"
+      >
+        取消
+      </el-button>
+      <el-button 
+        size="small" 
+        type="warning" 
+        @click="handleOverwriteSwitch"
+        icon="el-icon-warning"
+      >
+        不保存
+      </el-button>
+      <el-button 
+        size="small" 
+        type="primary" 
+        @click="handleSaveAndSwitch"
+        icon="el-icon-check"
+      >
+        保存并切换
+      </el-button>
+    </div>
+    </el-dialog>
+  </div>
 </template>
 
 <script>
@@ -119,6 +165,10 @@ export default {
     visible: {
       type: Boolean,
       default: false
+    },
+    mindMap: {
+      type: Object,
+      default: null
     }
   },
   data() {
@@ -137,7 +187,14 @@ export default {
         initialTop: 0
       },
       // 状态栏消息
-      statusMessage: ''
+      statusMessage: '',
+      // mindMap实例
+      localMindMap: null,
+      
+      // 保存提示对话框相关
+      saveConfirmVisible: false,
+      targetMindMapForSwitch: null,  // 目标切换的思维导图
+      currentMindMapTitle: ''       // 当前思维导图标题
     }
   },
   computed: {
@@ -145,6 +202,11 @@ export default {
       supabaseEnabled: state => state.supabaseEnabled,
       isDark: state => state.localConfig.isDark
     }),
+    
+    // 使用本地mindMap（优先）或传入的mindMap
+    currentMindMap() {
+      return this.localMindMap || this.mindMap;
+    },
     
     filteredMindMaps() {
       if (!this.searchQuery.trim()) {
@@ -169,9 +231,18 @@ export default {
       }
     }
   },
+  
+  created() {
+    // 监听思维导图初始化事件
+    this.$bus.$on('mind_map_inited', this.handleMindMapInited);
+  },
   beforeDestroy() {
     // 清理拖拽事件监听
     this.cleanupDragEvents()
+    // 清理保存确认对话框拖拽事件
+    this.cleanupSaveConfirmDragEvents()
+    // 取消订阅事件
+    this.$bus.$off('mind_map_inited', this.handleMindMapInited);
   },
   methods: {
     loadCurrentUser() {
@@ -535,15 +606,416 @@ export default {
         event.stopPropagation();
       }
       
-      this.$emit('load-mind-map', mindMap);
-      // 关闭对话框
-      this.handleClose();
+      // 首先检查当前思维导图是否需要保存
+      try {
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        
+        if (!this.currentMindMap) {
+          throw new Error('思维导图实例未找到，无法进行切换操作');
+        }
+        
+        const currentData = this.currentMindMap.getData(true);
+        
+        const needsSave = await this.$store.dispatch('needsSave', {
+          currentMindMap: {
+            id: currentMindMapId,
+            data: currentData
+          }
+        });
+        
+        if (needsSave) {
+          // 需要保存，显示保存确认对话框
+          this.showSaveConfirmDialogForSwitch(mindMap);
+        } else {
+          // 不需要保存，直接开始切换
+          await this.startActualSwitching(mindMap);
+        }
+      } catch (error) {
+        console.error('❌ MindMapHistory - 检查思维导图是否需要保存时出错:', error);
+        // 出错时按需要保存处理
+        this.showSaveConfirmDialogForSwitch(mindMap);
+      }
     },
     
     formatDate(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleString('zh-CN')
+    },
+    
+    // 处理思维导图初始化事件
+    handleMindMapInited(mindMap) {
+      this.localMindMap = mindMap;
+    },
+
+    // 显示保存确认对话框（用于切换）
+    showSaveConfirmDialogForSwitch(targetMindMap) {
+      // 保存目标思维导图信息
+      this.targetMindMapForSwitch = targetMindMap;
+      
+      // 获取当前思维导图的标题
+      this.getCurrentMindMapTitle();
+      
+      // 显示确认对话框
+      this.saveConfirmVisible = true;
+      
+      // 延迟初始化拖拽功能，确保DOM完全渲染
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.initDragForDialog('.draggable-save-confirm-dialog', '温馨提示');
+        }, 100);
+      });
+    },
+
+    // 获取当前思维导图标题
+    getCurrentMindMapTitle() {
+      try {
+        if (this.currentMindMap && this.currentMindMap.renderer && this.currentMindMap.renderer.root) {
+          const rootData = this.currentMindMap.renderer.root.getData();
+          if (rootData && rootData.text) {
+            // 移除HTML标签，获取纯文本
+            this.currentMindMapTitle = rootData.text.replace(/<[^>]*>/g, '').trim();
+          } else {
+            this.currentMindMapTitle = '未命名思维导图';
+          }
+        } else {
+          this.currentMindMapTitle = '未命名思维导图';
+        }
+      } catch (error) {
+        console.error('❌ MindMapHistory - 获取当前标题失败:', error);
+        this.currentMindMapTitle = '未命名思维导图';
+      }
+    },
+
+    // 开始实际的切换过程
+    async startActualSwitching(targetMindMap) {
+      
+      try {
+        // 从localStorage获取目标思维导图数据
+        const cacheKey = `mindmap_cache_${targetMindMap.id}`;
+        const cachedDataStr = localStorage.getItem(cacheKey);
+        
+        if (!cachedDataStr) {
+          throw new Error(`未找到思维导图缓存数据 (ID: ${targetMindMap.id})`);
+        }
+        
+        // 解析缓存数据
+        const cachedData = JSON.parse(cachedDataStr);
+        // 根据数据结构选择合适的方法设置思维导图数据
+        if (cachedData.root && cachedData.root.data) {
+          // 如果数据包含完整的思维导图结构（根节点、布局、主题等），使用 setFullData
+          this.currentMindMap.setFullData(cachedData);
+        } else {
+          // 否则直接设置根节点数据
+          this.currentMindMap.setData(cachedData);
+        }
+        
+        // 更新当前思维导图ID
+        this.$store.commit('setCurrentMindMapId', targetMindMap.id);
+        
+        // 等待根节点创建完成后再居中
+        setTimeout(() => {
+          if (this.currentMindMap && this.currentMindMap.renderer && this.currentMindMap.renderer.root) {
+            this.currentMindMap.renderer.setRootNodeCenter();
+          }
+        }, 100);
+        
+        this.$message.success(`已切换到思维导图: ${targetMindMap.title}`);
+        
+        // 关闭历史对话框
+        this.handleClose();
+        
+      } catch (error) {
+        console.error('❌ MindMapHistory - 切换思维导图失败:', error);
+        this.$message.error('切换思维导图失败: ' + error.message);
+      }
+    },
+
+    // 处理保存并切换
+    async handleSaveAndSwitch() {
+      // 1. 关闭确认对话框
+      this.saveConfirmVisible = false;
+      
+      // 2. 在开始任何操作前，先复制当前思维导图的数据和ID
+      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentUser = this.$store.state.currentUser;
+      const originalData = JSON.parse(JSON.stringify(this.currentMindMap.getData(true))); // 深拷贝原始数据
+      const originalTitle = this.currentMindMapTitle;
+      const targetMindMap = this.targetMindMapForSwitch;
+      
+      // 3. 开始切换（与保存同时进行）
+      const switchingPromise = this.startActualSwitching(targetMindMap);
+      
+      // 4. 在后台异步保存原始数据（与切换同时进行）
+      if (currentUser && originalData) {
+        // 显示保存状态
+        
+        this.saveMindMapData(originalData, originalTitle, currentMindMapId, currentUser.id)
+          .then(result => {
+            // 使用通知提示保存成功
+            this.$notify({
+              title: '保存成功',
+              message: '原思维导图已保存 (ID: ' + (result?.id || currentMindMapId) + ')',
+              type: 'success',
+              duration: 3000
+            });
+          })
+          .catch(error => {
+            // 使用通知提示保存失败
+            this.$notify({
+              title: '保存失败',
+              message: '原思维导图保存失败: ' + error.message,
+              type: 'error',
+              duration: 5000
+            });
+          });
+      }
+      
+      // 等待切换完成
+      await switchingPromise;
+    },
+
+    // 处理不保存直接切换
+    async handleOverwriteSwitch() {
+      // 1. 关闭确认对话框
+      this.saveConfirmVisible = false;
+      
+      // 2. 直接开始切换
+      const targetMindMap = this.targetMindMapForSwitch;
+      await this.startActualSwitching(targetMindMap);
+    },
+
+    // 处理取消切换
+    handleCancelSwitch() {
+      // 关闭确认对话框
+      this.saveConfirmVisible = false;
+      this.targetMindMapForSwitch = null;
+      this.$message.info('已取消切换思维导图');
+    },
+
+    // 处理保存确认对话框关闭
+    handleSaveConfirmClose() {
+      // 用户直接关闭对话框，相当于取消操作
+      this.saveConfirmVisible = false;
+      this.targetMindMapForSwitch = null;
+      this.$message.info('已取消切换思维导图');
+    },
+
+    // 保存思维导图数据的辅助方法
+    async saveMindMapData(content, title, mindMapId, userId) {
+      try {
+        let result;
+        if (mindMapId) {
+          // 更新现有思维导图
+          result = await this.$store.dispatch('saveMindMap', {
+            id: mindMapId,
+            userId: userId,
+            title: title,
+            content: content,
+            isUpdate: true
+          });
+        } else {
+          // 创建新思维导图
+          result = await this.$store.dispatch('saveMindMap', {
+            userId: userId,
+            title: title,
+            content: content,
+            isUpdate: false
+          });
+        }
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    // 为指定对话框初始化拖拽功能
+    initDragForDialog(dialogClass, dialogTitle) {
+      // 尝试多种选择器方式
+      let dialogHeaderEl = document.querySelector(`${dialogClass} .el-dialog__header`);
+      let dragDom = document.querySelector(`${dialogClass} .el-dialog`);
+      
+      // 如果通过custom-class找不到，尝试通过class找
+      if (!dialogHeaderEl || !dragDom) {
+        const allDialogs = document.querySelectorAll('.el-dialog');
+        for (let dialog of allDialogs) {
+          const title = dialog.querySelector('.el-dialog__title');
+          if (title && title.textContent.includes(dialogTitle)) {
+            dragDom = dialog;
+            dialogHeaderEl = dialog.querySelector('.el-dialog__header');
+            break;
+          }
+        }
+      }
+
+      if (!dialogHeaderEl || !dragDom) {
+        return;
+      }
+      
+      // 设置标题栏样式
+      dialogHeaderEl.style.cursor = 'move';
+      dialogHeaderEl.style.userSelect = 'none';
+
+      let startX = 0;
+      let startY = 0;
+      let lastX = 0;
+      let lastY = 0;
+
+      const mousedownHandler = (e) => {
+        // 只有点击标题栏才触发拖拽
+        if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+          return;
+        }
+
+        startX = e.clientX;
+        startY = e.clientY;
+
+        // 获取当前transform值
+        const style = window.getComputedStyle(dragDom);
+        const transform = style.transform;
+        if (transform && transform !== 'none') {
+          const matrix = new DOMMatrix(transform);
+          lastX = matrix.m41;
+          lastY = matrix.m42;
+        } else {
+          lastX = 0;
+          lastY = 0;
+        }
+
+        const mousemoveHandler = (e) => {
+          const offsetX = e.clientX - startX;
+          const offsetY = e.clientY - startY;
+          dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`;
+          dragDom.style.willChange = 'transform'; // 优化性能
+        };
+
+        const mouseupHandler = () => {
+          dragDom.style.willChange = 'auto';
+          document.removeEventListener('mousemove', mousemoveHandler);
+          document.removeEventListener('mouseup', mouseupHandler);
+        };
+
+        document.addEventListener('mousemove', mousemoveHandler);
+        document.addEventListener('mouseup', mouseupHandler);
+
+        e.preventDefault();
+      };
+
+      dialogHeaderEl.addEventListener('mousedown', mousedownHandler);
+
+      // 保存拖拽处理器以便清理
+      if (dialogTitle.includes('温馨提示')) {
+        this.saveConfirmDragHandler = {
+          element: dialogHeaderEl,
+          mousedownHandler: mousedownHandler
+        };
+      }
+    },
+
+    // 清理保存确认对话框拖拽事件
+    cleanupSaveConfirmDragEvents() {
+      if (this.saveConfirmDragHandler) {
+        this.saveConfirmDragHandler.element.removeEventListener('mousedown', this.saveConfirmDragHandler.mousedownHandler);
+        this.saveConfirmDragHandler = null;
+      }
+    },
+
+    // 验证和清理思维导图数据
+    validateAndCleanMindMapData(data) {
+      
+      if (!data || typeof data !== 'object') {
+        return { root: { data: { text: '空思维导图' }, children: [] } };
+      }
+
+      // 递归清理节点数据
+      const cleanNode = (node) => {
+        if (!node || typeof node !== 'object') {
+          return { data: { text: '空节点' }, children: [] };
+        }
+
+        // 确保节点数据结构完整，深度清理所有字符串属性
+        const cleanedData = {};
+        if (node.data) {
+          for (const key in node.data) {
+            const value = node.data[key];
+            if (typeof value === 'string' || value === null || value === undefined) {
+              cleanedData[key] = this.ensureValidText(value);
+            } else if (Array.isArray(value)) {
+              // 清理数组中的字符串元素
+              cleanedData[key] = value.map(item => 
+                typeof item === 'string' || item === null || item === undefined 
+                  ? this.ensureValidText(item) 
+                  : item
+              ).filter(item => item !== null && item !== undefined);
+            } else {
+              cleanedData[key] = value;
+            }
+          }
+        }
+        
+        const cleanedNode = {
+          data: {
+            text: '未命名节点', // 默认值
+            ...cleanedData,
+            text: this.ensureValidText(cleanedData.text) // 确保text最后设置
+          },
+          children: []
+        };
+
+        // 递归清理子节点
+        if (node.children && Array.isArray(node.children)) {
+          cleanedNode.children = node.children
+            .filter(child => child != null) // 过滤掉null/undefined
+            .map(child => cleanNode(child));
+        }
+
+        return cleanedNode;
+      };
+
+      // 正确处理数据结构
+      let result;
+      if (data.root) {
+        // 如果有root属性，直接处理整个数据结构
+        result = {
+          root: cleanNode(data.root)
+        };
+      } else {
+        // 如果没有root属性，将数据作为root节点处理
+        result = {
+          root: cleanNode(data)
+        };
+      }
+      
+      return result;
+    },
+
+    // 确保文本内容有效
+    ensureValidText(text) {
+      if (text === null || text === undefined) {
+        return '未命名节点';
+      }
+      if (typeof text !== 'string') {
+        return String(text);
+      }
+      if (text.trim() === '') {
+        return '空节点';
+      }
+      return text;
+    },
+
+    // 计算节点数量（用于日志）
+    countNodes(data) {
+      if (!data || !data.root) return 0;
+      
+      const countInNode = (node) => {
+        let count = 1; // 当前节点
+        if (node.children && Array.isArray(node.children)) {
+          count += node.children.reduce((sum, child) => sum + countInNode(child), 0);
+        }
+        return count;
+      };
+      
+      return countInNode(data.root);
     }
   }
 }
@@ -826,6 +1298,68 @@ export default {
 .mind-map-history-dialog.dragging {
   .el-dialog__header {
     cursor: move !important;
+  }
+}
+
+// 保存确认对话框样式
+.saveConfirmDialog {
+  margin-top: 115px;
+  
+  .confirm-content {
+    padding: 10px 0;
+    
+    .confirm-text {
+      margin: 0 0 15px 0;
+      font-size: 15px;
+      color: #606266;
+      line-height: 1.5;
+      text-align: center;
+    }
+  }
+  
+  .dialog-footer {
+    text-align: right;
+    padding: 15px 20px 0 20px;
+    border-top: none;
+    
+    .el-button {
+      margin-left: 12px;
+      
+      i {
+        margin-right: 5px;
+      }
+    }
+  }
+}
+
+// 深色主题下的保存确认对话框
+.toolbarContainer.isDark .saveConfirmDialog {
+  .el-dialog {
+    background-color: #2b2f33 !important;
+    border: 1px solid #404040 !important;
+  }
+  
+  .el-dialog__header {
+    background-color: #2b2f33 !important;
+    border-bottom: 1px solid #404040 !important;
+  }
+  
+  .el-dialog__title {
+    color: hsla(0, 0%, 100%, 0.9) !important;
+  }
+  
+  .el-dialog__headerbtn .el-dialog__close {
+    color: hsla(0, 0%, 100%, 0.6) !important;
+  }
+  
+  .confirm-content {
+    .confirm-text {
+      color: hsla(0, 0%, 100%, 0.8) !important;
+    }
+  }
+  
+  .dialog-footer {
+    border-top: none !important;
   }
 }
 </style>
