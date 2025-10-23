@@ -30,7 +30,7 @@
           <span class="icon iconfont iconxmind"></span>
           <span class="text">思维导图</span>
         </div>
-        <div class="toolbarBtn" @click="openDirectory" v-if="!isMobile">
+        <div class="toolbarBtn" @click="openDirectory" v-if="false">
           <span class="icon iconfont icondakai"></span>
           <span class="text">{{ $t('toolbar.directory') }}</span>
         </div>
@@ -49,7 +49,7 @@
           effect="dark"
           :content="$t('toolbar.openFileTip')"
           placement="bottom"
-          v-if="!isMobile"
+          v-if="false"
         >
           <div class="toolbarBtn" @click="openLocalFile">
             <span class="icon iconfont iconwenjian1"></span>
@@ -60,7 +60,7 @@
           <span class="icon iconfont iconexport"></span>
           <span class="text">保存</span>
         </div>
-        <div class="toolbarBtn" @click="saveLocalFile" v-if="!isMobile">
+        <div class="toolbarBtn" @click="saveLocalFile" v-if="false">
           <span class="icon iconfont iconlingcunwei"></span>
           <span class="text">{{ $t('toolbar.saveAs') }}</span>
         </div>
@@ -169,6 +169,50 @@
       :visible.sync="showMindMapDialog"
       @load-mind-map="handleLoadMindMap"
     />
+    
+    <!-- 新建思维导图保存确认对话框 -->
+    <el-dialog
+      title="温馨提示"
+      :visible.sync="showNewMindMapSaveConfirm"
+      width="500px"
+      :modal-append-to-body="false"
+      :close-on-click-modal="false"
+      :before-close="handleNewMindMapSaveConfirmClose"
+      custom-class="draggable-new-mindmap-confirm-dialog newMindMapSaveConfirmDialog"
+      :class="{ isDark: isDark }"
+    >
+      <div class="confirm-content">
+        <p class="confirm-text">
+          检测到当前思维导图"<strong>{{ currentMindMapTitleForNew }}</strong>"已发生变化，是否需要保存？
+        </p>
+      </div>
+      
+      <div slot="footer" class="dialog-footer">
+        <el-button 
+          size="small" 
+          @click="handleCancelNewMindMap"
+          icon="el-icon-close"
+        >
+          取消
+        </el-button>
+        <el-button 
+          size="small" 
+          type="warning" 
+          @click="handleNewMindMapWithoutSave"
+          icon="el-icon-warning"
+        >
+          不保存
+        </el-button>
+        <el-button 
+          size="small" 
+          type="primary" 
+          @click="handleSaveAndNewMindMap"
+          icon="el-icon-check"
+        >
+          保存并新建
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -245,7 +289,14 @@ export default {
       // 密码修改相关
       currentPassword: '',
       newPassword: '',
-      confirmNewPassword: ''
+      confirmNewPassword: '',
+      
+      // 新建思维导图保存确认对话框相关
+      showNewMindMapSaveConfirm: false,
+      currentMindMapTitleForNew: '',
+      
+      // 本地思维导图实例
+      localMindMapInstance: null
     }
   },
   computed: {
@@ -300,6 +351,8 @@ export default {
     window.addEventListener('keydown', this.handleKeyDown)
     // 添加保存当前思维导图事件监听
     this.$bus.$on('saveCurrentMindMap', this.saveToDatabaseAuto)
+    // 监听思维导图初始化事件
+    this.$bus.$on('mind_map_inited', this.handleMindMapInited)
     
     // 预加载思维导图列表（延迟执行，不阻塞页面初始化）
     this.$nextTick(() => {
@@ -319,6 +372,10 @@ export default {
     window.removeEventListener('keydown', this.handleKeyDown)
     // 移除保存当前思维导图事件监听
     this.$bus.$off('saveCurrentMindMap', this.saveToDatabase)
+    // 移除思维导图初始化事件监听
+    this.$bus.$off('mind_map_inited', this.handleMindMapInited)
+    // 清理新建确认对话框拖拽事件
+    this.cleanupNewMindMapSaveConfirmDragEvents()
   },
   methods: {
     // 计算工具按钮如何显示
@@ -542,9 +599,38 @@ export default {
       this.waitingWriteToLocalFile = false
     },
 
-    // 创建本地文件
+    // 创建新思维导图
     async createNewLocalFile() {
-      await this.createLocalFile(exampleData)
+      // 首先检查当前思维导图是否需要保存
+      try {
+        const currentMindMapId = this.$store.state.currentMindMapId;
+        
+        // 获取当前思维导图实例
+        const currentMindMap = this.getCurrentMindMapInstance();
+        if (!currentMindMap) {
+          await this.createActualNewMindMap();
+          return;
+        }
+        
+        const currentData = currentMindMap.getData(true);
+        const needsSave = await this.$store.dispatch('needsSave', {
+          currentMindMap: {
+            id: currentMindMapId,
+            data: currentData
+          }
+        });
+        
+        if (needsSave) {
+          // 需要保存，显示保存确认对话框
+          this.showNewMindMapSaveConfirmDialog();
+        } else {
+          // 不需要保存，直接创建新思维导图
+          await this.createActualNewMindMap();
+        }
+      } catch (error) {
+        // 出错时按需要保存处理
+        this.showNewMindMapSaveConfirmDialog();
+      }
     },
 
     // 另存为
@@ -1312,6 +1398,308 @@ export default {
           }
         })
       }
+    },
+
+    // 获取当前思维导图实例
+    getCurrentMindMapInstance() {
+      // 1. 优先使用本地保存的实例
+      if (this.localMindMapInstance) {
+        return this.localMindMapInstance;
+      }
+      
+      // 2. 尝试从事件总线获取
+      if (window.mindMapInstance) {
+        return window.mindMapInstance;
+      }
+      
+      // 3. 尝试从全局变量获取
+      if (this.$root.$children && this.$root.$children[0] && this.$root.$children[0].mindMap) {
+        return this.$root.$children[0].mindMap;
+      }
+      
+      // 4. 尝试通过getData函数的上下文获取
+      try {
+        const data = getData();
+        if (data && window.mindMapInstanceFromGetData) {
+          return window.mindMapInstanceFromGetData;
+        }
+      } catch (error) {
+      }
+      
+      return null;
+    },
+
+    // 显示新建思维导图保存确认对话框
+    showNewMindMapSaveConfirmDialog() {
+      // 获取当前思维导图的标题
+      this.getCurrentMindMapTitleForNew();
+      
+      // 显示确认对话框
+      this.showNewMindMapSaveConfirm = true;
+      
+      // 延迟初始化拖拽功能，确保DOM完全渲染
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.initDragForNewMindMapDialog('.draggable-new-mindmap-confirm-dialog', '温馨提示');
+        }, 100);
+      });
+    },
+
+    // 获取当前思维导图标题（用于新建确认对话框）
+    getCurrentMindMapTitleForNew() {
+      try {
+        const currentMindMap = this.getCurrentMindMapInstance();
+        if (currentMindMap && currentMindMap.renderer && currentMindMap.renderer.root) {
+          const rootData = currentMindMap.renderer.root.getData();
+          if (rootData && rootData.text) {
+            // 移除HTML标签，获取纯文本
+            this.currentMindMapTitleForNew = rootData.text.replace(/<[^>]*>/g, '').trim();
+          } else {
+            this.currentMindMapTitleForNew = '未命名思维导图';
+          }
+        } else {
+          this.currentMindMapTitleForNew = '未命名思维导图';
+        }
+      } catch (error) {
+        this.currentMindMapTitleForNew = '未命名思维导图';
+      }
+    },
+
+    // 执行实际的新建思维导图
+    async createActualNewMindMap() {
+      try {
+        // 获取当前主题信息
+        const currentTheme = this.$store.state.localConfig.theme || 'default';
+        // 创建新的思维导图数据，只包含根节点
+        const newMindMapData = {
+          root: {
+            data: {
+              text: '未命名主题'
+            },
+            children: []
+          },
+          theme: currentTheme,
+          layout: this.$store.state.localConfig.layout || 'logicalStructure',
+          config: {
+            // 保持当前的一些基本配置
+            enableFreeDrag: this.$store.state.localConfig.enableFreeDrag || false,
+            watermark: this.$store.state.localConfig.watermark || {}
+          }
+        };
+        
+        // 通过事件总线设置新数据
+        this.$bus.$emit('setData', newMindMapData);
+        
+        // 清除当前思维导图ID
+        this.$store.commit('setCurrentMindMapId', null);
+        // 等待一下让思维导图渲染
+        setTimeout(() => {
+          const currentMindMap = this.getCurrentMindMapInstance();
+          if (currentMindMap && currentMindMap.renderer && currentMindMap.renderer.root) {
+            currentMindMap.renderer.setRootNodeCenter();
+          }
+        }, 100);
+        
+        this.$message.success('新思维导图创建成功');
+      } catch (error) {
+        this.$message.error('创建新思维导图失败: ' + error.message);
+      }
+    },
+
+    // 处理保存并新建
+    async handleSaveAndNewMindMap() {
+      // 1. 关闭确认对话框
+      this.showNewMindMapSaveConfirm = false;
+      
+      // 2. 在开始任何操作前，先复制当前思维导图的数据和ID
+      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentUser = this.$store.state.currentUser;
+      const currentMindMap = this.getCurrentMindMapInstance();
+      
+      if (!currentMindMap) {
+        await this.createActualNewMindMap();
+        return;
+      }
+      
+      const originalData = JSON.parse(JSON.stringify(currentMindMap.getData(true))); // 深拷贝原始数据
+      const originalTitle = this.currentMindMapTitleForNew;
+      
+      // 3. 开始新建（与保存同时进行）
+      const newMindMapPromise = this.createActualNewMindMap();
+      
+      // 4. 在后台异步保存原始数据（与新建同时进行）
+      if (currentUser && originalData) {
+        // 显示保存状态
+        this.saveMindMapDataForNew(originalData, originalTitle, currentMindMapId, currentUser.id)
+          .then(result => {
+            // 使用通知提示保存成功
+            this.$notify({
+              title: '保存成功',
+              message: '原思维导图已保存!',
+              type: 'success',
+              duration: 3000
+            });
+          })
+          .catch(error => {
+            // 使用通知提示保存失败
+            this.$notify({
+              title: '保存失败',
+              message: '原思维导图保存失败: ' + error.message,
+              type: 'error',
+              duration: 5000
+            });
+          });
+      } else {
+      }
+      
+      // 等待新建完成
+      await newMindMapPromise;
+    },
+
+    // 处理不保存直接新建
+    async handleNewMindMapWithoutSave() {
+      // 1. 关闭确认对话框
+      this.showNewMindMapSaveConfirm = false;
+      
+      // 2. 直接开始新建
+      await this.createActualNewMindMap();
+    },
+
+    // 处理取消新建
+    handleCancelNewMindMap() {
+      // 关闭确认对话框
+      this.showNewMindMapSaveConfirm = false;
+      this.$message.info('已取消新建思维导图');
+    },
+
+    // 处理新建保存确认对话框关闭
+    handleNewMindMapSaveConfirmClose() {
+      // 用户直接关闭对话框，相当于取消操作
+      this.showNewMindMapSaveConfirm = false;
+      this.$message.info('已取消新建思维导图');
+    },
+
+    // 保存思维导图数据的辅助方法（用于新建功能）
+    async saveMindMapDataForNew(content, title, mindMapId, userId) {
+      try {
+        let result;
+        if (mindMapId) {
+          // 更新现有思维导图
+          result = await this.$store.dispatch('saveMindMap', {
+            id: mindMapId,
+            userId: userId,
+            title: title,
+            content: content,
+            isUpdate: true
+          });
+        } else {
+          // 创建新思维导图
+          result = await this.$store.dispatch('saveMindMap', {
+            userId: userId,
+            title: title,
+            content: content,
+            isUpdate: false
+          });
+        }
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    // 为新建确认对话框初始化拖拽功能
+    initDragForNewMindMapDialog(dialogClass, dialogTitle) {
+      // 尝试多种选择器方式
+      let dialogHeaderEl = document.querySelector(`${dialogClass} .el-dialog__header`);
+      let dragDom = document.querySelector(`${dialogClass} .el-dialog`);
+      
+      // 如果通过custom-class找不到，尝试通过class找
+      if (!dialogHeaderEl || !dragDom) {
+        const allDialogs = document.querySelectorAll('.el-dialog');
+        for (let dialog of allDialogs) {
+          const title = dialog.querySelector('.el-dialog__title');
+          if (title && title.textContent.includes(dialogTitle)) {
+            dragDom = dialog;
+            dialogHeaderEl = dialog.querySelector('.el-dialog__header');
+            break;
+          }
+        }
+      }
+
+      if (!dialogHeaderEl || !dragDom) {
+        return;
+      }
+      // 设置标题栏样式
+      dialogHeaderEl.style.cursor = 'move';
+      dialogHeaderEl.style.userSelect = 'none';
+
+      let startX = 0;
+      let startY = 0;
+      let lastX = 0;
+      let lastY = 0;
+
+      const mousedownHandler = (e) => {
+        // 只有点击标题栏才触发拖拽
+        if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
+          return;
+        }
+
+        startX = e.clientX;
+        startY = e.clientY;
+
+        // 获取当前transform值
+        const style = window.getComputedStyle(dragDom);
+        const transform = style.transform;
+        if (transform && transform !== 'none') {
+          const matrix = new DOMMatrix(transform);
+          lastX = matrix.m41;
+          lastY = matrix.m42;
+        } else {
+          lastX = 0;
+          lastY = 0;
+        }
+
+        const mousemoveHandler = (e) => {
+          const offsetX = e.clientX - startX;
+          const offsetY = e.clientY - startY;
+          dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`;
+          dragDom.style.willChange = 'transform'; // 优化性能
+        };
+
+        const mouseupHandler = () => {
+          dragDom.style.willChange = 'auto';
+          document.removeEventListener('mousemove', mousemoveHandler);
+          document.removeEventListener('mouseup', mouseupHandler);
+        };
+
+        document.addEventListener('mousemove', mousemoveHandler);
+        document.addEventListener('mouseup', mouseupHandler);
+
+        e.preventDefault();
+      };
+
+      dialogHeaderEl.addEventListener('mousedown', mousedownHandler);
+
+      // 保存拖拽处理器以便清理
+      if (dialogTitle.includes('温馨提示')) {
+        this.newMindMapSaveConfirmDragHandler = {
+          element: dialogHeaderEl,
+          mousedownHandler: mousedownHandler
+        };
+      }
+    },
+
+    // 清理新建确认对话框拖拽事件
+    cleanupNewMindMapSaveConfirmDragEvents() {
+      if (this.newMindMapSaveConfirmDragHandler) {
+        this.newMindMapSaveConfirmDragHandler.element.removeEventListener('mousedown', this.newMindMapSaveConfirmDragHandler.mousedownHandler);
+        this.newMindMapSaveConfirmDragHandler = null;
+      }
+    },
+
+    // 处理思维导图初始化事件
+    handleMindMapInited(mindMap) {
+      this.localMindMapInstance = mindMap;
     }
   }
 }
@@ -1319,6 +1707,71 @@ export default {
 // CSS样式已移动到 <style> 标签中
 
 </script>
+
+<style lang="less" scoped>
+// 新建思维导图保存确认对话框样式
+.newMindMapSaveConfirmDialog {
+  margin-top: 115px;
+  
+  .confirm-content {
+    padding: 10px 0;
+    
+    .confirm-text {
+      margin: 0 0 15px 0;
+      font-size: 15px;
+      color: #606266;
+      line-height: 1.5;
+      text-align: center;
+    }
+  }
+  
+  .dialog-footer {
+    text-align: right;
+    padding: 15px 20px 0 20px;
+    border-top: none;
+    
+    .el-button {
+      margin-left: 12px;
+      
+      i {
+        margin-right: 5px;
+      }
+    }
+  }
+}
+</style>
+
+<style lang="less">
+// 深色主题下的新建思维导图保存确认对话框
+.toolbarContainer.isDark .newMindMapSaveConfirmDialog {
+  .el-dialog {
+    background-color: #2b2f33 !important;
+    border: 1px solid #404040 !important;
+  }
+  
+  .el-dialog__header {
+    background-color: #2b2f33 !important;
+    border-bottom: 1px solid #404040 !important;
+  }
+  
+  .el-dialog__title {
+    color: hsla(0, 0%, 100%, 0.9) !important;
+  }
+  
+  .el-dialog__headerbtn .el-dialog__close {
+    color: hsla(0, 0%, 100%, 0.6) !important;
+  }
+  
+  .confirm-content {
+    .confirm-text {
+      color: hsla(0, 0%, 100%, 0.8) !important;
+    }
+  }
+  
+  .dialog-footer {
+    border-top: none !important;
+  }
+}</style>
 
 <style lang="less" scoped>
 .no-mindmaps {
