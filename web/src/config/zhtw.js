@@ -206,6 +206,26 @@ export const backgroundSizeList = [
 // 快捷鍵列表
 export const shortcutKeyList = [
   {
+    type: '功能鍵',
+    list: [
+      {
+        icon: 'iconlingcunwei',
+        name: '保存思維導圖',
+        value: `${ctrl} + S`
+      },
+      {
+        icon: 'iconAIshengcheng',
+        name: 'AI創建思維導圖',
+        value: `${ctrl} + G`
+      },
+      {
+        icon: 'icondakai',
+        name: '打開思維導圖列表',
+        value: `${ctrl} + L`
+      }
+    ]
+  },
+  {
     type: '節點操作',
     list: [
       {

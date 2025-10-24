@@ -210,6 +210,26 @@ const macFn = isMac ? 'fn + ' : ''
 // Danh sách phím tắt
 export const shortcutKeyList = [
   {
+    type: 'Phím chức năng',
+    list: [
+      {
+        icon: 'iconlingcunwei',
+        name: 'Lưu bản đồ tư duy',
+        value: `${ctrl} + S`
+      },
+      {
+        icon: 'iconAIshengcheng',
+        name: 'AI tạo bản đồ tư duy',
+        value: `${ctrl} + G`
+      },
+      {
+        icon: 'icondakai',
+        name: 'Mở danh sách bản đồ tư duy',
+        value: `${ctrl} + L`
+      }
+    ]
+  },
+  {
     type: 'Hoạt động nút',
     list: [
       {

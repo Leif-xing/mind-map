@@ -272,6 +272,26 @@ const macFn = isMac ? 'fn + ' : ''
 // 快捷键列表
 export const shortcutKeyList = [
   {
+    type: '功能键',
+    list: [
+      {
+        icon: 'iconlingcunwei',
+        name: '保存思维导图',
+        value: `${ctrl} + S`
+      },
+      {
+        icon: 'iconAIshengcheng',
+        name: 'AI创建思维导图',
+        value: `${ctrl} + G`
+      },
+      {
+        icon: 'icondakai',
+        name: '打开思维导图列表',
+        value: `${ctrl} + L`
+      }
+    ]
+  },
+  {
     type: '节点操作',
     list: [
       {

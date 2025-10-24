@@ -206,6 +206,26 @@ export const backgroundSizeList = [
 // 快捷键列表
 export const shortcutKeyList = [
   {
+    type: 'Function Keys',
+    list: [
+      {
+        icon: 'iconlingcunwei',
+        name: 'Save mind map',
+        value: `${ctrl} + S`
+      },
+      {
+        icon: 'iconAIshengcheng',
+        name: 'AI create mind map',
+        value: `${ctrl} + G`
+      },
+      {
+        icon: 'icondakai',
+        name: 'Open mind map list',
+        value: `${ctrl} + L`
+      }
+    ]
+  },
+  {
     type: 'Node operation',
     list: [
       {

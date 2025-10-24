@@ -259,20 +259,71 @@ export default {
       }
       
       this.loading = true
+      
       try {
-        // 使用新的增量同步函数同步数据库与内容缓存
-        await this.$store.dispatch('syncMindMapCacheIncrementally', this.currentUser.id);
+        // 策略1：先尝试从Vuex缓存快速显示
+        const cachedMindMaps = this.$store.state.localMindMaps
+        if (cachedMindMaps && cachedMindMaps.length > 0) {
+          this.mindMaps = cachedMindMaps
+          this.loading = false // 立即显示缓存数据
+          
+          // 后台异步同步最新数据
+          this.syncDataInBackground()
+          return
+        }
         
-        // 从数据库获取最新的元数据用于界面显示
-        const mindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id);
-        
+        // 策略2：如果没有缓存，直接获取元数据（更快）
+        const mindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
         this.mindMaps = mindMaps
-        // 同步到Vuex本地缓存
         this.$store.commit('setLocalMindMaps', mindMaps)
+        this.loading = false
+        
+        // 后台异步同步内容缓存
+        this.syncContentCacheInBackground()
+        
       } catch (error) {
         this.$message.error('加载思维导图失败: ' + error.message)
-      } finally {
         this.loading = false
+      }
+    },
+    
+    // 后台同步数据（不阻塞UI）
+    async syncDataInBackground() {
+      try {
+        // 静默同步，不显示加载状态
+        await this.$store.dispatch('syncMindMapCacheIncrementally', this.currentUser.id)
+        const latestMindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
+        
+        // 检查是否有更新
+        const currentIds = this.mindMaps.map(m => m.id).sort()
+        const latestIds = latestMindMaps.map(m => m.id).sort()
+        
+        if (JSON.stringify(currentIds) !== JSON.stringify(latestIds)) {
+          // 有新的变化，更新UI
+          this.mindMaps = latestMindMaps
+          this.$store.commit('setLocalMindMaps', latestMindMaps)
+          
+          // 可选：显示轻量级提示
+          this.$message({
+            message: '已更新思维导图列表',
+            type: 'info',
+            duration: 1500,
+            showClose: false
+          })
+        }
+      } catch (error) {
+        // 后台同步失败不影响用户体验
+        console.warn('后台同步失败:', error)
+      }
+    },
+    
+    // 后台同步内容缓存（不阻塞UI）
+    async syncContentCacheInBackground() {
+      try {
+        // 静默同步内容缓存
+        await this.$store.dispatch('syncMindMapCacheIncrementally', this.currentUser.id)
+      } catch (error) {
+        console.warn('后台内容缓存同步失败:', error)
       }
     },
     
@@ -468,11 +519,30 @@ export default {
       this.statusMessage = `已找到 ${searchResultsCount} 个思维导图`;
     },
     
-    // 刷新思维导图列表
+    // 刷新思维导图列表（优化版：立即响应，后台同步）
     async refreshMindMaps() {
-      await this.loadMindMaps()
+      // 清空选中状态
       this.selectedMindMaps = []
-      this.statusMessage = `刷新完成，共获取 ${this.mindMaps.length} 个思维导图`
+      
+      // 先尝试快速刷新（直接获取元数据）
+      this.loading = true
+      try {
+        const mindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
+        this.mindMaps = mindMaps
+        this.$store.commit('setLocalMindMaps', mindMaps)
+        this.loading = false
+        
+        this.statusMessage = `刷新完成，共获取 ${this.mindMaps.length} 个思维导图`
+        
+        // 后台异步同步内容缓存（不阻塞UI）
+        this.syncContentCacheInBackground()
+        
+      } catch (error) {
+        this.loading = false
+        this.$message.error('刷新失败: ' + error.message)
+        this.statusMessage = '刷新失败'
+      }
+      
       // 延时后恢复默认状态栏信息
       setTimeout(() => {
         this.updateStatusMessage()
