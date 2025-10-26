@@ -18,7 +18,7 @@ CREATE TABLE mind_maps (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
-  content JSONB NOT NULL,  -- 存储思维导图的JSON数据
+  content TEXT NOT NULL,  -- 存储思维导图的TEXT数据，使用lz-string的utf16加密字符串
   is_public BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

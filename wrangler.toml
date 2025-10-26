@@ -1,9 +1,0 @@
-name = "mind-map"
-compatibility_date = "2024-01-01"
-
-[env.production]
-name = "mind-map-production"
-
-# Cloudflare Pages configuration
-[env.production.pages_build_output_dir]
-directory = "cloudflare-build"
