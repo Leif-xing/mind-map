@@ -690,7 +690,16 @@ export const aiConfigApi = {
     //   messagesCount: aiPayload.messages?.length
     // }); // 隐私保护：不输出用户ID和请求详情
     
-    // 直接调用后端AI代理服务
+    // 获取用户当前选择的AI配置ID（从localStorage）
+    let currentConfigId = null
+    try {
+      const localConfig = JSON.parse(localStorage.getItem('SIMPLE_MIND_MAP_LOCAL_CONFIG') || '{}')
+      currentConfigId = localConfig.aiSystem?.currentProvider || null
+    } catch (e) {
+      console.warn('无法从localStorage获取AI配置ID:', e)
+    }
+    
+    // 调用后端AI代理服务
     const proxyResponse = await fetch('/api/ai-proxy', {
       method: 'POST',
       headers: {
@@ -699,6 +708,7 @@ export const aiConfigApi = {
       },
       body: JSON.stringify({
         userId: userId,
+        configId: currentConfigId, // 从localStorage获取的配置ID
         aiPayload: aiPayload
       })
     })

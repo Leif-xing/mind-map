@@ -1,3 +1,56 @@
+import { createClient } from '@supabase/supabase-js'
+
+// 初始化Supabase客户端
+const supabaseUrl = process.env.VUE_APP_SUPABASE_URL
+const supabaseAnonKey = process.env.VUE_APP_SUPABASE_ANON_KEY
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// 简单的解密函数（需要根据实际加密方式调整）
+function decryptApiKey(encryptedKey) {
+  // TODO: 实现真正的解密逻辑
+  // 目前假设密钥是base64编码的，实际项目中需要使用真正的加密/解密
+  try {
+    return Buffer.from(encryptedKey, 'base64').toString('utf8')
+  } catch (e) {
+    console.warn('解密失败，返回原始值:', e)
+    return encryptedKey
+  }
+}
+
+// 从数据库获取AI配置
+async function getAiConfigById(configId) {
+  try {
+    console.log('正在查询AI配置:', { configId: '[HIDDEN]' })
+    
+    const { data, error } = await supabase
+      .from('ai_provider_configs')
+      .select('api_endpoint, model_name, api_key_encrypted')
+      .eq('id', configId)
+      .eq('is_active', true)
+      .single()
+    
+    if (error) {
+      console.error('数据库查询错误:', error)
+      throw new Error(`获取AI配置失败: ${error.message}`)
+    }
+    
+    if (!data) {
+      throw new Error('未找到指定的AI配置')
+    }
+    
+    console.log('成功获取AI配置:', {
+      hasApiEndpoint: !!data.api_endpoint,
+      hasModelName: !!data.model_name,
+      hasApiKey: !!data.api_key_encrypted
+    })
+    
+    return data
+  } catch (error) {
+    console.error('获取AI配置时出错:', error)
+    throw error
+  }
+}
+
 export default async function handler(req, res) {
   // 设置CORS头部
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -14,8 +67,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // 检测部署环境（通过环境变量手动设置）
+  const IS_VERCEL_DEPLOYED = process.env.VUE_APP_IS_VERCEL_DEPLOYED !== 'false' // 默认true，只有明确设置为'false'才是本地
+  
+  console.log('环境检测:', {
+    IS_VERCEL_DEPLOYED,
+    VUE_APP_IS_VERCEL_DEPLOYED: process.env.VUE_APP_IS_VERCEL_DEPLOYED,
+    isLocalEnv: process.env.VUE_APP_IS_VERCEL_DEPLOYED === 'false'
+  })
+
   try {
-    const { api, headers, data, providerType, userId, configId } = req.body
+    const { api, headers, data, providerType, userId, configId, aiPayload } = req.body
 
     console.log('收到AI代理请求:', { 
       api, 
@@ -23,14 +85,79 @@ export default async function handler(req, res) {
       userId: userId ? '[HIDDEN]' : 'undefined',
       configId: configId ? '[HIDDEN]' : 'undefined',
       headers: headers ? Object.keys(headers).map(key => `${key}: ${headers[key] ? (key.toLowerCase().includes('authorization') ? '[HIDDEN]' : '[PRESENT]') : '[MISSING]'}`) : 'undefined',
-      hasData: !!data 
+      hasData: !!data,
+      hasAiPayload: !!aiPayload
     })
 
-    // 验证基本请求参数
-    if (!api || !data) {
+    // 支持两种调用方式：
+    // 1. 旧方式：直接提供 api, headers, data
+    // 2. 新方式：提供 configId, userId, aiPayload（从数据库获取配置）
+    
+    let finalApi = api
+    let finalHeaders = headers
+    let finalData = data
+
+    // 根据环境决定使用哪种方式
+    if (!api && !data && configId && aiPayload && userId) {
+      if (IS_VERCEL_DEPLOYED) {
+        // 🚀 Vercel部署环境：使用新方式（数据库配置）
+        console.log('Vercel环境：使用新方式从数据库获取AI配置...', { configId: '[HIDDEN]' })
+        
+        try {
+          // 1. 根据configId查询数据库获取完整AI配置
+          const config = await getAiConfigById(configId)
+          
+          // 2. 解密API密钥
+          const decryptedApiKey = decryptApiKey(config.api_key_encrypted)
+          
+          // 3. 构建完整的请求参数
+          finalApi = config.api_endpoint
+          finalHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${decryptedApiKey}`
+          }
+          finalData = {
+            model: config.model_name,
+            ...aiPayload
+          }
+          
+          console.log('Vercel环境：成功使用数据库配置:', {
+            api: finalApi,
+            model: config.model_name,
+            hasHeaders: !!finalHeaders,
+            hasData: !!finalData,
+            messagesCount: finalData.messages?.length
+          })
+        } catch (dbError) {
+          console.error('Vercel环境：从数据库获取AI配置失败:', dbError)
+          return res.status(500).json({ 
+            error: '获取AI配置失败',
+            details: dbError.message
+          })
+        }
+      } else {
+        // 💻 本地开发环境：拒绝新方式调用，强制使用旧方式
+        console.log('本地环境：拒绝新方式调用，请使用旧方式 (ai.js)')
+        return res.status(400).json({ 
+          error: '本地开发环境请使用旧方式调用',
+          details: '本地调试应该使用 ai.js 的直接调用方式，而不是通过代理',
+          suggestion: '请确保前端检测到本地环境时使用 ai.js 而不是 supabase-api.js'
+        })
+      }
+    }
+
+    // 验证最终参数
+    if (!finalApi || !finalData) {
       return res.status(400).json({ 
-        error: '缺少必要参数: api, data',
-        received: { api: !!api, headers: !!headers, data: !!data, providerType: !!providerType, userId: !!userId, configId: !!configId }
+        error: '缺少必要参数: (api, data) 或 (configId, userId, aiPayload)',
+        received: { 
+          api: !!finalApi, 
+          headers: !!finalHeaders, 
+          data: !!finalData, 
+          configId: !!configId,
+          userId: !!userId,
+          aiPayload: !!aiPayload
+        }
       })
     }
 
@@ -52,11 +179,11 @@ export default async function handler(req, res) {
     })
 
     // 确保使用HTTPS
-    const secureApi = api.replace(/^http:\/\//, 'https://')
+    const secureApi = finalApi.replace(/^http:\/\//, 'https://')
     console.log('使用安全API地址:', secureApi)
 
     // 处理API密钥认证
-    let finalHeaders = { ...headers };
+    finalHeaders = { ...finalHeaders };
     
     // 检查Authorization头是否存在
     if (!finalHeaders['Authorization']) {
@@ -124,7 +251,7 @@ export default async function handler(req, res) {
         ...finalHeaders,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(finalData)
     })
 
     console.log('AI API响应状态:', response.status)

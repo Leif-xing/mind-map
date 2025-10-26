@@ -553,9 +553,27 @@ const store = new Vuex.Store({
     // 通过代理调用AI服务
     async callAiThroughProxy({ state }, { userId, aiPayload }) {
       try {
-        return await aiConfigApi.callAiService(userId, aiPayload)
+        // 检测是否为部署环境（通过环境变量手动设置）
+        const IS_VERCEL_DEPLOYED = process.env.VUE_APP_IS_VERCEL_DEPLOYED !== 'false' // 默认true，只有明确设置为'false'才是本地
+        
+        console.log('前端环境检测:', {
+          hostname: window.location.hostname,
+          IS_VERCEL_DEPLOYED,
+          VUE_APP_IS_VERCEL_DEPLOYED: process.env.VUE_APP_IS_VERCEL_DEPLOYED,
+          willUseNewMethod: IS_VERCEL_DEPLOYED
+        })
+        
+        if (IS_VERCEL_DEPLOYED) {
+          // 🚀 部署环境：使用新方式（通过代理调用）
+          console.log('部署环境：使用新方式通过代理调用AI')
+          return await aiConfigApi.callAiService(userId, aiPayload)
+        } else {
+          // 💻 本地环境：使用旧方式（直接调用ai.js）
+          console.log('本地环境：应该使用旧方式 (ai.js)，但当前调用了新方式')
+          throw new Error('本地开发环境应该使用 ai.js 直接调用，而不是通过代理')
+        }
       } catch (error) {
-        // console.error('AI服务调用失败:', error)
+        console.error('AI服务调用失败:', error)
         throw error
       }
     },
