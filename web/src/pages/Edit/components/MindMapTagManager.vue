@@ -185,6 +185,7 @@ import TagCreateEditDialog from './TagCreateEditDialog.vue'
 import TagSelectionDialog from './TagSelectionDialog.vue'
 
 import { tagApi } from '@/api/supabase-api'
+import TagCacheManager from '@/utils/tagCacheManager'
 import { mapState } from 'vuex'
 
 export default {
@@ -236,13 +237,28 @@ export default {
     this.$bus.$on('showTagManager', this.show)
     this.loadAvailableTags()
   },
+  mounted() {
+    // 添加键盘事件监听
+    document.addEventListener('keydown', this.handleKeyDown)
+  },
   beforeDestroy() {
     this.$bus.$off('showTagManager', this.show)
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
     }
+    // 移除键盘事件监听
+    document.removeEventListener('keydown', this.handleKeyDown)
   },
   methods: {
+    // 处理键盘快捷键
+    handleKeyDown(event) {
+      // 只有在标签管理器打开时才处理ESC键
+      if (this.$refs.sidebar && this.$refs.sidebar.show && event.key === 'Escape') {
+        event.preventDefault()
+        this.hide() // 关闭标签管理器
+      }
+    },
+
     // 显示标签管理器
     show() {
       this.$refs.sidebar.show = true
@@ -252,13 +268,44 @@ export default {
       }
     },
 
-    // 加载可用标签列表
+    // 隐藏标签管理器
+    hide() {
+      if (this.$refs.sidebar) {
+        this.$refs.sidebar.show = false
+      }
+    },
+
+    // 加载可用标签列表（需求2：缓存优化）
     async loadAvailableTags() {
       if (!this.currentUser) return
       
       try {
         this.loading = true
-        this.availableTags = await tagApi.getUserAvailableTags(this.currentUser.id)
+        
+        // 先尝试从缓存获取
+        const cachedTags = TagCacheManager.getUserTagsArray()
+        if (cachedTags.length > 0) {
+          console.log('从缓存加载用户标签:', cachedTags.length)
+          this.availableTags = cachedTags
+          this.handleSearch() // 更新筛选结果
+          this.loading = false
+          return
+        }
+        
+        // 缓存未命中，从数据库获取
+        console.log('缓存未命中，从数据库加载用户标签')
+        const tags = await tagApi.getUserAvailableTags(this.currentUser.id)
+        this.availableTags = tags
+        
+        // 保存到缓存
+        const userTags = {}
+        tags.forEach(tag => {
+          const { id, ...tagData } = tag
+          userTags[id] = tagData
+        })
+        TagCacheManager.setUserTags(userTags)
+        console.log('用户标签已保存到缓存:', Object.keys(userTags).length)
+        
         this.handleSearch() // 更新筛选结果
       } catch (error) {
         this.$message.error('加载标签列表失败: ' + error.message)
@@ -267,15 +314,30 @@ export default {
       }
     },
 
-    // 加载当前思维导图的标签
+    // 加载当前思维导图的标签（需求1：缓存优化）
     async loadCurrentMindMapTags() {
       if (!this.currentUser || !this.currentMindMapId) return
       
       try {
-        this.currentMindMapTags = await tagApi.getMindMapTags(
+        // 先尝试从缓存获取
+        const cachedTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+        if (cachedTags.length > 0) {
+          console.log('从缓存加载思维导图标签:', this.currentMindMapId, cachedTags.length)
+          this.currentMindMapTags = cachedTags
+          return
+        }
+        
+        // 缓存未命中，从数据库获取
+        console.log('缓存未命中，从数据库加载思维导图标签:', this.currentMindMapId)
+        const tags = await tagApi.getMindMapTags(
           this.currentUser.id, 
           this.currentMindMapId
         )
+        this.currentMindMapTags = tags
+        
+        // 保存到缓存
+        TagCacheManager.setMindMapTagsFromArray(this.currentMindMapId, tags)
+        console.log('思维导图标签已保存到缓存:', this.currentMindMapId, tags.length)
       } catch (error) {
         this.$message.error('加载思维导图标签失败: ' + error.message)
       }
@@ -298,7 +360,7 @@ export default {
       return this.currentMindMapTags.some(tag => tag.id === tagId)
     },
 
-    // 切换标签状态（添加/移除）
+    // 切换标签状态（添加/移除）（需求7：缓存同步）
     async toggleTagForMindMap(tag) {
       if (!this.currentMindMapId) {
         this.$message.warning('请先选择思维导图')
@@ -316,15 +378,22 @@ export default {
             this.currentMindMapId,
             tag.id
           )
+          
+          // 同步更新缓存
+          TagCacheManager.addTagToMindMap(this.currentMindMapId, tag.id)
+          console.log('添加标签到缓存:', this.currentMindMapId, tag.id)
+          
+          // 更新本地显示
+          this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+          
           this.$message.success(`标签 "${tag.name}" 添加成功`)
-          this.loadCurrentMindMapTags()
         }
       } catch (error) {
         this.$message.error('操作失败: ' + error.message)
       }
     },
 
-    // 从思维导图移除标签
+    // 从思维导图移除标签（需求7：缓存同步）
     async removeTagFromMindMap(tagId) {
       if (!this.currentMindMapId) return
 
@@ -341,9 +410,15 @@ export default {
           tagId
         )
         
+        // 同步更新缓存
+        TagCacheManager.removeTagFromMindMap(this.currentMindMapId, tagId)
+        console.log('从缓存移除标签:', this.currentMindMapId, tagId)
+        
+        // 更新本地显示
+        this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+        
         const tag = this.availableTags.find(t => t.id === tagId)
         this.$message.success(`标签 "${tag?.name || ''}" 移除成功`)
-        this.loadCurrentMindMapTags()
       } catch (error) {
         if (error !== 'cancel') {
           this.$message.error('移除标签失败: ' + error.message)
@@ -368,7 +443,7 @@ export default {
       this.showTagDialog = true
     },
 
-    // 删除标签
+    // 删除标签（需求6：缓存同步）
     async deleteTag(tag) {
       try {
         await this.$confirm(
@@ -382,9 +457,17 @@ export default {
         )
 
         await tagApi.deleteTag(this.currentUser.id, tag.id)
+        
+        // 同步更新缓存（自动清理所有映射关系）
+        TagCacheManager.deleteTag(tag.id)
+        console.log('从缓存删除标签:', tag.id)
+        
+        // 更新本地显示
+        this.availableTags = TagCacheManager.getUserTagsArray()
+        this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+        this.handleSearch() // 更新筛选结果
+        
         this.$message.success('标签删除成功')
-        this.loadAvailableTags()
-        this.loadCurrentMindMapTags()
       } catch (error) {
         if (error !== 'cancel') {
           this.$message.error('删除标签失败: ' + error.message)
@@ -403,16 +486,51 @@ export default {
       this.showSelectionDialog = false
     },
 
-    // 标签创建/编辑成功
-    handleTagSuccess() {
+    // 标签创建/编辑成功（需求3和5：缓存同步）
+    handleTagSuccess(tagData) {
       this.closeTagDialog()
-      this.loadAvailableTags()
+      
+      if (tagData) {
+        if (this.editingTag) {
+          // 编辑标签 - 更新缓存中的标签信息
+          TagCacheManager.updateUserTag(tagData.id, {
+            name: tagData.name,
+            color: tagData.color,
+            is_public: tagData.is_public
+          })
+          console.log('更新标签缓存:', tagData.id)
+        } else {
+          // 创建标签 - 添加到缓存
+          TagCacheManager.addUserTag(tagData)
+          console.log('添加标签到缓存:', tagData.id)
+        }
+        
+        // 更新本地显示
+        this.availableTags = TagCacheManager.getUserTagsArray()
+        this.handleSearch() // 更新筛选结果
+      } else {
+        // 如果没有返回标签数据，重新加载
+        this.loadAvailableTags()
+      }
     },
 
-    // 添加标签成功
-    handleAddTagsSuccess() {
+    // 添加标签成功（需求7：缓存同步）
+    handleAddTagsSuccess(addedTagIds) {
       this.closeSelectionDialog()
-      this.loadCurrentMindMapTags()
+      
+      if (addedTagIds && addedTagIds.length > 0) {
+        // 更新缓存中的映射关系
+        addedTagIds.forEach(tagId => {
+          TagCacheManager.addTagToMindMap(this.currentMindMapId, tagId)
+        })
+        console.log('批量添加标签到缓存:', this.currentMindMapId, addedTagIds)
+        
+        // 更新本地显示
+        this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+      } else {
+        // 如果没有返回添加的标签ID，重新加载
+        this.loadCurrentMindMapTags()
+      }
     },
 
     // 批量添加到思维导图
@@ -438,12 +556,16 @@ export default {
       this.selectedTags = []
     },
 
-    // 刷新标签
+    // 刷新标签（需求4：只刷新用户标签）
     async refreshTags() {
+      console.log('刷新标签缓存')
+      // 清除用户标签缓存
+      TagCacheManager.clearUserTagsCache()
+      
+      // 重新加载用户标签（会从数据库获取并更新缓存）
       await this.loadAvailableTags()
-      if (this.currentMindMapId) {
-        await this.loadCurrentMindMapTags()
-      }
+      
+      // 思维导图标签不需要刷新，映射关系保持不变
       this.$message.success('刷新完成')
     },
 

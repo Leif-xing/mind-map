@@ -416,7 +416,9 @@ export default {
         )
 
         this.$message.success(`成功添加 ${this.selectedTags.length} 个标签`)
-        this.$emit('success')
+        
+        // 发出成功事件，传递添加的标签ID列表
+        this.$emit('success', [...this.selectedTags])
         this.handleClose()
       } catch (error) {
         this.$message.error('添加标签失败: ' + error.message)

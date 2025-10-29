@@ -853,6 +853,12 @@ export default {
         event.preventDefault() // 阻止默认行为（如浏览器地址栏聚焦）
         this.showMindMapHistory() // 显示思维导图对话框
       }
+      
+      // 检查是否按下Alt+t - 打开标签管理器
+      if (event.altKey && event.key === 't') {
+        event.preventDefault() // 阻止默认行为
+        this.showTagManager() // 显示标签管理器
+      }
     },
     
     // 显示思维导图历史

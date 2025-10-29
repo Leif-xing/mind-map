@@ -7,6 +7,7 @@
       :visible.sync="clientTipDialogVisible"
       width="400px"
       append-to-body
+      :close-on-click-modal="false"
     >
       <div class="tipBox">
         <p>{{ $t('ai.connectFailedTip') }}</p>
@@ -39,6 +40,8 @@
       :visible.sync="createDialogVisible"
       width="450px"
       append-to-body
+      :close-on-click-modal="false"
+      :before-close="handleCreateDialogClose"
       custom-class="draggable-ai-create-dialog"
     >
       <div class="inputBox">
@@ -143,6 +146,7 @@
       :visible.sync="createPartDialogVisible"
       width="450px"
       append-to-body
+      :close-on-click-modal="false"
       custom-class="draggable-ai-create-part-dialog"
     >
       <div class="inputBox">
@@ -468,6 +472,13 @@ export default {
     closeAiCreateDialog() {
       this.createDialogVisible = false
       this.aiInput = ''
+    },
+
+    // 处理AI创建对话框关闭事件（阻止点击外部关闭）
+    handleCreateDialogClose(done) {
+      // 什么都不做，阻止关闭
+      // 只能通过点击取消按钮或确认按钮来关闭对话框
+      console.log('阻止AI创建对话框通过点击外部关闭')
     },
 
     // 确认生成

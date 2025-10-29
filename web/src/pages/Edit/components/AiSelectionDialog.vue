@@ -5,6 +5,7 @@
     :visible.sync="visible"
     width="600px"
     append-to-body
+    :close-on-click-modal="false"
     custom-class="draggable-ai-selection-dialog"
   >
     <div class="aiSelectionBox">

@@ -299,9 +299,11 @@ export default {
       try {
         this.submitting = true
 
+        let resultTag = null
+        
         if (this.isEdit) {
           // 更新标签
-          await tagApi.updateTag(
+          resultTag = await tagApi.updateTag(
             this.currentUser.id,
             this.tag.id,
             {
@@ -312,7 +314,7 @@ export default {
           this.$message.success('标签更新成功')
         } else {
           // 创建标签
-          await tagApi.createTag(
+          resultTag = await tagApi.createTag(
             this.currentUser.id,
             this.formData.name.trim(),
             this.formData.color
@@ -320,7 +322,8 @@ export default {
           this.$message.success('标签创建成功')
         }
 
-        this.$emit('success')
+        // 发出成功事件，传递完整的标签数据
+        this.$emit('success', resultTag)
         this.handleClose()
       } catch (error) {
         this.$message.error((this.isEdit ? '更新' : '创建') + '标签失败: ' + error.message)
