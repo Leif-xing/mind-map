@@ -784,6 +784,674 @@ function transformAiConfigForFrontend(config) {
   }
 }
 
+// 标签API替代方案 - 使用本地存储模拟
+const tagStorageManager = {
+  // 获取标签存储key
+  getTagsKey(userId) {
+    return `user_tags_${userId}`
+  },
+  
+  getMindMapTagsKey(userId) {
+    return `user_mindmap_tags_${userId}`
+  },
+
+  // 获取用户标签列表
+  getUserTags(userId) {
+    try {
+      const key = this.getTagsKey(userId)
+      const tags = JSON.parse(localStorage.getItem(key) || '[]')
+      return tags
+    } catch (error) {
+      console.error('获取用户标签失败:', error)
+      return []
+    }
+  },
+
+  // 保存用户标签列表
+  saveUserTags(userId, tags) {
+    try {
+      const key = this.getTagsKey(userId)
+      localStorage.setItem(key, JSON.stringify(tags))
+      return true
+    } catch (error) {
+      console.error('保存用户标签失败:', error)
+      return false
+    }
+  },
+
+  // 获取思维导图标签关联
+  getMindMapTags(userId) {
+    try {
+      const key = this.getMindMapTagsKey(userId)
+      const relations = JSON.parse(localStorage.getItem(key) || '[]')
+      return relations
+    } catch (error) {
+      console.error('获取思维导图标签关联失败:', error)
+      return []
+    }
+  },
+
+  // 保存思维导图标签关联
+  saveMindMapTags(userId, relations) {
+    try {
+      const key = this.getMindMapTagsKey(userId)
+      localStorage.setItem(key, JSON.stringify(relations))
+      return true
+    } catch (error) {
+      console.error('保存思维导图标签关联失败:', error)
+      return false
+    }
+  },
+
+  // 生成唯一ID
+  generateId() {
+    return Date.now().toString() + Math.random().toString(36).substr(2, 9)
+  }
+}
+
+// 标签相关API
+export const tagApi = {
+  // 创建私有标签
+  async createTag(userId, name, color = '#cccccc') {
+    // 验证参数
+    if (!userId || !name) {
+      throw new Error('用户ID和标签名称不能为空')
+    }
+
+    // 检查标签名称长度
+    if (name.length > 50) {
+      throw new Error('标签名称不能超过50个字符')
+    }
+
+    // 验证颜色格式（简单验证）
+    if (color && !color.match(/^#[0-9A-Fa-f]{6}$/)) {
+      throw new Error('颜色格式不正确，请使用十六进制格式如 #cccccc')
+    }
+
+    try {
+      // 首先尝试Supabase
+      const { data: tag, error } = await supabase
+        .from('tags')
+        .insert([{
+          name: name.trim(),
+          color: color,
+          is_public: false,
+          owner_id: userId
+        }])
+        .select()
+        .single()
+
+      if (!error) {
+        console.log('Supabase标签创建成功')
+        return tag
+      }
+
+      // Supabase失败，使用本地存储
+      console.warn('Supabase创建标签失败，使用本地存储:', error.message)
+    } catch (error) {
+      console.warn('Supabase连接失败，使用本地存储:', error.message)
+    }
+
+    // 本地存储备用方案
+    const userTags = tagStorageManager.getUserTags(userId)
+    
+    // 检查是否有重复标签名称
+    if (userTags.some(tag => tag.name === name.trim())) {
+      throw new Error('您已经创建了同名的标签')
+    }
+
+    const newTag = {
+      id: tagStorageManager.generateId(),
+      name: name.trim(),
+      color: color,
+      is_public: false,
+      owner_id: userId,
+      created_at: new Date().toISOString()
+    }
+
+    userTags.push(newTag)
+    
+    if (!tagStorageManager.saveUserTags(userId, userTags)) {
+      throw new Error('保存标签到本地存储失败')
+    }
+
+    console.log('本地存储标签创建成功')
+    return newTag
+  },
+
+  // 验证用户权限的辅助方法
+  async validateUserPermission(userId) {
+    try {
+      // 验证用户是否存在且有效
+      const user = await userApi.validateUserById(userId)
+      if (!user) {
+        throw new Error('用户不存在或已被删除')
+      }
+      return user
+    } catch (error) {
+      console.error('用户权限验证失败:', error)
+      throw new Error('用户权限验证失败: ' + error.message)
+    }
+  },
+
+  // 删除私有标签
+  async deleteTag(userId, tagId) {
+    if (!userId || !tagId) {
+      throw new Error('用户ID和标签ID不能为空')
+    }
+
+    // 检查标签是否被使用
+    const { data: usageCount, error: usageError } = await supabase
+      .from('mindmap_tags')
+      .select('tag_id', { count: 'exact' })
+      .eq('tag_id', tagId)
+
+    if (usageError) {
+      throw new Error('检查标签使用情况失败')
+    }
+
+    if (usageCount && usageCount.length > 0) {
+      throw new Error('该标签正在被使用，无法删除。请先从相关思维导图中移除该标签')
+    }
+
+    // 删除标签（RLS策略确保只能删除自己的标签）
+    const { error } = await supabase
+      .from('tags')
+      .delete()
+      .eq('id', tagId)
+      .eq('owner_id', userId)
+      .eq('is_public', false) // 确保不能删除公共标签
+
+    if (error) {
+      throw new Error(error.message || '删除标签失败')
+    }
+
+    return true
+  },
+
+  // 更新标签信息
+  async updateTag(userId, tagId, updates) {
+    if (!userId || !tagId) {
+      throw new Error('用户ID和标签ID不能为空')
+    }
+
+    const updateData = {}
+    
+    // 验证和处理更新字段
+    if (updates.name !== undefined) {
+      if (!updates.name || updates.name.length > 50) {
+        throw new Error('标签名称不能为空且不能超过50个字符')
+      }
+      updateData.name = updates.name.trim()
+    }
+
+    if (updates.color !== undefined) {
+      if (updates.color && !updates.color.match(/^#[0-9A-Fa-f]{6}$/)) {
+        throw new Error('颜色格式不正确，请使用十六进制格式如 #cccccc')
+      }
+      updateData.color = updates.color
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('没有需要更新的内容')
+    }
+
+    const { data: tag, error } = await supabase
+      .from('tags')
+      .update(updateData)
+      .eq('id', tagId)
+      .eq('owner_id', userId)
+      .eq('is_public', false) // 确保不能修改公共标签
+      .select()
+      .single()
+
+    if (error) {
+      // 处理重复标签名称错误
+      if (error.code === '23505') {
+        throw new Error('您已经创建了同名的标签')
+      }
+      throw new Error(error.message || '更新标签失败')
+    }
+
+    return tag
+  },
+
+  // 获取用户可用的标签列表（包括自己的私有标签和公共标签）
+  async getUserAvailableTags(userId) {
+    if (!userId) {
+      throw new Error('用户ID不能为空')
+    }
+
+    try {
+      // 首先尝试Supabase
+      const { data: tags, error } = await supabase
+        .from('tags')
+        .select(`
+          id,
+          name,
+          color,
+          is_public,
+          owner_id,
+          created_at,
+          mindmap_tags(count)
+        `)
+        .or(`owner_id.eq.${userId},is_public.eq.true`)
+        .order('is_public', { ascending: true }) // 私有标签在前
+        .order('created_at', { ascending: false })
+
+      if (!error) {
+        console.log('Supabase获取标签列表成功')
+        return tags.map(tag => ({
+          ...tag,
+          usageCount: tag.mindmap_tags?.[0]?.count || 0,
+          isOwned: tag.owner_id === userId
+        }))
+      }
+
+      console.warn('Supabase获取标签失败，使用本地存储:', error.message)
+    } catch (error) {
+      console.warn('Supabase连接失败，使用本地存储:', error.message)
+    }
+
+    // 本地存储备用方案
+    const userTags = tagStorageManager.getUserTags(userId)
+    const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
+
+    // 计算每个标签的使用次数
+    const tagsWithUsage = userTags.map(tag => {
+      const usageCount = mindMapTagRelations.filter(relation => relation.tag_id === tag.id).length
+      return {
+        ...tag,
+        usageCount: usageCount,
+        isOwned: tag.owner_id === userId
+      }
+    })
+
+    // 按创建时间倒序排列
+    tagsWithUsage.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+    console.log('本地存储获取标签列表成功')
+    return tagsWithUsage
+  },
+
+  // 为思维导图添加标签
+  async addTagToMindMap(userId, mindMapId, tagId) {
+    if (!userId || !mindMapId || !tagId) {
+      throw new Error('用户ID、思维导图ID和标签ID不能为空')
+    }
+
+    try {
+      // 首先尝试Supabase
+      // 验证思维导图是否属于当前用户
+      const { data: mindMap, error: mindMapError } = await supabase
+        .from('mind_maps')
+        .select('id')
+        .eq('id', mindMapId)
+        .eq('user_id', userId)
+        .single()
+
+      if (!mindMapError && mindMap) {
+        // 验证标签是否可用
+        const { data: tag, error: tagError } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('id', tagId)
+          .or(`owner_id.eq.${userId},is_public.eq.true`)
+          .single()
+
+        if (!tagError && tag) {
+          // 先检查是否已存在关联
+          const { data: existing } = await supabase
+            .from('mindmap_tags')
+            .select('*')
+            .eq('mindmap_id', mindMapId)
+            .eq('tag_id', tagId)
+            .single()
+
+          if (existing) {
+            throw new Error('该思维导图已经添加了此标签')
+          }
+
+          // 添加标签关联
+          const { data: relation, error } = await supabase
+            .from('mindmap_tags')
+            .insert([{
+              mindmap_id: mindMapId,
+              tag_id: tagId
+            }])
+            .select()
+            .single()
+
+          if (!error) {
+            console.log('Supabase添加标签关联成功')
+            return relation
+          }
+
+          // 处理其他错误
+          if (error.code === '23505') {
+            throw new Error('该思维导图已经添加了此标签')
+          }
+        }
+      }
+
+      console.warn('Supabase操作失败，使用本地存储')
+    } catch (error) {
+      console.warn('Supabase连接失败，使用本地存储:', error.message)
+    }
+
+    // 本地存储备用方案
+    const userTags = tagStorageManager.getUserTags(userId)
+    const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
+
+    // 验证标签是否存在
+    const tag = userTags.find(t => t.id === tagId)
+    if (!tag) {
+      throw new Error('标签不存在或无权限使用')
+    }
+
+    // 检查是否已经关联
+    const existingRelation = mindMapTagRelations.find(r => 
+      r.mindmap_id === mindMapId && r.tag_id === tagId
+    )
+    if (existingRelation) {
+      throw new Error('该思维导图已经添加了此标签')
+    }
+
+    // 创建新关联
+    const newRelation = {
+      id: tagStorageManager.generateId(),
+      mindmap_id: mindMapId,
+      tag_id: tagId,
+      created_at: new Date().toISOString()
+    }
+
+    mindMapTagRelations.push(newRelation)
+    
+    if (!tagStorageManager.saveMindMapTags(userId, mindMapTagRelations)) {
+      throw new Error('保存标签关联到本地存储失败')
+    }
+
+    console.log('本地存储添加标签关联成功')
+    return newRelation
+  },
+
+  // 从思维导图移除标签
+  async removeTagFromMindMap(userId, mindMapId, tagId) {
+    if (!userId || !mindMapId || !tagId) {
+      throw new Error('用户ID、思维导图ID和标签ID不能为空')
+    }
+
+    // 验证思维导图是否属于当前用户
+    const { data: mindMap, error: mindMapError } = await supabase
+      .from('mind_maps')
+      .select('id')
+      .eq('id', mindMapId)
+      .eq('user_id', userId)
+      .single()
+
+    if (mindMapError || !mindMap) {
+      throw new Error('思维导图不存在或无权限操作')
+    }
+
+    // 移除标签关联
+    const { error } = await supabase
+      .from('mindmap_tags')
+      .delete()
+      .eq('mindmap_id', mindMapId)
+      .eq('tag_id', tagId)
+
+    if (error) {
+      throw new Error(error.message || '移除标签失败')
+    }
+
+    return true
+  },
+
+  // 获取思维导图的标签列表
+  async getMindMapTags(userId, mindMapId) {
+    if (!userId || !mindMapId) {
+      throw new Error('用户ID和思维导图ID不能为空')
+    }
+
+    try {
+      // 首先尝试Supabase
+      // 验证思维导图是否属于当前用户
+      const { data: mindMap, error: mindMapError } = await supabase
+        .from('mind_maps')
+        .select('id')
+        .eq('id', mindMapId)
+        .eq('user_id', userId)
+        .single()
+
+      if (!mindMapError && mindMap) {
+        const { data: tags, error } = await supabase
+          .from('mindmap_tags')
+          .select(`
+            tag_id,
+            tags (
+              id,
+              name,
+              color,
+              is_public,
+              owner_id
+            )
+          `)
+          .eq('mindmap_id', mindMapId)
+
+        if (!error) {
+          console.log('Supabase获取思维导图标签成功')
+          return tags.map(item => ({
+            ...item.tags,
+            isOwned: item.tags.owner_id === userId
+          }))
+        }
+      }
+
+      console.warn('Supabase获取思维导图标签失败，使用本地存储')
+    } catch (error) {
+      console.warn('Supabase连接失败，使用本地存储:', error.message)
+    }
+
+    // 本地存储备用方案
+    const userTags = tagStorageManager.getUserTags(userId)
+    const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
+
+    // 获取当前思维导图的标签关联
+    const mindMapRelations = mindMapTagRelations.filter(relation => 
+      relation.mindmap_id === mindMapId
+    )
+
+    // 根据关联获取标签详情
+    const tags = mindMapRelations.map(relation => {
+      const tag = userTags.find(t => t.id === relation.tag_id)
+      if (tag) {
+        return {
+          ...tag,
+          isOwned: tag.owner_id === userId
+        }
+      }
+      return null
+    }).filter(Boolean)
+
+    console.log('本地存储获取思维导图标签成功')
+    return tags
+  },
+
+  // 根据标签筛选思维导图
+  async getMindMapsByTags(userId, tagIds, matchAll = false) {
+    if (!userId) {
+      throw new Error('用户ID不能为空')
+    }
+
+    if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0) {
+      throw new Error('标签ID列表不能为空')
+    }
+
+    let query = supabase
+      .from('mind_maps')
+      .select(`
+        id,
+        title,
+        created_at,
+        updated_at,
+        is_public,
+        mindmap_tags!inner (
+          tag_id,
+          tags (
+            id,
+            name,
+            color
+          )
+        )
+      `)
+      .eq('user_id', userId)
+
+    if (matchAll) {
+      // 需要包含所有指定标签的思维导图
+      // 这需要更复杂的查询，暂时使用 in 查询后在前端过滤
+      query = query.in('mindmap_tags.tag_id', tagIds)
+    } else {
+      // 包含任一指定标签的思维导图
+      query = query.in('mindmap_tags.tag_id', tagIds)
+    }
+
+    const { data: mindMaps, error } = await query.order('updated_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message || '根据标签筛选思维导图失败')
+    }
+
+    // 如果需要匹配所有标签，在前端进行过滤
+    if (matchAll) {
+      return mindMaps.filter(mindMap => {
+        const mindMapTagIds = mindMap.mindmap_tags.map(mt => mt.tag_id)
+        return tagIds.every(tagId => mindMapTagIds.includes(tagId))
+      })
+    }
+
+    return mindMaps
+  },
+
+  // 批量为思维导图添加标签
+  async addTagsToMindMap(userId, mindMapId, tagIds) {
+    if (!userId || !mindMapId || !Array.isArray(tagIds) || tagIds.length === 0) {
+      throw new Error('参数不正确')
+    }
+
+    // 验证思维导图是否属于当前用户
+    const { data: mindMap, error: mindMapError } = await supabase
+      .from('mind_maps')
+      .select('id')
+      .eq('id', mindMapId)
+      .eq('user_id', userId)
+      .single()
+
+    if (mindMapError || !mindMap) {
+      throw new Error('思维导图不存在或无权限操作')
+    }
+
+    // 验证所有标签是否可用
+    const { data: tags, error: tagsError } = await supabase
+      .from('tags')
+      .select('id')
+      .in('id', tagIds)
+      .or(`owner_id.eq.${userId},is_public.eq.true`)
+
+    if (tagsError) {
+      throw new Error('验证标签权限失败')
+    }
+
+    if (tags.length !== tagIds.length) {
+      throw new Error('部分标签不存在或无权限使用')
+    }
+
+    // 批量插入标签关联
+    const relations = tagIds.map(tagId => ({
+      mindmap_id: mindMapId,
+      tag_id: tagId
+    }))
+
+    const { data: result, error } = await supabase
+      .from('mindmap_tags')
+      .insert(relations)
+      .select()
+
+    if (error) {
+      throw new Error(error.message || '批量添加标签失败')
+    }
+
+    return result
+  },
+
+  // 搜索标签
+  async searchTags(userId, searchTerm) {
+    if (!userId || !searchTerm) {
+      throw new Error('用户ID和搜索词不能为空')
+    }
+
+    const { data: tags, error } = await supabase
+      .from('tags')
+      .select('id, name, color, is_public, owner_id, created_at')
+      .or(`owner_id.eq.${userId},is_public.eq.true`)
+      .ilike('name', `%${searchTerm}%`)
+      .order('is_public', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(20)
+
+    if (error) {
+      throw new Error(error.message || '搜索标签失败')
+    }
+
+    return tags.map(tag => ({
+      ...tag,
+      isOwned: tag.owner_id === userId
+    }))
+  },
+
+  // 获取标签使用统计
+  async getTagUsageStats(userId, tagId) {
+    if (!userId || !tagId) {
+      throw new Error('用户ID和标签ID不能为空')
+    }
+
+    // 验证标签权限
+    const { data: tag, error: tagError } = await supabase
+      .from('tags')
+      .select('id, name, is_public, owner_id')
+      .eq('id', tagId)
+      .or(`owner_id.eq.${userId},is_public.eq.true`)
+      .single()
+
+    if (tagError || !tag) {
+      throw new Error('标签不存在或无权限查看')
+    }
+
+    // 获取使用统计
+    const { data: stats, error } = await supabase
+      .from('mindmap_tags')
+      .select(`
+        mindmap_id,
+        mind_maps (
+          id,
+          title,
+          updated_at
+        )
+      `)
+      .eq('tag_id', tagId)
+      .eq('mind_maps.user_id', userId)
+
+    if (error) {
+      throw new Error(error.message || '获取标签使用统计失败')
+    }
+
+    return {
+      tag: tag,
+      usageCount: stats.length,
+      usedByMindMaps: stats.map(item => item.mind_maps)
+    }
+  }
+}
+
 // 简单的密码哈希函数，实际应用中应使用更安全的方法
 async function hashPassword(password) {
   // 在实际应用中，密码哈希应在后端完成

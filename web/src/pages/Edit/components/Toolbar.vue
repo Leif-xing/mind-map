@@ -60,6 +60,10 @@
           <span class="icon iconfont iconexport"></span>
           <span class="text">保存</span>
         </div>
+        <div class="toolbarBtn" @click="showTagManager" v-if="!isMobile">
+          <span class="icon iconfont iconbiaoqian"></span>
+          <span class="text">标签管理</span>
+        </div>
         <div class="toolbarBtn" @click="saveLocalFile" v-if="false">
           <span class="icon iconfont iconlingcunwei"></span>
           <span class="text">{{ $t('toolbar.saveAs') }}</span>
@@ -170,6 +174,9 @@
       @load-mind-map="handleLoadMindMap"
     />
     
+    <!-- 标签管理器 -->
+    <MindMapTagManager ref="tagManager" />
+    
     <!-- 新建思维导图保存确认对话框 -->
     <el-dialog
       title="温馨提示"
@@ -225,6 +232,7 @@ import NodeTag from './NodeTag.vue'
 import Export from './Export.vue'
 import Import from './Import.vue'
 import MindMapHistory from './MindMapHistory.vue'
+import MindMapTagManager from './MindMapTagManager.vue'
 import { mapState } from 'vuex'
 import { Notification } from 'element-ui'
 import exampleData from 'simple-mind-map/example/exampleData'
@@ -266,7 +274,8 @@ export default {
     Export,
     Import,
     ToolbarNodeBtnList,
-    MindMapHistory
+    MindMapHistory,
+    MindMapTagManager
   },
   data() {
     return {
@@ -996,6 +1005,11 @@ export default {
       }
     },
     
+    // 显示标签管理器
+    showTagManager() {
+      this.$refs.tagManager.show()
+    },
+
     // 刷新思维导图列表
     async refreshMindMaps() {
       try {

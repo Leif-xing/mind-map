@@ -48,3 +48,39 @@ CREATE TRIGGER update_mind_maps_updated_at
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_mind_maps_user_id ON mind_maps(user_id);
 CREATE INDEX idx_mind_maps_created_at ON mind_maps(created_at);
+
+-- 1. 标签表
+CREATE TABLE tags (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  color text DEFAULT '#cccccc',         -- 可选字段，用于前端展示
+  is_public boolean DEFAULT false,      -- 是否公共标签
+  owner_id uuid REFERENCES users(id), -- 私人标签归属用户
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (name, owner_id)               -- 避免同一用户重复标签
+);
+
+-- 2. mind_maps 与标签的多对多关联表
+CREATE TABLE mindmap_tags (
+  mindmap_id uuid REFERENCES mind_maps(id) ON DELETE CASCADE,
+  tag_id uuid REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (mindmap_id, tag_id)
+);
+
+-- 3. 开启 RLS
+ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mindmap_tags ENABLE ROW LEVEL SECURITY;
+
+-- 插入常用思维导图标签
+INSERT INTO tags (name, color, is_public, owner_id)
+VALUES
+  ('学习', '#4caf50', true, NULL),
+  ('工作', '#2196f3', true, NULL),
+  ('项目', '#ff9800', true, NULL),
+  ('待办', '#9c27b0', true, NULL),
+  ('灵感', '#e91e63', true, NULL),
+  ('阅读', '#3f51b5', true, NULL),
+  ('目标', '#009688', true, NULL),
+  ('计划', '#795548', true, NULL),
+  ('总结', '#607d8b', true, NULL),
+  ('会议', '#f44336', true, NULL);
