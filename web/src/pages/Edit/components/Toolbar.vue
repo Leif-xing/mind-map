@@ -239,6 +239,7 @@ import exampleData from 'simple-mind-map/example/exampleData'
 import { getData } from '../../../api'
 import ToolbarNodeBtnList from './ToolbarNodeBtnList.vue'
 import { throttle, isMobile } from 'simple-mind-map/src/utils/index'
+import { setMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
 
 // 工具栏
 let fileHandle = null
@@ -709,8 +710,7 @@ export default {
           
           // 保存成功后，立即更新本地缓存
           try {
-            const cacheKey = `mindmap_cache_${result.id}`;
-            localStorage.setItem(cacheKey, JSON.stringify(data));
+            setMindMapCache(result.id, data);
           } catch (error) {
           }
         } else {
@@ -779,8 +779,7 @@ export default {
           
           // 自动保存成功后，立即更新本地缓存
           try {
-            const cacheKey = `mindmap_cache_${result.id}`;
-            localStorage.setItem(cacheKey, JSON.stringify(data));
+            setMindMapCache(result.id, data);
           } catch (error) {
           }
         } else {
@@ -788,8 +787,7 @@ export default {
           const currentMindMapId = this.$store.state.currentMindMapId;
           if (currentMindMapId) {
             try {
-              const cacheKey = `mindmap_cache_${currentMindMapId}`;
-              localStorage.setItem(cacheKey, JSON.stringify(data));
+              setMindMapCache(currentMindMapId, data);
             } catch (error) {
             }
           }
@@ -932,13 +930,12 @@ export default {
     
     // 从缓存中获取思维导图数据（如果缓存中没有，则从数据库获取）
     async getMindMapDataFromCache(mindMapId) {
-      // 1. 先尝试从localStorage获取
+      // 1. 先尝试从统一缓存获取
       try {
-        const cacheKey = `mindmap_cache_${mindMapId}`;
-        const cachedData = localStorage.getItem(cacheKey);
+        const cachedData = getMindMapCache(mindMapId);
         
         if (cachedData) {
-          return JSON.parse(cachedData);
+          return cachedData;
         }
         
         // 2. 如果缓存中没有，从数据库获取
@@ -968,8 +965,7 @@ export default {
     // 保存思维导图数据到缓存
     saveMindMapDataToCache(mindMapId, data) {
       try {
-        const cacheKey = `mindmap_cache_${mindMapId}`;
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+        setMindMapCache(mindMapId, data);
       } catch (error) {
         // 保存失败，但不抛出错误
       }
@@ -1146,8 +1142,7 @@ export default {
         // 清空选中状态
         // 清理被删除思维导图的本地缓存
         this.selectedMindMaps.forEach(mindMap => {
-          const deletedMindMapCacheKey = `mindmap_cache_${mindMap.id}`;
-          localStorage.removeItem(deletedMindMapCacheKey);
+          removeMindMapCache(mindMap.id);
         });
         
         this.selectedMindMaps = []
@@ -1160,12 +1155,13 @@ export default {
         
         // 批量删除后清空思维导图内容缓存
         const currentMindMapId = this.$store.state.currentMindMapId;
-        const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-        cacheKeys.forEach(key => {
-          if (currentMindMapId && !key.includes(currentMindMapId)) {
-            localStorage.removeItem(key);
+        // 获取所有缓存的ID
+        const allCacheIds = Object.keys(this.$store.state.mindMapCacheManager?.cache || {});
+        allCacheIds.forEach(cacheId => {
+          if (currentMindMapId && cacheId !== currentMindMapId.toString()) {
+            removeMindMapCache(cacheId);
           } else if (!currentMindMapId) {
-            localStorage.removeItem(key);
+            removeMindMapCache(cacheId);
           }
         });
         

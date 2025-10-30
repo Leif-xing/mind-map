@@ -11,10 +11,16 @@ import i18n from './i18n'
 import { getLang } from '@/api'
 import Message from './element-ui-config' // 导入禁用消息的配置
 import { dragDirective } from './element-ui-config' // 导入拖拽指令
-// import VConsole from 'vconsole'
-// const vConsole = new VConsole()
+import { mindMapCacheManager } from '@/utils/mindmap-cache-manager'
 
+// 初始化缓存管理器
+mindMapCacheManager.init()
 
+// 将缓存管理器添加到Vue原型中，方便全局访问
+Vue.prototype.$mindMapCacheManager = mindMapCacheManager
+
+// 将缓存管理器添加到store中
+store.state.mindMapCacheManager = mindMapCacheManager
 
 Vue.config.productionTip = false
 const bus = new Vue()

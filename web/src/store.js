@@ -3,6 +3,7 @@ import Vuex from 'vuex'
 import { storeLocalConfig, getUserData, storeUserData } from '@/api'
 import { userApi, mindMapApi, aiConfigApi } from '@/api/supabase-api'
 import { compressMindMap, decompressMindMap } from '@/utils/mindmap-compression'
+import { setMindMapCache, getMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
 
 Vue.use(Vuex)
 
@@ -314,10 +315,9 @@ const store = new Vuex.Store({
           );
           commit('setLocalMindMaps', updatedLocalList);
           
-          // 更新内容缓存 (mindmap_cache_${id})
+          // 更新内容缓存
           try {
-            const cacheKey = `mindmap_cache_${id}`;
-            localStorage.setItem(cacheKey, JSON.stringify(content));
+            setMindMapCache(id, content);
           } catch (error) {
             console.error('更新思维导图内容缓存失败:', error);
           }
@@ -339,10 +339,9 @@ const store = new Vuex.Store({
           const updatedLocalList = [newMindMap, ...state.localMindMaps];
           commit('setLocalMindMaps', updatedLocalList);
           
-          // 更新内容缓存 (mindmap_cache_${newId})
+          // 更新内容缓存
           try {
-            const cacheKey = `mindmap_cache_${result.id}`;
-            localStorage.setItem(cacheKey, JSON.stringify(content));
+            setMindMapCache(result.id, content);
           } catch (error) {
             console.error('创建思维导图内容缓存失败:', error);
           }
@@ -637,8 +636,7 @@ const store = new Vuex.Store({
           let totalUpdated = 0;
           for (const fullMindMapData of fullMindMapDataList) {
             if (fullMindMapData && fullMindMapData.content) {
-              const cacheKey = `mindmap_cache_${fullMindMapData.id}`;
-              localStorage.setItem(cacheKey, JSON.stringify(fullMindMapData.content));
+              setMindMapCache(fullMindMapData.id, fullMindMapData.content);
               totalUpdated++;
             }
           }
@@ -690,15 +688,13 @@ const store = new Vuex.Store({
       }
       
       try {
-        const cacheKey = `mindmap_cache_${mindMapId}`;
         // 检查localStorage中所有以mindmap_cache_开头的键
         const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-        const cachedContent = localStorage.getItem(cacheKey);
+        const cachedContent = getMindMapCache(mindMapId);
         if (!cachedContent) {
           return null;
         }
-        const parsedContent = JSON.parse(cachedContent);
-        return parsedContent;
+        return cachedContent;
       } catch (error) {
         return null;
       }

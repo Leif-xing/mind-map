@@ -173,6 +173,7 @@ import {
   getStrWithBrFromHtml
 } from 'simple-mind-map/src/utils'
 import { mapState } from 'vuex'
+import { setMindMapCache } from '@/utils/mindmap-cache-manager'
 import AiConfigDialog from './AiConfigDialog.vue'
 import AiSelectionDialog from './AiSelectionDialog.vue'
 
@@ -1278,8 +1279,7 @@ export default {
         
         // 保存成功后，立即更新本地缓存
         try {
-          const cacheKey = `mindmap_cache_${currentMindMapId}`;
-          localStorage.setItem(cacheKey, JSON.stringify(currentData));
+          setMindMapCache(currentMindMapId, currentData);
         } catch (error) {
           // console.error('保存思维导图缓存失败:', error);
         }
@@ -1301,8 +1301,7 @@ export default {
           this.$store.commit('setCurrentMindMapId', result.id);
           // 对于新创建的思维导图，也更新本地缓存
           try {
-            const cacheKey = `mindmap_cache_${result.id}`;
-            localStorage.setItem(cacheKey, JSON.stringify(currentData));
+            setMindMapCache(result.id, currentData);
           } catch (error) {
             // console.error('保存新思维导图缓存失败:', error);
           }

@@ -7,6 +7,7 @@
       :visible.sync="visible"
       width="500px"
       append-to-body
+      :close-on-click-modal="false"
       @close="handleClose"
       custom-class="draggable-unified-ai-create-dialog"
     >
@@ -75,6 +76,7 @@
       :visible.sync="saveConfirmVisible"
       width="400px"
       append-to-body
+      :close-on-click-modal="false"
       :before-close="handleSaveConfirmClose"
       custom-class="draggable-save-confirm-dialog"
     >
@@ -99,6 +101,7 @@
 <script>
 import { mapState } from 'vuex'
 import { transformMarkdownTo } from 'simple-mind-map/src/parse/markdownTo'
+import { setMindMapCache } from '@/utils/mindmap-cache-manager'
 
 export default {
   name: 'UnifiedAiCreateDialog',
@@ -709,8 +712,7 @@ export default {
         
         // 保存成功后，立即更新本地缓存
         try {
-          const cacheKey = `mindmap_cache_${currentMindMapId}`;
-          localStorage.setItem(cacheKey, JSON.stringify(currentData));
+          setMindMapCache(currentMindMapId, currentData);
         } catch (error) {
         }
         
@@ -727,8 +729,7 @@ export default {
           this.$store.commit('setCurrentMindMapId', result.id);
           // 对于新创建的思维导图，也更新本地缓存
           try {
-            const cacheKey = `mindmap_cache_${result.id}`;
-            localStorage.setItem(cacheKey, JSON.stringify(currentData));
+            setMindMapCache(result.id, currentData);
           } catch (error) {
           }
         }

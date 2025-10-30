@@ -158,6 +158,7 @@
 
 <script>
 import { mapState } from 'vuex'
+import { setMindMapCache, getMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
 
 export default {
   name: 'MindMapHistory',
@@ -568,8 +569,7 @@ export default {
         this.statusMessage = `已删除: ${mindMap.title}`
         
         // 清理被删除思维导图的本地缓存
-        const deletedMindMapCacheKey = `mindmap_cache_${mindMap.id}`;
-        localStorage.removeItem(deletedMindMapCacheKey);
+        removeMindMapCache(mindMap.id);
         
         // 重新加载思维导图列表
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
@@ -761,16 +761,12 @@ export default {
     async startActualSwitching(targetMindMap) {
       
       try {
-        // 从localStorage获取目标思维导图数据
-        const cacheKey = `mindmap_cache_${targetMindMap.id}`;
-        const cachedDataStr = localStorage.getItem(cacheKey);
+        // 从统一缓存获取目标思维导图数据
+        const cachedData = getMindMapCache(targetMindMap.id);
         
-        if (!cachedDataStr) {
+        if (!cachedData) {
           throw new Error(`未找到思维导图缓存数据 (ID: ${targetMindMap.id})`);
         }
-        
-        // 解析缓存数据
-        const cachedData = JSON.parse(cachedDataStr);
         // 根据数据结构选择合适的方法设置思维导图数据
         if (cachedData.root && cachedData.root.data) {
           // 如果数据包含完整的思维导图结构（根节点、布局、主题等），使用 setFullData
