@@ -80,6 +80,17 @@
         <span class="text">{{ $t('toolbar.image') }}</span>
       </div>
       <div
+        v-if="item === 'numbering'"
+        class="toolbarBtn"
+        :class="{
+          disabled: activeNodes.length <= 0
+        }"
+        @click="handleNumberingClick"
+      >
+        <span class="icon iconfont iconfuhao-dagangshu"></span>
+        <span class="text">编号</span>
+      </div>
+      <div
         v-if="item === 'icon'"
         class="toolbarBtn"
         :class="{
@@ -332,6 +343,155 @@ export default {
     // 打开AI创建
     openAiCreate() {
       this.$bus.$emit('open_ai_create')
+    },
+
+    // 处理编号点击 - 使用图标系统实现编号
+    handleNumberingClick() {
+      if (!this.activeNodes || this.activeNodes.length === 0) {
+        this.$message.warning('请先选择节点')
+        return
+      }
+
+      const selectedNode = this.activeNodes[0]
+      
+      if (selectedNode.isRoot) {
+        // 如果选中根节点，为所有直接子节点编号
+        this.numberingChildNodes(selectedNode)
+      } else {
+        // 如果选中非根节点，仅为当前节点编号
+        this.numberingSingleNode(selectedNode)
+      }
+    },
+
+    // 为所有节点编号（递归处理所有层级）
+    numberingChildNodes(rootNode) {
+      const children = rootNode.children || []
+      if (children.length === 0) {
+        this.$message.info('根节点没有子节点可以编号')
+        return
+      }
+
+      // 递归处理所有层级的节点
+      this.numberingAllNodes(rootNode, 0)
+    },
+
+    // 递归为所有层级的节点编号
+    numberingAllNodes(node, parentLevel) {
+      const children = node.children || []
+      
+      children.forEach((child, index) => {
+        const currentLevel = parentLevel + 1
+        this.toggleNodeNumbering(child, currentLevel, index)
+        
+        // 递归处理子节点
+        if (child.children && child.children.length > 0) {
+          this.numberingAllNodes(child, currentLevel)
+        }
+      })
+    },
+
+    // 为单个节点编号
+    numberingSingleNode(node) {
+      const level = this.getNodeLevel(node)
+      const siblings = this.getSiblingNodes(node)
+      const index = siblings.indexOf(node)
+      
+      this.toggleNodeNumbering(node, level, index)
+    },
+
+    // 切换节点编号状态 - 使用图标系统
+    toggleNodeNumbering(node, level, index) {
+      // 获取节点当前的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否已有编号图标（任何number-开头的图标）
+      const numberIconIndex = iconList.findIndex(item => item.startsWith('number-'))
+      
+      if (numberIconIndex !== -1) {
+        // 移除现有编号图标
+        iconList.splice(numberIconIndex, 1)
+      } else {
+        // 添加新的编号图标
+        const numberingIcon = this.generateNumberingIcon(level, index)
+        if (numberingIcon) {
+          iconList.push(numberingIcon)
+        }
+      }
+      
+      // 更新节点图标
+      node.setIcon(iconList)
+    },
+
+    // 生成编号图标标识
+    generateNumberingIcon(level, index) {
+      // 根据层级确定编号类型和文本
+      let numberType = ''
+      let numberText = ''
+      
+      switch (level) {
+        case 1:
+          // 一级：中文数字
+          numberType = 'number-1'
+          numberText = this.toChineseNumber(index + 1)
+          break
+        case 2:
+          // 二级：阿拉伯数字
+          numberType = 'number-2'
+          numberText = `${index + 1}`
+          break
+        case 3:
+          // 三级：大写字母
+          numberType = 'number-3'
+          numberText = String.fromCharCode(65 + (index % 26))
+          break
+        case 4:
+          // 四级：小写字母
+          numberType = 'number-4'
+          numberText = String.fromCharCode(97 + (index % 26))
+          break
+        default:
+          // 五级及以上：循环使用
+          const cycleLevel = ((level - 1) % 4) + 1
+          return this.generateNumberingIcon(cycleLevel, index)
+      }
+      
+      // 返回图标标识：type_text格式
+      return `${numberType}_${numberText}`
+    },
+
+    // 中文数字转换函数
+    toChineseNumber(num) {
+      const chineseDigits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+      const chineseUnits = ['', '十', '百', '千']
+      
+      if (num === 0) return '零'
+      if (num <= 10) return chineseDigits[num] || '十'
+      if (num < 20) return '十' + (num === 10 ? '' : chineseDigits[num - 10])
+      if (num < 100) {
+        const tens = Math.floor(num / 10)
+        const ones = num % 10
+        return chineseDigits[tens] + '十' + (ones === 0 ? '' : chineseDigits[ones])
+      }
+      
+      // 处理更大的数字
+      return num.toString()
+    },
+
+    // 获取节点层级
+    getNodeLevel(node) {
+      let level = 0
+      let current = node.parent
+      while (current && !current.isRoot) {
+        level++
+        current = current.parent
+      }
+      return level + 1 // 根节点的直接子节点为第1层
+    },
+
+    // 获取同级节点
+    getSiblingNodes(node) {
+      if (!node.parent) return [node]
+      return node.parent.children || []
     }
   }
 }

@@ -393,6 +393,11 @@ export const shortcutKeyList = [
         icon: 'iconsousuo',
         name: '搜索和替换',
         value: `${ctrl} + F`
+      },
+      {
+        icon: 'iconliebiao-youxupailie',
+        name: '切换编号',
+        value: 'Shift + A'
       }
     ]
   },

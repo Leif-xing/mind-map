@@ -266,6 +266,7 @@ export default {
     this.$bus.$off('localStorageExceeded', this.onLocalStorageExceeded)
     window.removeEventListener('resize', this.handleResize)
     this.$bus.$off('showDownloadTip', this.showDownloadTip)
+    this.$bus.$off('execCommand', this.handleExecCommand)
     this.mindMap.destroy()
   },
   methods: {
@@ -466,6 +467,13 @@ export default {
       this.mindMap.keyCommand.addShortcut('Control+s', () => {
         this.manualSave()
       })
+      this.mindMap.keyCommand.addShortcut('Shift+a', () => {
+        this.handleToggleNumbering()
+      })
+      
+      // 设置编号更新监听器
+      this.setupNumberingUpdateListener()
+      
       // 转发事件
       ;[
         'node_active',
@@ -506,6 +514,13 @@ export default {
       }
       // 发布思维导图实例，以便其他组件可以访问
       this.$bus.$emit('mind_map_inited', this.mindMap)
+      
+      // 注册全局编号方法
+      window.mindMapInstance = {
+        toggleNumbering: () => {
+          this.handleToggleNumbering()
+        }
+      }
       // 解析url中的文件
       if (hasFileURL) {
         this.$bus.$emit('handle_file_url')
@@ -577,7 +592,6 @@ export default {
             this.mindMap.view.reset();
           }
         } catch (err) {
-          // console.error('Edit.vue - 强制重新渲染出错:', err);
         }
       }
     },
@@ -594,7 +608,6 @@ export default {
         const data = mindMapDataObj.content || mindMapDataObj;
         
         if (!data) {
-          // console.error('❌ Edit.vue - 没有有效的数据内容');
           return;
         }
         
@@ -774,6 +787,342 @@ export default {
         showCancelButton: false,
         showConfirmButton: false
       })
+    },
+
+    // 获取字母（A, B, C... Z, AA, AB...）
+    getAlphabet(num) {
+      if (num <= 0) return ''
+      let result = ''
+      num-- // 从0开始计算
+      
+      while (num >= 0) {
+        result = String.fromCharCode(65 + (num % 26)) + result
+        num = Math.floor(num / 26) - 1
+      }
+      
+      return result
+    },
+
+    // 处理编号切换 - 调用ToolbarNodeBtnList的编号功能
+    handleToggleNumbering() {
+      // 直接从思维导图实例获取活动节点
+      const activeNodes = this.mindMap.renderer.activeNodeList
+      
+      if (!activeNodes || activeNodes.length === 0) {
+        this.$message.warning('请先选择节点')
+        return
+      }
+
+      const selectedNode = activeNodes[0]
+      
+      if (selectedNode.isRoot) {
+        // 如果选中根节点，为所有层级的节点编号
+        this.numberingAllNodesFromRoot(selectedNode)
+      } else {
+        // 如果选中非根节点，仅为当前节点编号
+        this.numberingSingleNodeFromShortcut(selectedNode)
+      }
+    },
+
+    // 从根节点为所有层级节点编号
+    numberingAllNodesFromRoot(rootNode) {
+      const children = rootNode.children || []
+      if (children.length === 0) {
+        this.$message.info('根节点没有子节点可以编号')
+        return
+      }
+
+      // 递归处理所有层级的节点
+      this.numberingAllNodesRecursive(rootNode, 0)
+    },
+
+    // 递归为所有层级的节点编号
+    numberingAllNodesRecursive(node, parentLevel) {
+      const children = node.children || []
+      
+      children.forEach((child, index) => {
+        const currentLevel = parentLevel + 1
+        this.toggleNodeNumberingFromShortcut(child, currentLevel, index)
+        
+        // 递归处理子节点
+        if (child.children && child.children.length > 0) {
+          this.numberingAllNodesRecursive(child, currentLevel)
+        }
+      })
+    },
+
+    // 为单个节点编号（快捷键触发）
+    numberingSingleNodeFromShortcut(node) {
+      const level = this.getNodeLevel(node)
+      const siblings = this.getSiblingNodes(node)
+      const index = siblings.indexOf(node)
+      
+      this.toggleNodeNumberingFromShortcut(node, level, index)
+    },
+
+    // 切换节点编号状态（快捷键版本）- 使用图标系统
+    toggleNodeNumberingFromShortcut(node, level, index) {
+      // 获取节点当前的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否已有编号图标（任何number-开头的图标）
+      const numberIconIndex = iconList.findIndex(item => item.startsWith('number-'))
+      
+      if (numberIconIndex !== -1) {
+        // 移除现有编号图标
+        iconList.splice(numberIconIndex, 1)
+      } else {
+        // 添加新的编号图标
+        const numberingIcon = this.generateNumberingIconFromShortcut(level, index)
+        if (numberingIcon) {
+          iconList.push(numberingIcon)
+        }
+      }
+      
+      // 更新节点图标
+      node.setIcon(iconList)
+    },
+
+    // 生成编号图标标识（快捷键版本）
+    generateNumberingIconFromShortcut(level, index) {
+      // 根据层级确定编号类型和文本
+      let numberType = ''
+      let numberText = ''
+      
+      switch (level) {
+        case 1:
+          // 一级：中文数字
+          numberType = 'number-1'
+          numberText = this.toChineseNumberFromShortcut(index + 1)
+          break
+        case 2:
+          // 二级：阿拉伯数字
+          numberType = 'number-2'
+          numberText = `${index + 1}`
+          break
+        case 3:
+          // 三级：大写字母
+          numberType = 'number-3'
+          numberText = String.fromCharCode(65 + (index % 26))
+          break
+        case 4:
+          // 四级：小写字母
+          numberType = 'number-4'
+          numberText = String.fromCharCode(97 + (index % 26))
+          break
+        default:
+          // 五级及以上：循环使用
+          const cycleLevel = ((level - 1) % 4) + 1
+          return this.generateNumberingIconFromShortcut(cycleLevel, index)
+      }
+      
+      // 返回图标标识：type_text格式
+      return `${numberType}_${numberText}`
+    },
+
+    // 中文数字转换函数（快捷键版本）
+    toChineseNumberFromShortcut(num) {
+      const chineseDigits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+      const chineseUnits = ['', '十', '百', '千']
+      
+      if (num === 0) return '零'
+      if (num <= 10) return chineseDigits[num] || '十'
+      if (num < 20) return '十' + (num === 10 ? '' : chineseDigits[num - 10])
+      if (num < 100) {
+        const tens = Math.floor(num / 10)
+        const ones = num % 10
+        return chineseDigits[tens] + '十' + (ones === 0 ? '' : chineseDigits[ones])
+      }
+      
+      // 处理更大的数字
+      return num.toString()
+    },
+
+    // 监听删除节点事件，更新编号
+    setupNumberingUpdateListener() {
+      // 创建事件处理函数
+      this.handleExecCommand = (commandName, ...args) => {
+        // 删除节点相关命令
+        if (commandName === 'REMOVE_NODE' || commandName === 'REMOVE_CURRENT_NODE' || commandName === 'CUT_NODE') {
+          this.triggerNumberingUpdate()
+        }
+        
+        // 节点位置变换相关命令
+        if (commandName === 'MOVE_NODE_TO' || commandName === 'UP_NODE' || commandName === 'DOWN_NODE' || commandName === 'INSERT_NODE') {
+          this.triggerNumberingUpdate()
+        }
+      }
+      
+      // 监听删除节点的快捷键和按钮
+      this.$bus.$on('execCommand', this.handleExecCommand)
+      
+      // 监听拖动结束事件
+      this.mindMap.on('node_dragend', () => {
+        this.triggerNumberingUpdate()
+      })
+      
+      // 同时监听思维导图实例的命令执行
+      this.mindMap.on('afterExecCommand', (commandName, ...args) => {
+        
+        // 删除节点相关命令
+        if (commandName === 'REMOVE_NODE' || commandName === 'REMOVE_CURRENT_NODE' || commandName === 'CUT_NODE') {
+          this.triggerNumberingUpdate()
+        }
+        
+        // 节点位置变换相关命令
+        if (commandName === 'MOVE_NODE_TO' || commandName === 'UP_NODE' || commandName === 'DOWN_NODE' || commandName === 'INSERT_NODE') {
+          this.triggerNumberingUpdate()
+        }
+      })
+    },
+
+    // 触发编号更新（统一的延迟更新机制）
+    triggerNumberingUpdate() {
+      // 延迟执行编号更新，确保节点操作完成后再更新
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.updateSiblingNumbering()
+        }, 50)
+      })
+    },
+
+    // 更新同级节点编号
+    updateSiblingNumbering() {
+      
+      // 递归检查所有节点，更新有编号的同级节点
+      this.updateNodeGroupsRecursive(this.mindMap.renderer.root, 0)
+    },
+
+    // 递归更新节点组编号
+    updateNodeGroupsRecursive(node, parentLevel) {
+      const children = node.children || []
+      
+      if (children.length > 0) {
+        const currentLevel = parentLevel + 1
+        
+        // 检查当前层级是否有编号节点
+        const numberedChildren = children.filter(child => {
+          const iconList = child.getData('icon') || []
+          return iconList.some(item => item.startsWith('number-'))
+        })
+        
+        // 如果有编号节点，重新排序
+        if (numberedChildren.length > 0) {
+          numberedChildren.forEach((child, index) => {
+            const iconList = [...(child.getData('icon') || [])]
+            const numberIconIndex = iconList.findIndex(item => item.startsWith('number-'))
+            
+            if (numberIconIndex !== -1) {
+              // 生成新的编号图标
+              const newNumberingIcon = this.generateNumberingIconFromShortcut(currentLevel, index)
+              if (newNumberingIcon) {
+                iconList[numberIconIndex] = newNumberingIcon
+                child.setIcon(iconList)
+              }
+            }
+          })
+        }
+        
+        // 递归处理子节点
+        children.forEach(child => {
+          if (child.children && child.children.length > 0) {
+            this.updateNodeGroupsRecursive(child, currentLevel)
+          }
+        })
+      }
+    },
+
+
+    // 为单个节点添加编号
+    addNodeNumbering(node, level, index) {
+      const numberingConfig = this.generateNumberingConfig(level, index)
+      const currentText = node.data.text || ''
+      const numberedText = this.addNumberingPrefix(currentText, numberingConfig)
+      
+      node.setData({ 
+        text: numberedText,
+        numbering: numberingConfig
+      })
+    },
+
+    // 移除单个节点的编号
+    removeNodeNumbering(node) {
+      const currentText = node.data.text || ''
+      const newText = this.removeNumberingPrefix(currentText)
+      
+      // 从节点数据中移除编号配置
+      const newData = { ...node.data }
+      delete newData.numbering
+      newData.text = newText
+      
+      node.setData(newData)
+    },
+
+    // 检查兄弟节点是否都有编号
+    hasNumberingPrefix(text) {
+      return /<span[^>]*style="[^"]*background-color:[^"]*"[^>]*>.*?<\/span>/.test(text)
+    },
+
+    // 生成编号配置
+    generateNumberingConfig(level, index) {
+      const numberText = this.getNumberingSymbol(level, index)
+      const backgroundColor = this.getNumberingColor(index)
+
+      return {
+        text: numberText,
+        backgroundColor,
+        level,
+        index
+      }
+    },
+
+    // 转换为罗马数字
+    toRoman(num) {
+      const values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+      const numerals = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I']
+      let result = ''
+      
+      for (let i = 0; i < values.length; i++) {
+        while (num >= values[i]) {
+          result += numerals[i]
+          num -= values[i]
+        }
+      }
+      return result
+    },
+
+    // 添加编号前缀
+    addNumberingPrefix(text, config) {
+      const circle = `<span style="display: inline-block; width: 20px; height: 20px; background-color: ${config.backgroundColor}; color: white; border-radius: 50%; text-align: center; line-height: 20px; font-size: 12px; margin-right: 5px; vertical-align: middle;">${config.text}</span>`
+      return circle + text
+    },
+
+    // 移除编号前缀
+    removeNumberingPrefix(text) {
+      // 移除HTML格式的圆形编号标记
+      return text.replace(/<span[^>]*style="[^"]*background-color:[^"]*"[^>]*>.*?<\/span>\s*/i, '')
+    },
+
+    // 检查是否有编号前缀
+    hasNumberingPrefix(text) {
+      return /<span[^>]*style="[^"]*background-color:[^"]*"[^>]*>.*?<\/span>/.test(text)
+    },
+
+    // 获取节点层级
+    getNodeLevel(node) {
+      let level = 0
+      let current = node.parent
+      while (current && !current.isRoot) {
+        level++
+        current = current.parent
+      }
+      return level + 1 // 根节点的直接子节点为第1层
+    },
+
+    // 获取同级节点
+    getSiblingNodes(node) {
+      if (!node.parent) return [node]
+      return node.parent.children || []
     }
   }
 }

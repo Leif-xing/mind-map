@@ -251,6 +251,7 @@ const defaultBtnList = [
   'childNode',
   'deleteNode',
   'image',
+  'numbering',
   'icon',
   'link',
   'note',
@@ -989,7 +990,6 @@ export default {
         
         
       } catch (error) {
-        console.error('🔄 预加载思维导图失败:', error);
         // 预加载失败不影响用户体验，静默处理
       }
     },
@@ -1038,7 +1038,6 @@ export default {
         //   this.statusMessage = '';
         // }, 5000);
       } catch (error) {
-        console.error('🔄 Toolbar - 刷新失败:', error);
         this.$message.error('刷新失败: ' + error.message);
         this.statusMessage = `刷新失败: ${error.message}`;
         
@@ -1231,7 +1230,6 @@ export default {
         
       } catch (err) {
         if (err !== 'cancel') {
-          // console.error('一键删除思维导图失败:', err)
           this.$message.error('一键删除思维导图失败: ' + err.message)
           this.statusMessage = '一键删除失败: ' + err.message
         } else {

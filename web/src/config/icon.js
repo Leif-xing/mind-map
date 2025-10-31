@@ -127,7 +127,93 @@ const weatherList = [
   '<svg t="1690592392150" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3861" width="200" height="200"><path d="M402.432 356.3008m-286.5152 0a286.5152 286.5152 0 1 0 573.0304 0 286.5152 286.5152 0 1 0-573.0304 0Z" fill="#9FDFFF" p-id="3862"></path><path d="M731.648 546.9184m-253.0816 0a253.0816 253.0816 0 1 0 506.1632 0 253.0816 253.0816 0 1 0-506.1632 0Z" fill="#78CCFF" p-id="3863"></path><path d="M268.4416 570.8288m-229.2224 0a229.2224 229.2224 0 1 0 458.4448 0 229.2224 229.2224 0 1 0-458.4448 0Z" fill="#78CCFF" p-id="3864"></path><path d="M266.0864 570.8288h463.2064v229.2224H266.0864z" fill="#78CCFF" p-id="3865"></path><path d="M324.096 831.232h17.6128l82.7392 118.9888h0.6144v-118.9888h16.7936v146.2272h-17.2032L341.504 857.2416h-0.6144v120.2176H324.096v-146.2272zM536.8832 809.5232h14.5408l-72.4992 188.416h-14.7456l72.704-188.416zM616.5504 831.232h19.456l57.5488 146.2272h-18.2272l-15.5648-40.96h-67.1744l-15.5648 40.96h-18.0224l57.5488-146.2272z m-18.6368 91.136h56.5248l-27.648-73.1136h-0.8192l-28.0576 73.1136z" fill="#78CCFF" p-id="3866"></path></svg>'
 ]
 
+// 计算颜色亮度（0-255）
+const getLuminance = (hex) => {
+  // 移除 # 符号
+  const rgb = hex.replace('#', '')
+  const r = parseInt(rgb.substr(0, 2), 16)
+  const g = parseInt(rgb.substr(2, 2), 16) 
+  const b = parseInt(rgb.substr(4, 2), 16)
+  
+  // 使用 ITU-R BT.709 标准计算亮度
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// 根据背景色选择最佳文本颜色
+const getTextColor = (backgroundColor) => {
+  const luminance = getLuminance(backgroundColor)
+  // 如果背景色较亮，使用黑色文字；否则使用白色文字
+  return luminance > 128 ? '#000000' : '#FFFFFF'
+}
+
+// 生成编号图标的SVG
+const generateNumberIcon = (text, color) => {
+  // 根据文字长度调整字体大小
+  const fontSize = text.length > 2 ? 6 : text.length > 1 ? 8 : 10
+  // 根据背景色选择最佳文本颜色
+  const textColor = getTextColor(color)
+  
+  return `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 20 20" width="20" height="20">
+    <circle cx="10" cy="10" r="10" fill="${color}"/>
+    <text x="10" y="10" text-anchor="middle" dominant-baseline="central" fill="${textColor}" font-size="${fontSize}" font-weight="bold" font-family="Arial, sans-serif">${text}</text>
+  </svg>`
+}
+
+// 中文数字转换函数
+const toChineseNumber = (num) => {
+  const chineseDigits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+  const chineseUnits = ['', '十', '百', '千']
+  
+  if (num === 0) return '零'
+  if (num <= 10) return chineseDigits[num] || '十'
+  if (num < 20) return '十' + (num === 10 ? '' : chineseDigits[num - 10])
+  if (num < 100) {
+    const tens = Math.floor(num / 10)
+    const ones = num % 10
+    return chineseDigits[tens] + '十' + (ones === 0 ? '' : chineseDigits[ones])
+  }
+  
+  // 处理更大的数字（虽然不太可能用到）
+  return num.toString()
+}
+
+// 19种彩虹色系颜色
+const numberingColors = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+  '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#F4D03F',
+  '#AED6F1', '#A9DFBF', '#F9E79F', '#D2B4DE', '#AEB6BF'
+]
+
+// 生成编号图标列表
+const generateNumberingIcons = (type, textGenerator, count = 20) => {
+  return Array.from({ length: count }, (_, index) => ({
+    name: textGenerator(index),
+    icon: generateNumberIcon(textGenerator(index), numberingColors[index % numberingColors.length])
+  }))
+}
+
 export default [
+  {
+    name: '一级编号（中文数字）',
+    type: 'number-1',
+    list: generateNumberingIcons('number-1', (index) => toChineseNumber(index + 1), 20)
+  },
+  {
+    name: '二级编号（阿拉伯数字）',
+    type: 'number-2',
+    list: generateNumberingIcons('number-2', (index) => `${index + 1}`, 30)
+  },
+  {
+    name: '三级编号（大写字母）',
+    type: 'number-3',
+    list: generateNumberingIcons('number-3', (index) => String.fromCharCode(65 + index), 26)
+  },
+  {
+    name: '四级编号（小写字母）',
+    type: 'number-4',
+    list: generateNumberingIcons('number-4', (index) => String.fromCharCode(97 + index), 26)
+  },
   {
     name: '多彩标记图标', // 分组名称
     type: 'sign2', // 分组的值
