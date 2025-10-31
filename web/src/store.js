@@ -681,6 +681,127 @@ const store = new Vuex.Store({
       }
     },
     
+    // 判断当前思维导图是否需要保存（用于检查差异，带日志输出）
+    async needsSaveForCheck({ dispatch }, { currentMindMap }) {
+      // 递归比较节点的辅助函数
+      const compareNodesForDiff = (oldNode, newNode, depth) => {
+        // 检查节点是否存在
+        const oldExists = oldNode !== null && oldNode !== undefined;
+        const newExists = newNode !== null && newNode !== undefined;
+
+        if (!oldExists && newExists) {
+          console.log(`  `.repeat(depth) + `节点新增: "${newNode.data?.text || '未知节点'}"`);
+          // 继续比较新节点的子节点
+          if (newNode.children) {
+            newNode.children.forEach((child, index) => {
+              compareNodesForDiff(null, child, depth + 1);
+            });
+          }
+          return;
+        }
+
+        if (oldExists && !newExists) {
+          console.log(`  `.repeat(depth) + `节点删除: "${oldNode.data?.text || '未知节点'}"`);
+          return;
+        }
+
+        if (!oldExists && !newExists) {
+          // 都不存在，无需比较
+          return;
+        }
+
+        // 比较节点数据
+        const oldNodeDataStr = JSON.stringify(oldNode.data || {});
+        const newNodeDataStr = JSON.stringify(newNode.data || {});
+
+        if (oldNodeDataStr !== newNodeDataStr) {
+          console.log(`  `.repeat(depth) + `节点数据变化: "${oldNode.data?.text || '未知节点'}" -> "${newNode.data?.text || '未知节点'}"`);
+          console.log(`  `.repeat(depth + 1) + `旧数据:`, oldNode.data);
+          console.log(`  `.repeat(depth + 1) + `新数据:`, newNode.data);
+        }
+
+        // 比较子节点数量
+        const oldChildren = oldNode.children || [];
+        const newChildren = newNode.children || [];
+
+        const maxChildren = Math.max(oldChildren.length, newChildren.length);
+
+        // 比较每个子节点
+        for (let i = 0; i < maxChildren; i++) {
+          if (i >= oldChildren.length) {
+            // 新增子节点
+            console.log(`  `.repeat(depth + 1) + `子节点新增 [${i}]: "${newChildren[i].data?.text || '未知节点'}"`);
+          } else if (i >= newChildren.length) {
+            // 删除子节点
+            console.log(`  `.repeat(depth + 1) + `子节点删除 [${i}]: "${oldChildren[i].data?.text || '未知节点'}"`);
+          } else {
+            // 继续比较子节点
+            compareNodesForDiff(oldChildren[i], newChildren[i], depth + 1);
+          }
+        }
+      };
+
+      // 如果当前思维导图ID为空，则需要保存
+      if (!currentMindMap || !currentMindMap.id) {
+        return true;
+      }
+      
+      try {
+        // 从内容缓存中根据ID获取对应的思维导图数据
+        const cachedMindMap = await dispatch('getMindMapContent', currentMindMap.id);
+        
+        // 如果缓存中没有找到对应数据，则需要保存
+        if (!cachedMindMap) {
+          return true;
+        }
+        
+        // 比较当前思维导图数据与缓存中的数据，只比较root部分
+        const currentRootStr = JSON.stringify(currentMindMap.data.root);
+        const cachedRootStr = JSON.stringify(cachedMindMap.root);
+        
+        // 如果数据不同，则需要保存，同时输出差异
+        if (currentRootStr !== cachedRootStr) {
+          console.group('🔍 思维导图数据差异检测');
+          console.log('当前数据 (Current):', currentMindMap.data.root);
+          console.log('缓存数据 (Cached):', cachedMindMap.root);
+          
+          // 找出具体差异
+          const currentRoot = currentMindMap.data.root;
+          const cachedRoot = cachedMindMap.root;
+          
+          // 比较基本属性
+          if (JSON.stringify(currentRoot.data) !== JSON.stringify(cachedRoot.data)) {
+            console.log('节点数据变化:', {
+              old: cachedRoot.data,
+              new: currentRoot.data
+            });
+          }
+          
+          // 比较子节点数量
+          const currentChildren = currentRoot.children || [];
+          const cachedChildren = cachedRoot.children || [];
+          
+          if (currentChildren.length !== cachedChildren.length) {
+            console.log('子节点数量变化:', {
+              oldCount: cachedChildren.length,
+              newCount: currentChildren.length
+            });
+          }
+          
+          // 递归比较子节点
+          compareNodesForDiff(cachedRoot, currentRoot, 0);
+          
+          console.groupEnd();
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('比较思维导图数据时出错:', error);
+        // 出错时保守地返回需要保存
+        return true;
+      }
+    },
+    
     // 从缓存中获取思维导图内容
     async getMindMapContent({ }, mindMapId) {
       if (!mindMapId) {

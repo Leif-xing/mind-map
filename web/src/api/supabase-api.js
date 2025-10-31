@@ -15,12 +15,10 @@ export const userApi = {
       .single()
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 表示未找到数据
-      // console.log('Supabase API - Check username error:', checkError); // 调试时可启用
       throw new Error('检查用户名时出错')
     }
 
     if (existingUser) {
-      // console.log('Supabase API - Username already exists:', existingUser); // 隐私保护：不输出用户信息
       throw new Error('用户名已存在')
     }
 
@@ -37,11 +35,9 @@ export const userApi = {
       .single()
 
     if (error) {
-      // console.log('Supabase API - Insert user error:', error); // 调试时可启用
       throw new Error(error.message || '注册失败')
     }
 
-    // console.log('Supabase API - User registered successfully:', newUser); // 隐私保护：不输出用户数据
     return newUser
   },
 
@@ -161,7 +157,6 @@ export const userApi = {
   // 更新用户权限
   // 更新用户导图权限
   async updateMindMapPermission(userId, permission) {
-    // console.log('Updating mind map permission:', { userId, permission }); // 隐私保护：不输出用户ID
     
     const { error } = await supabase
       .from('users')
@@ -185,7 +180,6 @@ export const userApi = {
       throw new Error(selectError.message || '获取更新后的用户数据失败')
     }
 
-    // console.log('Updated user data:', updatedUser); // 隐私保护：不输出用户数据
     return updatedUser
   }
 }
@@ -673,7 +667,6 @@ export const aiConfigApi = {
 
   // 通过后端代理调用AI服务（基于数据库配置）
   async callAiService(userId, aiPayload) {
-    // console.log('开始AI服务调用:', { userId, hasPayload: !!aiPayload }); // 隐私保护：不输出用户ID和请求负载
     
     // 验证必要参数
     if (!userId) {
@@ -683,12 +676,6 @@ export const aiConfigApi = {
     if (!aiPayload) {
       throw new Error('AI请求数据不能为空')
     }
-    
-    // console.log('准备发送AI代理请求:', {
-    //   userId: userId,
-    //   payloadKeys: Object.keys(aiPayload),
-    //   messagesCount: aiPayload.messages?.length
-    // }); // 隐私保护：不输出用户ID和请求详情
     
     // 获取用户当前选择的AI配置ID（从localStorage）
     let currentConfigId = null
@@ -713,16 +700,8 @@ export const aiConfigApi = {
       })
     })
     
-    // console.log('AI代理响应状态:', proxyResponse.status); // 调试时可启用
-    
     if (!proxyResponse.ok) {
       const errorText = await proxyResponse.text().catch(() => '')
-      // console.error('AI代理请求失败:', {
-      //   status: proxyResponse.status,
-      //   statusText: proxyResponse.statusText,
-      //   error: errorText
-      // })
-      
       let errorData = {}
       try {
         errorData = JSON.parse(errorText)
@@ -747,12 +726,6 @@ export const aiConfigApi = {
     }
     
     const result = await proxyResponse.json()
-    // console.log('AI服务调用成功:', {
-    //   hasChoices: !!result.choices,
-    //   choicesLength: result.choices?.length,
-    //   hasContent: !!result.choices?.[0]?.message?.content
-    // }); // 隐私保护：不输出AI响应内容
-    
     return result
   }
 }
@@ -882,7 +855,6 @@ export const tagApi = {
         .single()
 
       if (!error) {
-        console.log('Supabase标签创建成功')
         return tag
       }
 
@@ -915,7 +887,6 @@ export const tagApi = {
       throw new Error('保存标签到本地存储失败')
     }
 
-    console.log('本地存储标签创建成功')
     return newTag
   },
 
@@ -1040,7 +1011,6 @@ export const tagApi = {
         .order('created_at', { ascending: false })
 
       if (!error) {
-        console.log('Supabase获取标签列表成功')
         return tags.map(tag => ({
           ...tag,
           usageCount: tag.mindmap_tags?.[0]?.count || 0,
@@ -1070,7 +1040,6 @@ export const tagApi = {
     // 按创建时间倒序排列
     tagsWithUsage.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
-    console.log('本地存储获取标签列表成功')
     return tagsWithUsage
   },
 
@@ -1123,7 +1092,6 @@ export const tagApi = {
             .single()
 
           if (!error) {
-            console.log('Supabase添加标签关联成功')
             return relation
           }
 
@@ -1171,7 +1139,6 @@ export const tagApi = {
       throw new Error('保存标签关联到本地存储失败')
     }
 
-    console.log('本地存储添加标签关联成功')
     return newRelation
   },
 
@@ -1239,7 +1206,6 @@ export const tagApi = {
           .eq('mindmap_id', mindMapId)
 
         if (!error) {
-          console.log('Supabase获取思维导图标签成功')
           return tags.map(item => ({
             ...item.tags,
             isOwned: item.tags.owner_id === userId
@@ -1273,7 +1239,6 @@ export const tagApi = {
       return null
     }).filter(Boolean)
 
-    console.log('本地存储获取思维导图标签成功')
     return tags
   },
 

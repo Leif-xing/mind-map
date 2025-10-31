@@ -200,6 +200,7 @@
 import { tagApi } from '@/api/supabase-api'
 import TagCreateEditDialog from './TagCreateEditDialog.vue'
 import { mapState } from 'vuex'
+import { getCurrentMindMapIdFromVueInstance } from '@/utils/vue-instance-helpers'
 
 export default {
   name: 'TagSelectionDialog',

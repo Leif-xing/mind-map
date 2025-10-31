@@ -285,7 +285,6 @@ export default {
         // 先尝试从缓存获取
         const cachedTags = TagCacheManager.getUserTagsArray()
         if (cachedTags.length > 0) {
-          console.log('从缓存加载用户标签:', cachedTags.length)
           this.availableTags = cachedTags
           this.handleSearch() // 更新筛选结果
           this.loading = false
@@ -293,7 +292,6 @@ export default {
         }
         
         // 缓存未命中，从数据库获取
-        console.log('缓存未命中，从数据库加载用户标签')
         const tags = await tagApi.getUserAvailableTags(this.currentUser.id)
         this.availableTags = tags
         
@@ -304,7 +302,6 @@ export default {
           userTags[id] = tagData
         })
         TagCacheManager.setUserTags(userTags)
-        console.log('用户标签已保存到缓存:', Object.keys(userTags).length)
         
         this.handleSearch() // 更新筛选结果
       } catch (error) {
@@ -322,13 +319,11 @@ export default {
         // 先尝试从缓存获取
         const cachedTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
         if (cachedTags.length > 0) {
-          console.log('从缓存加载思维导图标签:', this.currentMindMapId, cachedTags.length)
           this.currentMindMapTags = cachedTags
           return
         }
         
         // 缓存未命中，从数据库获取
-        console.log('缓存未命中，从数据库加载思维导图标签:', this.currentMindMapId)
         const tags = await tagApi.getMindMapTags(
           this.currentUser.id, 
           this.currentMindMapId
@@ -337,7 +332,6 @@ export default {
         
         // 保存到缓存
         TagCacheManager.setMindMapTagsFromArray(this.currentMindMapId, tags)
-        console.log('思维导图标签已保存到缓存:', this.currentMindMapId, tags.length)
       } catch (error) {
         this.$message.error('加载思维导图标签失败: ' + error.message)
       }
@@ -381,7 +375,6 @@ export default {
           
           // 同步更新缓存
           TagCacheManager.addTagToMindMap(this.currentMindMapId, tag.id)
-          console.log('添加标签到缓存:', this.currentMindMapId, tag.id)
           
           // 更新本地显示
           this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
@@ -412,7 +405,6 @@ export default {
         
         // 同步更新缓存
         TagCacheManager.removeTagFromMindMap(this.currentMindMapId, tagId)
-        console.log('从缓存移除标签:', this.currentMindMapId, tagId)
         
         // 更新本地显示
         this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
@@ -460,7 +452,6 @@ export default {
         
         // 同步更新缓存（自动清理所有映射关系）
         TagCacheManager.deleteTag(tag.id)
-        console.log('从缓存删除标签:', tag.id)
         
         // 更新本地显示
         this.availableTags = TagCacheManager.getUserTagsArray()
@@ -498,11 +489,9 @@ export default {
             color: tagData.color,
             is_public: tagData.is_public
           })
-          console.log('更新标签缓存:', tagData.id)
         } else {
           // 创建标签 - 添加到缓存
           TagCacheManager.addUserTag(tagData)
-          console.log('添加标签到缓存:', tagData.id)
         }
         
         // 更新本地显示
@@ -523,7 +512,6 @@ export default {
         addedTagIds.forEach(tagId => {
           TagCacheManager.addTagToMindMap(this.currentMindMapId, tagId)
         })
-        console.log('批量添加标签到缓存:', this.currentMindMapId, addedTagIds)
         
         // 更新本地显示
         this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
@@ -558,7 +546,6 @@ export default {
 
     // 刷新标签（需求4：只刷新用户标签）
     async refreshTags() {
-      console.log('刷新标签缓存')
       // 清除用户标签缓存
       TagCacheManager.clearUserTagsCache()
       

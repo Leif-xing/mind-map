@@ -174,6 +174,7 @@ import {
 } from 'simple-mind-map/src/utils'
 import { mapState } from 'vuex'
 import { setMindMapCache } from '@/utils/mindmap-cache-manager'
+import { getCurrentMindMapIdFromVueInstance } from '@/utils/vue-instance-helpers'
 import AiConfigDialog from './AiConfigDialog.vue'
 import AiSelectionDialog from './AiSelectionDialog.vue'
 
@@ -496,7 +497,7 @@ export default {
       // 首先检查当前思维导图是否需要保存
       try {
         // console.log('开始检查思维导图是否需要保存...') // 调试日志，可移除
-        const currentMindMapId = this.$store.state.currentMindMapId
+        const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance()
         const currentData = this.mindMap.getData(true)
         // console.log('当前思维导图ID:', currentMindMapId) // 调试日志，可移除
         // console.log('当前思维导图数据:', currentData) // 调试日志，可移除
@@ -925,7 +926,7 @@ export default {
 
     // AI生成部分
     async aiCreatePart() {
-      const originalMindMapId = this.$store.state.currentMindMapId;
+      const originalMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
       // console.log('🔄 AiCreate - 开始AI续写，续写前ID:', originalMindMapId);
       
       try {
@@ -1253,7 +1254,7 @@ export default {
 
     // 保存当前思维导图
     async saveCurrentMindMap() {
-      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
       const currentUser = this.$store.state.currentUser;
       
       // console.log('💾 AiCreate - 开始保存当前思维导图，当前ID:', currentMindMapId);

@@ -102,6 +102,7 @@
 import { mapState } from 'vuex'
 import { transformMarkdownTo } from 'simple-mind-map/src/parse/markdownTo'
 import { setMindMapCache } from '@/utils/mindmap-cache-manager'
+import { getCurrentMindMapIdFromVueInstance } from '@/utils/vue-instance-helpers'
 
 export default {
   name: 'UnifiedAiCreateDialog',
@@ -209,7 +210,7 @@ export default {
 
       // 首先检查当前思维导图是否需要保存
       try {
-        const currentMindMapId = this.$store.state.currentMindMapId
+        const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance()
         const currentData = this.mindMap.getData(true)
         
         const needsSave = await this.$store.dispatch('needsSave', {
@@ -617,7 +618,7 @@ export default {
       this.saveConfirmVisible = false;
       
       // 2. 在开始任何操作前，先复制当前思维导图的数据和ID
-      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
       const currentUser = this.$store.state.currentUser;
       const originalData = JSON.parse(JSON.stringify(this.mindMap.getData(true))); // 深拷贝原始数据
       const originalTitle = this.currentMindMapTitle;
@@ -691,7 +692,7 @@ export default {
 
     // 保存当前思维导图
     async saveCurrentMindMap() {
-      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
       const currentUser = this.$store.state.currentUser;
       
       if (!currentUser) {

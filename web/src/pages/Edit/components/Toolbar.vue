@@ -240,6 +240,7 @@ import { getData } from '../../../api'
 import ToolbarNodeBtnList from './ToolbarNodeBtnList.vue'
 import { throttle, isMobile } from 'simple-mind-map/src/utils/index'
 import { setMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
+import { getCurrentMindMapIdFromVueInstance } from '@/utils/vue-instance-helpers'
 
 // 工具栏
 let fileHandle = null
@@ -431,7 +432,7 @@ export default {
     onUnload(e) {
       // 保存当前思维导图ID到localStorage，以便刷新后恢复
       // 只有当ID存在时才保存，避免存储null值
-      const currentMindMapId = this.$store.state.currentMindMapId;
+      const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
       if (currentMindMapId) {
         localStorage.setItem('REFRESH_ID', currentMindMapId);
       } else {
@@ -614,7 +615,7 @@ export default {
     async createNewLocalFile() {
       // 首先检查当前思维导图是否需要保存
       try {
-        const currentMindMapId = this.$store.state.currentMindMapId;
+        const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
         
         // 获取当前思维导图实例
         const currentMindMap = this.getCurrentMindMapInstance();
@@ -692,7 +693,7 @@ export default {
           return
         }
         
-        const currentMindMapId = this.$store.state.currentMindMapId;
+        const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
         // 调用store中的保存方法，根据是否有ID决定是更新还是创建
         const result = await this.$store.dispatch('saveMindMap', {
           id: currentMindMapId,  // 传递ID参数，如果有ID则更新，否则创建
@@ -716,7 +717,7 @@ export default {
           }
         } else {
           // 如果是更新操作，使用当前ID更新缓存
-          const currentMindMapId = this.$store.state.currentMindMapId;
+          const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
           if (currentMindMapId) {
             try {
               const cacheKey = `mindmap_cache_${currentMindMapId}`;
@@ -761,7 +762,7 @@ export default {
           autoSaveTitle = `${rootNodeText}_自动保存_${new Date().toISOString().replace(/[:.]/g, '-')}`
         }
         
-        const currentMindMapId = this.$store.state.currentMindMapId;
+        const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
         // 调用store中的保存方法，根据是否有ID决定是更新还是创建
         const result = await this.$store.dispatch('saveMindMap', {
           id: currentMindMapId,  // 传递ID参数，如果有ID则更新，否则创建
@@ -785,7 +786,7 @@ export default {
           }
         } else {
           // 如果是更新操作，使用当前ID更新缓存
-          const currentMindMapId = this.$store.state.currentMindMapId;
+          const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
           if (currentMindMapId) {
             try {
               setMindMapCache(currentMindMapId, data);
@@ -887,7 +888,7 @@ export default {
         // 1. 先保存当前思维导图的数据到缓存（如果有修改）
         if (this.$getCurrentData) {
           const currentData = this.$getCurrentData();
-          const currentMindMapId = this.$store.state.currentMindMapId || 'current';
+          const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance() || 'current';
           this.saveMindMapDataToCache(currentMindMapId, currentData);
         }
         
