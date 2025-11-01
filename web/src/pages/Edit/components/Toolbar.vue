@@ -859,6 +859,16 @@ export default {
         event.preventDefault() // 阻止默认行为
         this.showTagManager() // 显示标签管理器
       }
+      
+      // 检查是否按下Shift+C - 打开备注对话框
+      if (event.shiftKey && event.key.toLowerCase() === 'c') {
+        event.preventDefault() // 阻止默认行为
+        // 检查是否有选中的节点
+        if (this.$mindMap && this.$mindMap.getSelectedNodeList().length > 0) {
+          // 触发备注对话框事件
+          this.$bus.$emit('showNodeNote', this.$mindMap.getSelectedNodeList()[0])
+        }
+      }
     },
     
     // 显示思维导图历史
