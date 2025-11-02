@@ -93,3 +93,27 @@ export const getParentWithClass = (el, className) => {
   }
   return null
 }
+
+// 统一的图标排序函数 - 确保checkbox图标始终在最左边
+export const sortIconList = (iconList) => {
+  if (!iconList || iconList.length === 0) {
+    return []
+  }
+  
+  const sorted = [...iconList]
+  
+  // 将checkbox图标和其他图标分开
+  const checkboxIcons = []
+  const otherIcons = []
+  
+  sorted.forEach(icon => {
+    if (icon && icon.startsWith && icon.startsWith('checkbox_')) {
+      checkboxIcons.push(icon)
+    } else {
+      otherIcons.push(icon)
+    }
+  })
+  
+  // 返回排序后的列表：checkbox图标在前，其他图标在后
+  return [...checkboxIcons, ...otherIcons]
+}

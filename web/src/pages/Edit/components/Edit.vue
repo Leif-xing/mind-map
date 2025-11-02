@@ -127,6 +127,7 @@ import NodeNoteSidebar from './NodeNoteSidebar.vue'
 import AiCreate from './AiCreate.vue'
 import UnifiedAiManager from './UnifiedAiManager.vue'
 import AiChat from './AiChat.vue'
+import { sortIconList } from '@/utils/index.js'
 
 // 注册插件
 MindMap.usePlugin(MiniMap)
@@ -249,6 +250,7 @@ export default {
     this.$bus.$on('localStorageExceeded', this.onLocalStorageExceeded)
     window.addEventListener('resize', this.handleResize)
     this.$bus.$on('showDownloadTip', this.showDownloadTip)
+    this.$bus.$on('triggerShiftWForRootNode', this.handleTriggerShiftWForRootNode)
     // this.webTip() // 已注释：移除网页版更新提示
   },
   beforeDestroy() {
@@ -266,6 +268,7 @@ export default {
     this.$bus.$off('localStorageExceeded', this.onLocalStorageExceeded)
     window.removeEventListener('resize', this.handleResize)
     this.$bus.$off('showDownloadTip', this.showDownloadTip)
+    this.$bus.$off('triggerShiftWForRootNode', this.handleTriggerShiftWForRootNode)
     this.$bus.$off('execCommand', this.handleExecCommand)
     this.mindMap.destroy()
   },
@@ -469,6 +472,12 @@ export default {
       })
       this.mindMap.keyCommand.addShortcut('Shift+a', () => {
         this.handleToggleNumbering()
+      })
+      this.mindMap.keyCommand.addShortcut('Shift+w', () => {
+        this.handleToggleTodoCheckbox()
+      })
+      this.mindMap.keyCommand.addShortcut('Shift+s', () => {
+        this.handleToggleTodoStatus()
       })
       
       // 设置编号更新监听器
@@ -813,14 +822,24 @@ export default {
         return
       }
 
-      const selectedNode = activeNodes[0]
+      // 检查是否选中了根节点
+      const hasRootNode = activeNodes.some(node => node.isRoot)
       
-      if (selectedNode.isRoot) {
-        // 如果选中根节点，为所有层级的节点编号
-        this.numberingAllNodesFromRoot(selectedNode)
+      if (hasRootNode && activeNodes.length === 1) {
+        // 如果只选中了根节点，为所有层级的节点编号
+        this.numberingAllNodesFromRoot(activeNodes[0])
       } else {
-        // 如果选中非根节点，仅为当前节点编号
-        this.numberingSingleNodeFromShortcut(selectedNode)
+        // 为所有选中的非根节点添加编号
+        activeNodes.forEach(node => {
+          if (!node.isRoot) {
+            this.numberingSingleNodeFromShortcut(node)
+          }
+        })
+        
+        // 如果包含根节点，给出提示
+        if (hasRootNode) {
+          this.$message.info('已为选中的非根节点添加编号，根节点已跳过')
+        }
       }
     },
 
@@ -879,8 +898,11 @@ export default {
         }
       }
       
+      // 使用统一的排序函数确保checkbox始终在最左边
+      const sortedIconList = sortIconList(iconList)
+      
       // 更新节点图标
-      node.setIcon(iconList)
+      node.setIcon(sortedIconList)
     },
 
     // 生成编号图标标识（快捷键版本）
@@ -1017,7 +1039,9 @@ export default {
               const newNumberingIcon = this.generateNumberingIconFromShortcut(currentLevel, index)
               if (newNumberingIcon) {
                 iconList[numberIconIndex] = newNumberingIcon
-                child.setIcon(iconList)
+                // 使用统一的排序函数确保checkbox始终在最左边
+                const sortedIconList = sortIconList(iconList)
+                child.setIcon(sortedIconList)
               }
             }
           })
@@ -1123,6 +1147,321 @@ export default {
     getSiblingNodes(node) {
       if (!node.parent) return [node]
       return node.parent.children || []
+    },
+
+    // 处理待办复选框切换 (Shift+W) - 添加或移除复选框
+    handleToggleTodoCheckbox() {
+      // 直接从思维导图实例获取活动节点
+      const activeNodes = this.mindMap.renderer.activeNodeList
+      
+      if (!activeNodes || activeNodes.length === 0) {
+        this.$message.warning('请先选择节点')
+        return
+      }
+
+      // 检查是否选中了根节点
+      const hasRootNode = activeNodes.some(node => node.isRoot)
+      
+      if (hasRootNode && activeNodes.length === 1) {
+        // 如果只选中了根节点，检查所有子节点（不包括根节点本身）是否都已添加复选框
+        const selectedNode = activeNodes[0]
+        if (selectedNode.children && selectedNode.children.length > 0) {
+          // 检查所有直接子节点及其后代是否有复选框
+          const allChildrenHaveCheckbox = this.checkAllDescendantsOfChildrenHaveCheckbox(selectedNode, ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']);
+          
+          // 对所有子节点执行添加/移除操作
+          selectedNode.children.forEach(child => {
+            this.toggleCheckboxForAllDescendants(child, false, !allChildrenHaveCheckbox)
+          })
+        }
+      } else {
+        // 为所有选中的非根节点添加/移除待办
+        activeNodes.forEach(node => {
+          if (!node.isRoot) {
+            this.toggleCheckboxForSingleNode(node)
+          }
+        })
+        
+        // 如果包含根节点，给出提示
+        if (hasRootNode) {
+          this.$message.info('已为选中的非根节点切换待办状态，根节点已跳过')
+        }
+      }
+    },
+
+    // 处理待办状态切换 (Shift+S) - 在复选框状态下循环切换状态
+    handleToggleTodoStatus() {
+      // 直接从思维导图实例获取活动节点
+      const activeNodes = this.mindMap.renderer.activeNodeList
+      
+      if (!activeNodes || activeNodes.length === 0) {
+        this.$message.warning('请先选择节点')
+        return
+      }
+
+      // 检查是否选中了根节点
+      const hasRootNode = activeNodes.some(node => node.isRoot)
+      
+      if (hasRootNode && activeNodes.length === 1) {
+        // 如果只选中了根节点，则不执行任何操作
+        this.$message.info('根节点不支持状态切换功能')
+        return
+      } else {
+        // 为所有选中的非根节点切换状态
+        let hasValidNode = false
+        activeNodes.forEach(node => {
+          if (!node.isRoot) {
+            this.toggleStatusForSingleNode(node)
+            hasValidNode = true
+          }
+        })
+        
+        // 如果包含根节点，给出提示
+        if (hasRootNode) {
+          this.$message.info('已为选中的非根节点切换状态，根节点已跳过')
+        } else if (!hasValidNode) {
+          this.$message.info('没有可以切换状态的节点')
+        }
+      }
+    },
+    
+    // 为单个节点切换复选框图标
+    toggleCheckboxForSingleNode(node) {
+      // 获取当前节点的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否存在复选框图标
+      const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      
+      if (existingCheckboxIndex !== -1) {
+        // 如果存在复选框图标，则移除它
+        iconList.splice(existingCheckboxIndex, 1)
+      } else {
+        // 如果不存在，则添加未选中状态的复选框图标
+        iconList.push('checkbox_unchecked')
+      }
+      
+      // 使用统一的排序函数确保checkbox始终在最左边
+      const sortedIconList = sortIconList(iconList)
+      
+      // 更新节点图标
+      node.setIcon(sortedIconList)
+    },
+    
+    // 为单个节点切换复选框状态
+    toggleStatusForSingleNode(node) {
+      // 获取当前节点的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否存在复选框图标
+      const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      
+      if (existingCheckboxIndex === -1) {
+        // 如果没有复选框图标，不执行任何操作或显示提示
+        this.$message.info('请先为节点添加复选框')
+        return
+      }
+      
+      // 当前状态
+      const currentStatus = iconList[existingCheckboxIndex]
+      let nextStatus = 'checkbox_unchecked' // 默认为未选中
+      
+      // 按照顺序循环: 未选中(空) -> 选中(对号) -> 失败(叉号) -> 未选中(空) ...
+      if (currentStatus === 'checkbox_unchecked') {
+        nextStatus = 'checkbox_success'
+      } else if (currentStatus === 'checkbox_success') {
+        nextStatus = 'checkbox_failed'
+      } else if (currentStatus === 'checkbox_failed') {
+        nextStatus = 'checkbox_unchecked'
+      }
+      
+      // 更新图标列表中的复选框状态
+      iconList[existingCheckboxIndex] = nextStatus
+      
+      // 使用统一的排序函数确保checkbox始终在最左边
+      const sortedIconList = sortIconList(iconList)
+      
+      // 更新节点图标
+      node.setIcon(sortedIconList)
+    },
+    
+    // 递归为所有后代节点添加复选框 (用于根节点，只添加)
+    addCheckboxForAllDescendants(node) {
+      // 获取当前节点的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否存在复选框图标
+      const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      
+      // 如果不存在复选框，则添加未选中状态的复选框
+      if (existingCheckboxIndex === -1) {
+        iconList.push('checkbox_unchecked')
+        // 使用统一的排序函数确保checkbox始终在最左边
+        const sortedIconList = sortIconList(iconList)
+        node.setIcon(sortedIconList)
+      }
+      
+      // 递归处理所有子节点
+      if (node.children) {
+        node.children.forEach(child => {
+          this.addCheckboxForAllDescendants(child)
+        })
+      }
+    },
+    
+    // 递归为所有后代节点切换复选框 (用于子节点)
+    toggleCheckboxForAllDescendants(node, isRoot, shouldAdd) {
+      // 获取当前节点的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否存在复选框图标
+      const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      
+      // 根据 shouldAdd 参数决定是添加还是移除
+      if (shouldAdd) {
+        // 如果不存在复选框，则添加未选中状态的复选框
+        if (existingCheckboxIndex === -1) {
+          iconList.push('checkbox_unchecked')
+          // 使用统一的排序函数确保checkbox始终在最左边
+          const sortedIconList = sortIconList(iconList)
+          node.setIcon(sortedIconList)
+        }
+      } else {
+        // 如果已存在复选框，则移除
+        if (existingCheckboxIndex !== -1) {
+          iconList.splice(existingCheckboxIndex, 1)
+          // 使用统一的排序函数确保checkbox始终在最左边
+          const sortedIconList = sortIconList(iconList)
+          node.setIcon(sortedIconList)
+        }
+      }
+      
+      // 递归处理所有子节点
+      if (node.children) {
+        node.children.forEach(child => {
+          this.toggleCheckboxForAllDescendants(child, false, shouldAdd)
+        })
+      }
+    },
+    
+    // 检查所有子节点的后代是否都包含复选框图标（不包括指定节点本身）
+    checkAllDescendantsOfChildrenHaveCheckbox(node, checkboxIcons) {
+      // 检查所有子节点及其后代是否有复选框
+      if (!node.children || node.children.length === 0) {
+        return true; // 如果没有子节点，认为所有子节点都有复选框（以便添加功能）
+      }
+      
+      for (let child of node.children) {
+        if (!this.checkAllDescendantsHaveCheckbox(child, checkboxIcons)) {
+          return false; // 只要有一个子节点（及其后代）没有复选框，就返回false
+        }
+      }
+      
+      return true; // 所有子节点及其后代都有复选框
+    },
+    
+    // 检查一个节点及其所有后代是否都包含复选框图标（对整个树进行检查）
+    checkAllDescendantsHaveCheckbox(node, checkboxIcons) {
+      // 检查当前节点是否包含复选框
+      const iconList = [...(node.getData('icon') || [])]
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      const hasCheckbox = existingCheckboxIndex !== -1;
+      
+      // 检查所有子节点
+      if (node.children) {
+        for (let child of node.children) {
+          if (!this.checkAllDescendantsHaveCheckbox(child, checkboxIcons)) {
+            return false; // 只要有一个子节点没有复选框，就返回false
+          }
+        }
+      }
+      
+      return hasCheckbox; // 只有当前节点有复选框且所有子节点都有复选框时才返回true
+    },
+    
+    // 递归为所有后代节点切换复选框状态 (用于子节点)
+    toggleStatusForAllDescendants(node) {
+      // 获取当前节点的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否存在复选框图标
+      const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      
+      if (existingCheckboxIndex !== -1) {
+        // 当前状态
+        const currentStatus = iconList[existingCheckboxIndex]
+        let nextStatus = 'checkbox_unchecked' // 默认为未选中
+        
+        // 按照顺序循环: 未选中(空) -> 选中(对号) -> 失败(叉号) -> 未选中(空) ...
+        if (currentStatus === 'checkbox_unchecked') {
+          nextStatus = 'checkbox_success'
+        } else if (currentStatus === 'checkbox_success') {
+          nextStatus = 'checkbox_failed'
+        } else if (currentStatus === 'checkbox_failed') {
+          nextStatus = 'checkbox_unchecked'
+        }
+        
+        // 更新图标状态
+        iconList[existingCheckboxIndex] = nextStatus
+        
+        // 使用统一的排序函数确保checkbox始终在最左边
+        const sortedIconList = sortIconList(iconList)
+        
+        // 更新节点图标
+        node.setIcon(sortedIconList)
+      }
+      
+      // 递归处理所有子节点
+      if (node.children) {
+        node.children.forEach(child => {
+          this.toggleStatusForAllDescendants(child)
+        })
+      }
+    },
+    
+    // 处理根节点的Shift+W操作事件
+    handleTriggerShiftWForRootNode() {
+      // 直接从思维导图实例获取活动节点
+      const activeNodes = this.mindMap.renderer.activeNodeList
+      
+      if (!activeNodes || activeNodes.length === 0) {
+        this.$message.warning('请先选择节点')
+        return
+      }
+
+      // 检查是否选中了根节点
+      const hasRootNode = activeNodes.some(node => node.isRoot)
+      
+      if (hasRootNode && activeNodes.length === 1) {
+        // 如果只选中了根节点，处理根节点逻辑
+        const selectedNode = activeNodes[0]
+        if (selectedNode.isRoot && selectedNode.children && selectedNode.children.length > 0) {
+          // 检查所有子节点（不包括根节点本身）是否都已添加复选框
+          const allChildrenHaveCheckbox = this.checkAllDescendantsOfChildrenHaveCheckbox(selectedNode, ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']);
+          
+          // 对所有子节点执行添加/移除操作
+          selectedNode.children.forEach(child => {
+            this.toggleCheckboxForAllDescendants(child, false, !allChildrenHaveCheckbox)
+          })
+        }
+      } else {
+        // 为所有选中的非根节点添加/移除待办
+        activeNodes.forEach(node => {
+          if (!node.isRoot) {
+            this.toggleCheckboxForSingleNode(node)
+          }
+        })
+        
+        // 如果包含根节点，给出提示
+        if (hasRootNode) {
+          this.$message.info('已为选中的非根节点切换待办状态，根节点已跳过')
+        }
+      }
     }
   }
 }

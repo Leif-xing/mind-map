@@ -253,6 +253,7 @@ const defaultBtnList = [
   'deleteNode',
   'image',
   'numbering',
+  'todo',
   'icon',
   'link',
   'note',

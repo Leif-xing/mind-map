@@ -26,6 +26,7 @@
 <script>
 import { nodeIconList } from 'simple-mind-map/src/svg/icons'
 import icon from '@/config/icon'
+import { sortIconList } from '@/utils/index.js'
 
 // 节点图标内容设置
 export default {
@@ -85,7 +86,9 @@ export default {
         }
       }
       this.activeNodes.forEach(node => {
-        node.setIcon([...this.iconList])
+        // 使用统一的排序函数确保checkbox始终在最左边
+        const sortedIconList = sortIconList([...this.iconList])
+        node.setIcon(sortedIconList)
       })
     }
   }

@@ -61,6 +61,7 @@ import { nodeIconList } from 'simple-mind-map/src/svg/icons'
 import { mergerIconList } from 'simple-mind-map/src/utils/index'
 import icon from '@/config/icon'
 import image from '@/config/image'
+import { sortIconList } from '@/utils/index.js'
 
 export default {
   components: {
@@ -149,9 +150,11 @@ export default {
             iconList.push(key)
           }
         }
-        node.setIcon(iconList)
+        // 使用统一的排序函数确保checkbox始终在最左边
+        const sortedIconList = sortIconList(iconList)
+        node.setIcon(sortedIconList)
         if (this.activeNodes.length === 1) {
-          this.iconList = iconList
+          this.iconList = sortedIconList
         }
       })
     },

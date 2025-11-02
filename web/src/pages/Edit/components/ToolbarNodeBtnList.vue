@@ -91,6 +91,17 @@
         <span class="text">编号</span>
       </div>
       <div
+        v-if="item === 'todo'"
+        class="toolbarBtn"
+        :class="{
+          disabled: activeNodes.length <= 0 || hasGeneralization
+        }"
+        @click="handleTodoClick"
+      >
+        <span class="icon iconfont iconchoose1"></span>
+        <span class="text">待办</span>
+      </div>
+      <div
         v-if="item === 'icon'"
         class="toolbarBtn"
         :class="{
@@ -217,6 +228,7 @@
 
 <script>
 import { mapState, mapMutations } from 'vuex'
+import { sortIconList } from '../../../utils/index.js'
 
 export default {
   props: {
@@ -352,14 +364,24 @@ export default {
         return
       }
 
-      const selectedNode = this.activeNodes[0]
+      // 检查是否选中了根节点
+      const hasRootNode = this.activeNodes.some(node => node.isRoot)
       
-      if (selectedNode.isRoot) {
-        // 如果选中根节点，为所有直接子节点编号
-        this.numberingChildNodes(selectedNode)
+      if (hasRootNode && this.activeNodes.length === 1) {
+        // 如果只选中了根节点，为所有直接子节点编号
+        this.numberingChildNodes(this.activeNodes[0])
       } else {
-        // 如果选中非根节点，仅为当前节点编号
-        this.numberingSingleNode(selectedNode)
+        // 为所有选中的非根节点添加编号
+        this.activeNodes.forEach(node => {
+          if (!node.isRoot) {
+            this.numberingSingleNode(node)
+          }
+        })
+        
+        // 如果包含根节点，给出提示
+        if (hasRootNode) {
+          this.$message.info('已为选中的非根节点添加编号，根节点已跳过')
+        }
       }
     },
 
@@ -418,8 +440,11 @@ export default {
         }
       }
       
+      // 使用统一的排序函数确保checkbox始终在最左边
+      const sortedIconList = sortIconList(iconList)
+      
       // 更新节点图标
-      node.setIcon(iconList)
+      node.setIcon(sortedIconList)
     },
 
     // 生成编号图标标识
@@ -492,6 +517,58 @@ export default {
     getSiblingNodes(node) {
       if (!node.parent) return [node]
       return node.parent.children || []
+    },
+    
+    // 处理待办点击
+    handleTodoClick() {
+      if (!this.activeNodes || this.activeNodes.length === 0) {
+        this.$message.warning('请先选择节点')
+        return
+      }
+      
+      // 检查是否选中了根节点
+      const hasRootNode = this.activeNodes.some(node => node.isRoot)
+      
+      if (hasRootNode && this.activeNodes.length === 1) {
+        // 如果只选中了根节点，触发Shift+W快捷键对应的事件（在Edit组件中实现的逻辑）
+        this.$bus.$emit('triggerShiftWForRootNode')
+      } else {
+        // 为所有选中的非根节点添加/移除待办
+        this.activeNodes.forEach(node => {
+          if (!node.isRoot) {
+            this.toggleTodoForSingleNode(node)
+          }
+        })
+        
+        // 如果包含根节点，给出提示
+        if (hasRootNode) {
+          this.$message.info('已为选中的非根节点切换待办状态，根节点已跳过')
+        }
+      }
+    },
+    
+    // 为单个节点切换待办状态
+    toggleTodoForSingleNode(node) {
+      // 获取当前节点的图标列表
+      const iconList = [...(node.getData('icon') || [])]
+      
+      // 查找是否存在复选框图标
+      const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
+      const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
+      
+      if (existingCheckboxIndex !== -1) {
+        // 如果存在复选框图标，则移除它
+        iconList.splice(existingCheckboxIndex, 1)
+      } else {
+        // 如果不存在，则添加未选中状态的复选框图标
+        iconList.push('checkbox_unchecked')
+      }
+      
+      // 使用统一的排序函数确保checkbox始终在最左边
+      const sortedIconList = sortIconList(iconList)
+      
+      // 更新节点图标
+      node.setIcon(sortedIconList)
     }
   }
 }
