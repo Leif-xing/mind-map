@@ -180,6 +180,60 @@ class TagCacheManager {
   }
 
   /**
+   * 刷新缓存（强制重新加载）
+   */
+  static refreshCache() {
+    // 这个方法用于强制刷新缓存，实际上在当前实现中
+    // 所有方法都是直接从localStorage读取的，所以不需要特殊处理
+    // 但是为了API的完整性，我们保留这个方法
+  }
+
+  /**
+   * 创建新标签
+   * @param {Object} tagData - 标签数据
+   * @returns {string} 新标签的ID
+   */
+  static createTag(tagData) {
+    const tagId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    const userTags = this.getUserTags()
+    userTags[tagId] = {
+      name: tagData.name || '新标签',
+      color: tagData.color || '#409EFF',
+      createdAt: new Date().toISOString()
+    }
+    this.setUserTags(userTags)
+    return tagId
+  }
+
+  /**
+   * 更新标签
+   * @param {string} tagId - 标签ID
+   * @param {Object} tagData - 更新的标签数据
+   */
+  static updateTag(tagId, tagData) {
+    const userTags = this.getUserTags()
+    if (userTags[tagId]) {
+      userTags[tagId] = {
+        ...userTags[tagId],
+        ...tagData,
+        updatedAt: new Date().toISOString()
+      }
+      this.setUserTags(userTags)
+    }
+  }
+
+  /**
+   * 设置思维导图的标签
+   * @param {string} mindMapId - 思维导图ID
+   * @param {Array} tagIds - 标签ID数组
+   */
+  static setMindMapTags(mindMapId, tagIds) {
+    const mappings = this.getMindMapTagIds()
+    mappings[mindMapId] = tagIds
+    this.setMindMapTagIds(mappings)
+  }
+
+  /**
    * 批量设置思维导图标签（用于初始化）
    * @param {string} mindMapId - 思维导图ID
    * @param {Array} tags - 标签对象数组

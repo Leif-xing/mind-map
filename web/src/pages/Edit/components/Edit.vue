@@ -6,6 +6,11 @@
     @dragover.stop.prevent
     @drop.stop.prevent
   >
+    <!-- 左侧边栏触发器 -->
+    <LeftSidebarTrigger />
+    
+    <!-- 编辑器页面 -->
+    <div v-show="currentPage === 'editor'" class="editor-page">
     <div
       class="mindMapContainer"
       id="mindMapContainer"
@@ -50,6 +55,7 @@
       :mindMap="mindMap"
     ></NodeImgPlacementToolbar>
     <NodeNoteSidebar v-if="mindMap" :mindMap="mindMap"></NodeNoteSidebar>
+    <TagMindmapSidebar v-if="mindMap" :mindMap="mindMap"></TagMindmapSidebar>
     <AiCreate v-if="mindMap && enableAi" :mindMap="mindMap"></AiCreate>
     <UnifiedAiManager v-if="mindMap" :mindMap="mindMap"></UnifiedAiManager>
     <AiChat v-if="enableAi"></AiChat>
@@ -62,6 +68,10 @@
     >
       <div class="dragTip">{{ $t('edit.dragTip') }}</div>
     </div>
+    </div>
+    
+    <!-- 思维导图管理页面 -->
+    <TagMindmapPage v-show="currentPage === 'mindmap-manager'" />
   </div>
 </template>
 
@@ -124,6 +134,9 @@ import Setting from './Setting.vue'
 import AssociativeLineStyle from './AssociativeLineStyle.vue'
 import NodeImgPlacementToolbar from './NodeImgPlacementToolbar.vue'
 import NodeNoteSidebar from './NodeNoteSidebar.vue'
+import TagMindmapSidebar from './TagMindmapSidebar.vue'
+import LeftSidebarTrigger from './LeftSidebarTrigger.vue'
+import TagMindmapPage from './TagMindmapPage.vue'
 import AiCreate from './AiCreate.vue'
 import UnifiedAiManager from './UnifiedAiManager.vue'
 import AiChat from './AiChat.vue'
@@ -186,6 +199,9 @@ export default {
     AssociativeLineStyle,
     NodeImgPlacementToolbar,
     NodeNoteSidebar,
+    TagMindmapSidebar,
+    LeftSidebarTrigger,
+    TagMindmapPage,
     AiCreate,
     UnifiedAiManager,
     AiChat
@@ -199,7 +215,8 @@ export default {
       prevImg: '',
       storeConfigTimer: null,
       showDragMask: false,
-      lastSavedData: null // 保存最后保存的数据，用于检测是否有修改
+      lastSavedData: null, // 保存最后保存的数据，用于检测是否有修改
+      currentPage: 'editor' // 'editor' | 'mindmap-manager'
     }
   },
   computed: {
@@ -251,6 +268,9 @@ export default {
     window.addEventListener('resize', this.handleResize)
     this.$bus.$on('showDownloadTip', this.showDownloadTip)
     this.$bus.$on('triggerShiftWForRootNode', this.handleTriggerShiftWForRootNode)
+    this.$bus.$on('loadMindMap', this.handleLoadMindMap)
+    this.$bus.$on('openMindmapManager', this.handleOpenMindmapManager)
+    this.$bus.$on('backToEditor', this.handleBackToEditor)
     // this.webTip() // 已注释：移除网页版更新提示
   },
   beforeDestroy() {
@@ -269,6 +289,9 @@ export default {
     window.removeEventListener('resize', this.handleResize)
     this.$bus.$off('showDownloadTip', this.showDownloadTip)
     this.$bus.$off('triggerShiftWForRootNode', this.handleTriggerShiftWForRootNode)
+    this.$bus.$off('loadMindMap', this.handleLoadMindMap)
+    this.$bus.$off('openMindmapManager', this.handleOpenMindmapManager)
+    this.$bus.$off('backToEditor', this.handleBackToEditor)
     this.$bus.$off('execCommand', this.handleExecCommand)
     this.mindMap.destroy()
   },
@@ -1462,6 +1485,48 @@ export default {
           this.$message.info('已为选中的非根节点切换待办状态，根节点已跳过')
         }
       }
+    },
+
+    // 处理加载思维导图事件
+    async handleLoadMindMap(mindMapId) {
+      try {
+        if (!mindMapId) {
+          this.$message.error('思维导图ID不能为空')
+          return
+        }
+
+        // 从缓存中获取思维导图内容
+        const cachedContent = await this.$store.dispatch('getMindMapContent', mindMapId)
+        
+        if (cachedContent) {
+          // 设置当前思维导图ID
+          this.$store.commit('setCurrentMindMapId', mindMapId)
+          
+          // 加载思维导图数据
+          this.setData(cachedContent)
+          
+          // 提示用户
+          const mindMap = this.$store.state.localMindMaps.find(m => m.id === mindMapId)
+          if (mindMap) {
+            this.$message.success(`已加载思维导图：${mindMap.title}`)
+          }
+        } else {
+          this.$message.error('思维导图数据不存在或已损坏')
+        }
+      } catch (error) {
+        console.error('加载思维导图失败:', error)
+        this.$message.error('加载思维导图失败，请重试')
+      }
+    },
+
+    // 处理打开思维导图管理页面
+    handleOpenMindmapManager() {
+      this.currentPage = 'mindmap-manager'
+    },
+
+    // 处理返回编辑器
+    handleBackToEditor() {
+      this.currentPage = 'editor'
     }
   }
 }

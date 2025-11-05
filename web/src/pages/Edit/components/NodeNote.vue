@@ -7,8 +7,8 @@
     :top="isMobile ? '20px' : '15vh'"
     :modal="false"
     :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    @keyup.native.esc="cancel"
+    :close-on-press-escape="true"
+    @close="cancel"
   >
     <!-- <el-input
       type="textarea"
@@ -17,7 +17,7 @@
       v-model="note"
     >
     </el-input> -->
-    <div class="noteEditor" ref="noteEditor" @keyup.stop @keydown.stop></div>
+    <div class="noteEditor" ref="noteEditor"></div>
     <!-- <div class="tip">换行请使用：Enter+Shift</div> -->
     <span slot="footer" class="dialog-footer">
       <el-button @click="cancel">{{ $t('dialog.cancel') }}</el-button>
@@ -50,13 +50,6 @@ export default {
     dialogVisible(val, oldVal) {
       if (!val && oldVal) {
         this.$bus.$emit('endTextEdit')
-        // 对话框关闭时移除监听器
-        this.removeDialogKeydownListener()
-      } else if (val && !oldVal) {
-        // 对话框打开时设置监听器
-        this.$nextTick(() => {
-          this.setupESCListener()
-        })
       }
     }
   },
@@ -71,10 +64,6 @@ export default {
     document.addEventListener('keydown', this.handleGlobalKeydown)
     // 初始化拖拽功能
     this.initDrag()
-    // 等待DOM渲染完后设置焦点并监听对话框的键盘事件
-    this.$nextTick(() => {
-      this.setupESCListener()
-    })
   },
   beforeDestroy() {
     this.$bus.$off('node_active', this.handleNodeActive)
@@ -82,8 +71,6 @@ export default {
     this.$bus.$off('open_note_dialog', this.openNoteDialogWithShortcut)
     // 移除全局键盘事件监听
     document.removeEventListener('keydown', this.handleGlobalKeydown)
-    // 移除对话框键盘事件监听
-    this.removeDialogKeydownListener()
   },
   methods: {
     handleGlobalKeydown(event) {
@@ -135,7 +122,16 @@ export default {
           initialEditType: 'markdown',
           previewStyle: 'vertical',
           // 设置编辑器主题
-          theme: theme
+          theme: theme,
+          // 添加自定义键盘事件处理
+          events: {
+            keydown: (type, ev) => {
+              if (ev.key === 'Escape') {
+                this.cancel()
+                return false // 阻止编辑器的默认ESC行为
+              }
+            }
+          }
         })
       } else {
         // 如果编辑器已存在，更新主题
@@ -159,7 +155,16 @@ export default {
           height: '500px',
           initialEditType: 'markdown',
           previewStyle: 'vertical',
-          theme: this.isDarkMode() ? 'dark' : 'light'
+          theme: this.isDarkMode() ? 'dark' : 'light',
+          // 添加自定义键盘事件处理
+          events: {
+            keydown: (type, ev) => {
+              if (ev.key === 'Escape') {
+                this.cancel()
+                return false // 阻止编辑器的默认ESC行为
+              }
+            }
+          }
         })
         this.editor.setMarkdown(currentValue)
       }
@@ -225,41 +230,6 @@ export default {
       });
     },
 
-    setupESCListener() {
-      // 等待对话框完全渲染
-      this.$nextTick(() => {
-        // 获取el-dialog的DOM元素
-        const dialogWrapper = document.querySelector('.nodeNoteDialog .el-dialog__wrapper');
-        const dialog = document.querySelector('.nodeNoteDialog .el-dialog');
-        
-        if (dialogWrapper) {
-          // 监听对话框包装器的keydown事件
-          dialogWrapper.addEventListener('keydown', this.handleDialogKeydown);
-        } else if (dialog) {
-          // 如果找不到包装器，直接监听对话框元素
-          dialog.addEventListener('keydown', this.handleDialogKeydown);
-        }
-      });
-    },
-    
-    handleDialogKeydown(event) {
-      if (event.key === 'Escape') {
-        event.stopPropagation();  // 阻止事件冒泡
-        event.preventDefault();    // 阻止默认行为
-        this.cancel();            // 调用取消方法
-      }
-    },
-    
-    removeDialogKeydownListener() {
-      const dialogWrapper = document.querySelector('.nodeNoteDialog .el-dialog__wrapper');
-      const dialog = document.querySelector('.nodeNoteDialog .el-dialog');
-      
-      if (dialogWrapper) {
-        dialogWrapper.removeEventListener('keydown', this.handleDialogKeydown);
-      } else if (dialog) {
-        dialog.removeEventListener('keydown', this.handleDialogKeydown);
-      }
-    },
 
     cancel() {
       this.dialogVisible = false

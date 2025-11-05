@@ -98,6 +98,85 @@ export default {
   color: #2c3e50;
 }
 
+// 全局主题变量 - 增强对比度版本
+:root {
+  /* 亮色主题变量 */
+  --bg-color: #ffffff;
+  --bg-color-1: #f8f9fa;
+  --bg-color-2: #e9ecef;
+  --bg-color-3: #dee2e6;
+  --text-color: #212529;
+  --text-color-2: #495057;
+  --text-color-3: #6c757d;
+  --border-color: #dee2e6;
+  --primary-color: #409EFF;
+  --primary-color-light: #5C9EFF;
+  --primary-color-dark: #347EFF;
+}
+
+.isDark {
+  /* 暗色主题变量 - 增强对比度 */
+  --bg-color: #121212;
+  --bg-color-1: #1e1e1e;
+  --bg-color-2: #2a2a2a;
+  --bg-color-3: #363636;
+  --text-color: #e0e0e0;      /* 提高主要文字对比度 */
+  --text-color-2: #b0b0b0;    /* 提高次要文字对比度 */
+  --text-color-3: #888888;    /* 提高中等强调文字对比度 */
+  --border-color: #404040;    /* 更清晰的边框 */
+  --primary-color: #4A9EFF;   /* 调整主色调以增强对比 */
+  --primary-color-light: #5AAEFF;
+  --primary-color-dark: #3A7EFF;
+}
+
+/* 通用暗色模式增强 */
+.isDark body,
+.isDark html {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* 暗色模式下特定元素增强 */
+.isDark .el-input__inner,
+.isDark .el-textarea__inner {
+  background-color: var(--bg-color-1);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+.isDark .el-card {
+  background-color: var(--bg-color-1);
+  border-color: var(--border-color);
+}
+
+.isDark .el-button {
+  color: var(--text-color);
+}
+
+.isDark .el-button--primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.isDark .el-dialog {
+  background-color: var(--bg-color-1);
+  border: 1px solid var(--border-color);
+}
+
+.isDark .el-dropdown-menu {
+  background-color: var(--bg-color-1);
+  border: 1px solid var(--border-color);
+}
+
+.isDark .el-dropdown-menu__item {
+  color: var(--text-color);
+}
+
+.isDark .el-dropdown-menu__item:hover {
+  background-color: var(--bg-color-2);
+  color: var(--primary-color);
+}
+
 .customScrollbar {
   &::-webkit-scrollbar {
     width: 7px;
