@@ -566,11 +566,6 @@ export const sidebarTriggerList = [
     value: 'outline',
     icon: 'iconfuhao-dagangshu'
   },
-  {
-    name: '导图管理',
-    value: 'tagMindmap',
-    icon: 'iconguanli'
-  },
   // {
   //   name: 'AI',
   //   value: 'ai',

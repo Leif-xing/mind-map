@@ -55,7 +55,6 @@
       :mindMap="mindMap"
     ></NodeImgPlacementToolbar>
     <NodeNoteSidebar v-if="mindMap" :mindMap="mindMap"></NodeNoteSidebar>
-    <TagMindmapSidebar v-if="mindMap" :mindMap="mindMap"></TagMindmapSidebar>
     <AiCreate v-if="mindMap && enableAi" :mindMap="mindMap"></AiCreate>
     <UnifiedAiManager v-if="mindMap" :mindMap="mindMap"></UnifiedAiManager>
     <AiChat v-if="enableAi"></AiChat>
@@ -134,7 +133,6 @@ import Setting from './Setting.vue'
 import AssociativeLineStyle from './AssociativeLineStyle.vue'
 import NodeImgPlacementToolbar from './NodeImgPlacementToolbar.vue'
 import NodeNoteSidebar from './NodeNoteSidebar.vue'
-import TagMindmapSidebar from './TagMindmapSidebar.vue'
 import LeftSidebarTrigger from './LeftSidebarTrigger.vue'
 import TagMindmapPage from './TagMindmapPage.vue'
 import AiCreate from './AiCreate.vue'
@@ -199,7 +197,6 @@ export default {
     AssociativeLineStyle,
     NodeImgPlacementToolbar,
     NodeNoteSidebar,
-    TagMindmapSidebar,
     LeftSidebarTrigger,
     TagMindmapPage,
     AiCreate,

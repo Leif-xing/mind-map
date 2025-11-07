@@ -36,10 +36,63 @@
           </div>
         </div>
         
-        <!-- 底部装饰 -->
+        <!-- 底部用户区域 -->
         <div class="sidebar-footer">
-          <div class="brand-mark">
-            <i class="iconfont iconlogo"></i>
+          <div class="user-area" @click="toggleUserMenu" :class="{ active: showUserMenu }">
+            <div class="user-avatar">
+              <i class="el-icon-user-solid"></i>
+            </div>
+            <div class="user-info" v-if="currentUser">
+              <div class="user-name">{{ currentUser.username || currentUser.email || '用户' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+    
+    <!-- 右侧用户菜单面板 -->
+    <transition name="slide-left">
+      <div 
+        v-show="showUserMenu" 
+        class="user-menu-container"
+        @click.stop
+      >
+        <!-- 用户菜单背景 -->
+        <div class="user-menu-background"></div>
+        
+        <!-- 用户菜单内容 -->
+        <div class="user-menu-content">
+          <!-- 用户信息头部 -->
+          <div class="user-menu-header" v-if="currentUser">
+            <div class="user-avatar-large">
+              <i class="el-icon-user-solid"></i>
+            </div>
+            <div class="user-details">
+              <div class="user-name-large">{{ currentUser.username || '用户' }}</div>
+              <div class="user-email">{{ currentUser.email || currentUser.id }}</div>
+            </div>
+          </div>
+          
+          <!-- 用户菜单项 -->
+          <div class="user-menu-items">
+            <div class="user-menu-item" @click="changePassword">
+              <div class="item-icon">
+                <i class="el-icon-edit"></i>
+              </div>
+              <div class="item-label">修改密码</div>
+            </div>
+            
+            <div class="user-menu-item logout-item" @click="logout">
+              <div class="item-icon">
+                <i class="el-icon-switch-button"></i>
+              </div>
+              <div class="item-label">退出登录</div>
+            </div>
+          </div>
+          
+          <!-- 关闭按钮 -->
+          <div class="user-menu-close" @click="closeUserMenu">
+            <i class="el-icon-close"></i>
           </div>
         </div>
       </div>
@@ -56,7 +109,12 @@ export default {
     return {
       isVisible: false,
       hideTimer: null,
-      currentPage: '' // 当前激活的页面
+      currentPage: '', // 当前激活的页面
+      showUserMenu: false, // 显示用户菜单
+      // 密码修改相关
+      currentPassword: '',
+      newPassword: '',
+      confirmNewPassword: ''
     }
   },
   computed: {
@@ -64,6 +122,10 @@ export default {
     
     isDark() {
       return this.localConfig.isDark
+    },
+    
+    currentUser() {
+      return this.$store.state.currentUser || JSON.parse(localStorage.getItem('currentUser') || 'null')
     }
   },
   created() {
@@ -160,6 +222,174 @@ export default {
       
       // 触发恢复工具栏状态的事件
       this.$bus.$emit('backFromMindmapManager')
+    },
+    
+    // 切换用户菜单显示状态
+    toggleUserMenu() {
+      this.showUserMenu = !this.showUserMenu
+    },
+    
+    // 关闭用户菜单
+    closeUserMenu() {
+      this.showUserMenu = false
+    },
+    
+    // 退出登录
+    logout() {
+      this.closeUserMenu()
+      // 触发退出登录事件
+      this.$bus.$emit('logout')
+    },
+    
+    // 修改密码
+    async changePassword() {
+      // 获取当前用户信息
+      const currentUser = this.currentUser;
+      if (!currentUser) {
+        this.$message.error('请先登录');
+        return;
+      }
+      
+      // 创建密码修改的弹窗
+      const h = this.$createElement;
+      
+      const inputStyle = {
+        width: '100%',
+        padding: '8px',
+        marginBottom: '10px',
+        boxSizing: 'border-box'
+      };
+      
+      // 使用 Vue 的动态组件创建对话框
+      this.$msgbox({
+        title: '修改密码',
+        message: h('div', null, [
+          h('div', { style: { marginBottom: '10px' } }, [
+            h('label', { style: { display: 'block', marginBottom: '5px' } }, '当前密码:'),
+            h('input', {
+              attrs: { type: 'password', placeholder: '请输入当前密码' },
+              style: {
+                ...inputStyle,
+                backgroundColor: '#fff', // 输入框保持白色
+                color: '#000',
+                border: '1px solid #dcdfe6'
+              },
+              domProps: { value: this.currentPassword },
+              on: {
+                input: (event) => {
+                  this.currentPassword = event.target.value;
+                }
+              }
+            })
+          ]),
+          h('div', { style: { marginBottom: '10px' } }, [
+            h('label', { style: { display: 'block', marginBottom: '5px' } }, '新密码:'),
+            h('input', {
+              attrs: { type: 'password', placeholder: '请输入新密码' },
+              style: {
+                ...inputStyle,
+                backgroundColor: '#fff', // 输入框保持白色
+                color: '#000',
+                border: '1px solid #dcdfe6'
+              },
+              domProps: { value: this.newPassword },
+              on: {
+                input: (event) => {
+                  this.newPassword = event.target.value;
+                }
+              }
+            })
+          ]),
+          h('div', { style: { marginBottom: '10px' } }, [
+            h('label', { style: { display: 'block', marginBottom: '5px' } }, '确认新密码:'),
+            h('input', {
+              attrs: { type: 'password', placeholder: '请再次输入新密码' },
+              style: {
+                ...inputStyle,
+                backgroundColor: '#fff', // 输入框保持白色
+                color: '#000',
+                border: '1px solid #dcdfe6'
+              },
+              domProps: { value: this.confirmNewPassword },
+              on: {
+                input: (event) => {
+                  this.confirmNewPassword = event.target.value;
+                }
+              }
+            })
+          ])
+        ]),
+        showCancelButton: true,
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        customClass: 'el-message-box-gray', // 使用灰色主题
+        beforeClose: (action, instance, done) => {
+          if (action === 'confirm') {
+            // 验证输入
+            if (!this.currentPassword) {
+              this.$message.error('请输入当前密码');
+              return;
+            }
+            
+            if (!this.newPassword || this.newPassword.length < 6) {
+              this.$message.error('新密码长度不能少于6位');
+              return;
+            }
+            
+            if (this.newPassword !== this.confirmNewPassword) {
+              this.$message.error('两次输入的新密码不一致');
+              return;
+            }
+            
+            // 验证当前密码是否正确
+            if (this.currentPassword !== currentUser.password) {
+              this.$message.error('当前密码输入错误');
+              return;
+            }
+            
+            // 更新用户密码
+            this.updatePassword(currentUser).then(() => {
+              this.$message.success('密码修改成功');
+              this.resetPasswordFields();
+              done();
+            }).catch(error => {
+              this.$message.error('密码修改失败: ' + error.message);
+            });
+          } else {
+            this.resetPasswordFields();
+            done();
+          }
+        }
+      });
+    },
+    
+    // 更新密码
+    async updatePassword(currentUser) {
+      try {
+        // 更新用户密码
+        const updatedUser = { ...currentUser, password: this.newPassword };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        
+        // 如果使用 Supabase，也需要更新数据库中的密码
+        if (this.$store.state.supabaseEnabled) {
+          await this.$store.dispatch('updateUserPassword', {
+            userId: currentUser.id,
+            newPassword: this.newPassword
+          });
+        }
+        
+        // 重置表单数据
+        this.resetPasswordFields();
+      } catch (error) {
+        throw error;
+      }
+    },
+    
+    // 重置密码字段
+    resetPasswordFields() {
+      this.currentPassword = '';
+      this.newPassword = '';
+      this.confirmNewPassword = '';
     }
   }
 }
@@ -407,5 +637,284 @@ export default {
   .sidebar-item:hover {
     transform: none;
   }
+}
+
+/* 用户区域样式 */
+.user-area {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin: 0 8px 8px 8px;
+  background: rgba(64, 158, 255, 0.1);
+  border: 1px solid rgba(64, 158, 255, 0.2);
+}
+
+.user-area:hover {
+  background: rgba(64, 158, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+}
+
+.user-area.active {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #409eff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.user-avatar i {
+  color: white;
+  font-size: 16px;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 右侧用户菜单容器 */
+.user-menu-container {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  z-index: 2001;
+  pointer-events: all;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 用户菜单背景 */
+.user-menu-background {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-color, #fff);
+  border-left: 1px solid var(--border-color, #e8e8e8);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* 用户菜单内容 */
+.user-menu-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+/* 用户菜单头部 */
+.user-menu-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+  margin-bottom: 20px;
+}
+
+.user-avatar-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #409eff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.user-avatar-large i {
+  color: white;
+  font-size: 24px;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name-large {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 12px;
+  color: var(--text-secondary-color, #666);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 用户菜单项 */
+.user-menu-items {
+  flex: 1;
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.user-menu-item:hover {
+  background: var(--hover-bg-color, rgba(64, 158, 255, 0.1));
+}
+
+.user-menu-item .item-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.user-menu-item .item-icon i {
+  font-size: 16px;
+  color: var(--icon-color, #666);
+}
+
+.user-menu-item .item-label {
+  font-size: 14px;
+  color: var(--text-color, #333);
+  font-weight: 500;
+}
+
+.user-menu-item.logout-item:hover {
+  background: rgba(245, 108, 108, 0.1);
+}
+
+.user-menu-item.logout-item:hover .item-icon i,
+.user-menu-item.logout-item:hover .item-label {
+  color: #f56c6c;
+}
+
+/* 关闭按钮 */
+.user-menu-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--close-bg-color, rgba(0, 0, 0, 0.1));
+}
+
+.user-menu-close:hover {
+  background: var(--close-hover-bg-color, rgba(0, 0, 0, 0.2));
+  transform: rotate(90deg);
+}
+
+.user-menu-close i {
+  font-size: 14px;
+  color: var(--close-icon-color, #666);
+}
+
+/* 动画效果 */
+.slide-left-enter-active, .slide-left-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-left-enter, .slide-left-leave-to {
+  transform: translateX(100%);
+}
+
+/* 深色主题样式 */
+.leftSidebarTrigger.isDark .user-area {
+  background: rgba(64, 158, 255, 0.15);
+  border-color: rgba(64, 158, 255, 0.3);
+}
+
+.leftSidebarTrigger.isDark .user-area:hover {
+  background: rgba(64, 158, 255, 0.2);
+}
+
+.leftSidebarTrigger.isDark .user-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.leftSidebarTrigger.isDark .user-menu-background {
+  background: var(--bg-color, #262a2e);
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.leftSidebarTrigger.isDark .user-menu-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.leftSidebarTrigger.isDark .user-name-large {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.leftSidebarTrigger.isDark .user-email {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.leftSidebarTrigger.isDark .user-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.leftSidebarTrigger.isDark .user-menu-item .item-icon i {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.leftSidebarTrigger.isDark .user-menu-item .item-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.leftSidebarTrigger.isDark .user-menu-close {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.leftSidebarTrigger.isDark .user-menu-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.leftSidebarTrigger.isDark .user-menu-close i {
+  color: rgba(255, 255, 255, 0.7);
 }
 </style>
