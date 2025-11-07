@@ -1,19 +1,10 @@
 <template>
   <div class="leftSidebarTrigger" :class="{ isDark: isDark }">
-    <!-- 鼠标感应区域 -->
-    <div 
-      class="trigger-area"
-      @mouseenter="showSidebar"
-      @mouseleave="startHideTimer"
-    ></div>
-    
     <!-- 左侧边栏 -->
     <transition name="slide-right">
       <div 
         v-show="isVisible" 
         class="sidebar-container"
-        @mouseenter="cancelHideTimer"
-        @mouseleave="startHideTimer"
       >
         <!-- 侧边栏背景 -->
         <div class="sidebar-background"></div>
@@ -78,16 +69,31 @@ export default {
   created() {
     // 监听页面切换事件
     this.$bus.$on('pageChanged', this.handlePageChange)
+    
+    // 监听显示左侧边栏事件
+    this.$bus.$on('showLeftSidebar', this.showSidebar)
+    
+    // 添加键盘事件监听
+    window.addEventListener('keydown', this.handleKeyDown)
   },
   beforeDestroy() {
     this.$bus.$off('pageChanged', this.handlePageChange)
+    this.$bus.$off('showLeftSidebar', this.showSidebar)
     this.cancelHideTimer()
+    
+    // 移除键盘事件监听
+    window.removeEventListener('keydown', this.handleKeyDown)
   },
   methods: {
     // 显示侧边栏
     showSidebar() {
       this.cancelHideTimer()
       this.isVisible = true
+      
+      // 更新store中的activeSidebar状态
+      this.$store.commit('setActiveSidebar', 'left')
+      
+      // 不再设置自动隐藏，等待用户操作
     },
     
     // 开始隐藏计时器
@@ -95,7 +101,7 @@ export default {
       this.cancelHideTimer()
       this.hideTimer = setTimeout(() => {
         this.isVisible = false
-      }, 300) // 300ms延迟隐藏
+      }, 5000) // 5秒后自动隐藏
     },
     
     // 取消隐藏计时器
@@ -110,6 +116,11 @@ export default {
     openMindmapManager() {
       this.currentPage = 'mindmap-manager'
       this.isVisible = false
+      this.cancelHideTimer()
+      
+      // 更新store中的activeSidebar状态
+      this.$store.commit('setActiveSidebar', '')
+      
       this.$bus.$emit('openMindmapManager')
     },
     
@@ -117,12 +128,38 @@ export default {
     openAbout() {
       this.currentPage = 'about'
       this.isVisible = false
+      
+      // 更新store中的activeSidebar状态
+      this.$store.commit('setActiveSidebar', '')
+      
       this.$message.info('关于页面功能开发中...')
     },
     
     // 处理页面切换
     handlePageChange(page) {
       this.currentPage = page
+    },
+    
+    // 处理键盘事件
+    handleKeyDown(event) {
+      // 检查是否按下ESC键且左侧边栏正在显示
+      if (event.key === 'Escape' && this.isVisible) {
+        event.preventDefault()
+        this.closeSidebarAndRestoreToolbar()
+      }
+    },
+    
+    // 关闭侧边栏并恢复工具栏状态
+    closeSidebarAndRestoreToolbar() {
+      // 隐藏侧边栏
+      this.isVisible = false
+      this.cancelHideTimer()
+      
+      // 更新store中的activeSidebar状态
+      this.$store.commit('setActiveSidebar', '')
+      
+      // 触发恢复工具栏状态的事件
+      this.$bus.$emit('backFromMindmapManager')
     }
   }
 }
@@ -136,17 +173,6 @@ export default {
   height: 100vh;
   z-index: 2000;
   pointer-events: none;
-}
-
-/* 鼠标感应区域 */
-.trigger-area {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 10px;
-  height: 100vh;
-  pointer-events: all;
-  cursor: pointer;
 }
 
 /* 侧边栏容器 */

@@ -849,18 +849,6 @@ export default {
         this.saveToDatabase()  // 调用保存到数据库的方法
       }
       
-      // 检查是否按下Ctrl+L (或Cmd+L on Mac) - 打开思维导图对话框
-      if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
-        event.preventDefault() // 阻止默认行为（如浏览器地址栏聚焦）
-        this.showMindMapHistory() // 显示思维导图对话框
-      }
-      
-      // 检查是否按下Alt+t - 打开标签管理器
-      if (event.altKey && event.key === 't') {
-        event.preventDefault() // 阻止默认行为
-        this.showTagManager() // 显示标签管理器
-      }
-      
       // 检查是否按下Shift+C - 打开备注对话框
       if (event.shiftKey && event.key.toLowerCase() === 'c') {
         event.preventDefault() // 阻止默认行为
@@ -883,8 +871,8 @@ export default {
           return
         }
         
-        // 显示对话框
-        this.showMindMapDialog = true
+        // 通过事件总线触发思维导图历史对话框显示
+        this.$bus.$emit('show_mind_map_history')
       } catch (error) {
         this.$message.error('显示思维导图对话框失败: ' + error.message)
       }
@@ -1021,7 +1009,8 @@ export default {
     
     // 显示标签管理器
     showTagManager() {
-      this.$refs.tagManager.show()
+      // 通过事件总线触发标签管理器显示
+      this.$bus.$emit('showTagManager')
     },
 
     // 刷新思维导图列表
@@ -1044,19 +1033,9 @@ export default {
 
         this.$message.success('刷新完成');
         this.statusMessage = `刷新完成，共 ${updatedMindMaps.length} 个思维导图`;
-        
-        // 移除自动重置为就绪的逻辑，保持状态信息不变
-        // setTimeout(() => {
-        //   this.statusMessage = '';
-        // }, 5000);
       } catch (error) {
         this.$message.error('刷新失败: ' + error.message);
         this.statusMessage = `刷新失败: ${error.message}`;
-        
-        // 移除自动重置为就绪的逻辑，保持状态信息不变
-        // setTimeout(() => {
-        //   this.statusMessage = '';
-        // }, 5000);
       }
     },
 
@@ -1080,11 +1059,6 @@ export default {
       // 更新状态栏信息
       const count = this.filteredMindMaps.length
       this.statusMessage = `共检索出 ${count} 个思维导图`
-      
-      // 移除自动重置为就绪的逻辑，保持状态信息不变
-      // setTimeout(() => {
-      //   this.statusMessage = ''
-      // }, 8000)
     },
     
     // 检查是否选中
@@ -1105,11 +1079,6 @@ export default {
         this.selectedMindMaps.push(mindMapId)
         this.statusMessage = `已选中: ${mindMapTitle}`
       }
-      
-      // 移除自动重置为就绪的逻辑，保持状态信息不变
-      // setTimeout(() => {
-      //   this.statusMessage = ''
-      // }, 8000)
     },
     
 
@@ -1119,10 +1088,6 @@ export default {
       if (this.selectedMindMaps.length === 0) {
         this.$message.warning('请选择要删除的思维导图')
         this.statusMessage = '未选择任何思维导图，无法执行批量删除'
-        // 移除自动重置为就绪的逻辑，保持状态信息不变
-        // setTimeout(() => {
-        //   this.statusMessage = ''
-        // }, 8000)
         return
       }
       

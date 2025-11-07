@@ -657,7 +657,7 @@ export default {
     transition: all 0.3s;
     cursor: pointer;
     position: relative;
-    background-color: #ffffff;
+    background-color: #909399;
     box-sizing: border-box;
     min-width: 0; /* 确保flex/grid项目可以缩小 */
     
@@ -687,7 +687,7 @@ export default {
       .modelName {
         margin: 0 0 4px 0;
         font-size: 14px;
-        color: #606266;
+        color: #262a2e;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -733,7 +733,7 @@ export default {
         }
         
         .modelName {
-          color: hsla(0, 0%, 100%, 0.7) !important;
+          color: hsla(0, 0%, 100%, 0.9) !important;
         }
       }
     }

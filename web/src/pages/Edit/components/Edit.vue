@@ -1527,6 +1527,8 @@ export default {
     // 处理返回编辑器
     handleBackToEditor() {
       this.currentPage = 'editor'
+      // 触发从思维导图管理页面返回的事件，用于恢复工具栏状态
+      this.$bus.$emit('backFromMindmapManager')
     }
   }
 }

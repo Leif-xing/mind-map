@@ -9,8 +9,21 @@ import { userApi } from '@/api/supabase-api'
 
 export default {
   name: 'App',
+  data() {
+    return {
+      isToolbarHidden: false // 用于跟踪工具栏是否被隐藏
+    }
+  },
   async created() {
     await this.initializeAuth()
+    // 从localStorage中初始化工具栏状态
+    this.initializeToolbarStatus()
+    // 添加键盘事件监听器
+    window.addEventListener('keydown', this.handleKeyDown)
+  },
+  beforeDestroy() {
+    // 移除键盘事件监听器
+    window.removeEventListener('keydown', this.handleKeyDown)
   },
   methods: {
     async initializeAuth() {
@@ -81,6 +94,115 @@ export default {
       } catch (error) {
         // console.error('初始化认证状态失败:', error)
         localStorage.removeItem('currentUser')
+      }
+    },
+    
+    // 初始化工具栏状态
+    initializeToolbarStatus() {
+      try {
+        const toolbarStatus = localStorage.getItem('TOOLBAR_STATUS')
+        if (toolbarStatus !== null) {
+          const status = JSON.parse(toolbarStatus)
+          
+          // 兼容旧格式（boolean）和新格式（object）
+          if (typeof status === 'boolean') {
+            // 旧格式，转换为新格式
+            this.isToolbarHidden = !status
+            this.updateToolbarStatus(!status, !status)
+          } else if (status && typeof status === 'object') {
+            // 新格式  
+            this.isToolbarHidden = !status.current_state
+          } else {
+            // 无效格式，使用默认值
+            this.isToolbarHidden = false
+            this.updateToolbarStatus(false, false)
+          }
+          
+          // 根据存储的状态更新body类
+          if (this.isToolbarHidden) {
+            document.body.classList.add('toolbars-hidden')
+          } else {
+            document.body.classList.remove('toolbars-hidden')
+          }
+        } else {
+          // 没有存储的状态，使用默认值
+          this.isToolbarHidden = false
+          this.updateToolbarStatus(true, true)
+        }
+      } catch (error) {
+        // 如果解析失败，使用默认值
+        this.isToolbarHidden = false
+        this.updateToolbarStatus(true, true)
+      }
+    },
+    
+    // 处理键盘快捷键
+    handleKeyDown(event) {
+      // 检查是否按下 Alt+H 键
+      if (event.altKey && event.key.toLowerCase() === 'h') {
+        event.preventDefault() // 阻止默认行为
+        this.toggleToolbars() // 切换工具栏显示/隐藏
+      }
+    },
+    
+    // 切换工具栏显示/隐藏
+    toggleToolbars() {
+      // 获取当前状态
+      const toolbarStatus = this.getToolbarStatus()
+      
+      // 根据 current_state 来决定切换方向
+      const newState = !toolbarStatus.current_state
+      
+      this.isToolbarHidden = !newState
+      
+      // 更新 body 类，这样可以通过 CSS 来隐藏工具栏
+      if (this.isToolbarHidden) {
+        document.body.classList.add('toolbars-hidden')
+      } else {
+        document.body.classList.remove('toolbars-hidden')
+      }
+      
+      // 更新工具栏状态（current_state和user_state都更新为新状态）
+      this.updateToolbarStatus(newState, newState)
+    },
+    
+    // 更新工具栏状态到localStorage
+    updateToolbarStatus(currentState, userState) {
+      const status = {
+        current_state: currentState,
+        user_state: userState
+      }
+      localStorage.setItem('TOOLBAR_STATUS', JSON.stringify(status))
+    },
+    
+    // 获取工具栏状态
+    getToolbarStatus() {
+      try {
+        const toolbarStatus = localStorage.getItem('TOOLBAR_STATUS')
+        if (toolbarStatus !== null) {
+          const status = JSON.parse(toolbarStatus)
+          
+          // 兼容旧格式
+          if (typeof status === 'boolean') {
+            return {
+              current_state: !status,
+              user_state: !status
+            }
+          } else if (status && typeof status === 'object') {
+            return {
+              current_state: status.current_state !== undefined ? status.current_state : true,
+              user_state: status.user_state !== undefined ? status.user_state : true
+            }
+          }
+        }
+      } catch (error) {
+        // 解析失败
+      }
+      
+      // 默认状态
+      return {
+        current_state: true,
+        user_state: true
       }
     }
   }
@@ -198,5 +320,34 @@ export default {
 
 .el-dialog{
   border-radius: 10px;
+}
+
+/* 自定义 el-tag--info 样式 */
+.el-tag.el-tag--info {
+    background-color: #404040 !important;  /* 深灰色背景 */
+    border-color: #e9e9eb !important;      /* 边框颜色 */
+    color: #62ed61 !important;             /* 绿色文字 */
+}
+
+/* 如果需要暗色主题变体 */
+.el-tag--dark.el-tag--info {
+    background-color: #404040 !important;
+    border-color: #e9e9eb !important;
+    color: #62ed61 !important;
+}
+
+/* 如果需要朴素样式变体 */
+.el-tag--plain.el-tag--info {
+    background-color: #404040 !important;
+    border-color: #62ed61 !important;
+    color: #62ed61 !important;
+}
+
+/* 工具栏隐藏样式 - 通过 Alt+H 快捷键控制（只隐藏上方工具栏） */
+body.toolbars-hidden {
+  /* 隐藏上方工具栏 */
+  .toolbarContainer .toolbar {
+    display: none !important;
+  }
 }
 </style>

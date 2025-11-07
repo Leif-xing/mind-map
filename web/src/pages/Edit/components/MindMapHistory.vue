@@ -1350,7 +1350,9 @@ export default {
     .mindmap-card-content {
       .mindmap-info {
         .mindmap-title {
-          color: hsla(0, 0%, 100%, 0.9) !important;
+          color: #77eb3d !important;
+          text-shadow: none !important;
+          -webkit-text-fill-color: initial !important;
         }
         
         .mindmap-date {
