@@ -11,88 +11,51 @@
         
         <!-- 侧边栏内容 -->
         <div class="sidebar-content">
-          <!-- 导图管理按钮 -->
+          <!-- 思维导图按钮 -->
           <div 
-            class="sidebar-item"
+            class="nav-item"
             @click="openMindmapManager"
             :class="{ active: currentPage === 'mindmap-manager' }"
           >
-            <div class="item-icon">
-              <i class="iconfont iconguanli"></i>
-            </div>
-            <div class="item-label">导图管理</div>
+            <i>📑</i><span>思维导图</span>
           </div>
           
           <!-- 关于按钮 -->
           <div 
-            class="sidebar-item"
+            class="nav-item"
             @click="openAbout"
             :class="{ active: currentPage === 'about' }"
           >
+            <i>ℹ️</i><span>关于</span>
+          </div>
+          
+          <!-- 分割线 -->
+          <div class="divider"></div>
+          
+          <!-- 用户区域 -->
+          <div class="nav-item" @click="toggleUserMenu" :class="{ active: showUserMenu }">
+            <i>👤</i><span class="username" v-if="currentUser">{{ currentUser.username || currentUser.email || '用户' }}</span>
+          </div>
+        </div>
+        
+        <!-- 子菜单 -->
+        <div 
+          v-show="showUserMenu" 
+          class="submenu"
+          @click.stop
+        >
+          <div class="nav-item submenu-item" @click="handleChangePassword">
             <div class="item-icon">
-              <i class="iconfont iconbangzhu"></i>
+              <i class="el-icon-edit"></i>
             </div>
-            <div class="item-label">关于</div>
-          </div>
-        </div>
-        
-        <!-- 底部用户区域 -->
-        <div class="sidebar-footer">
-          <div class="user-area" @click="toggleUserMenu" :class="{ active: showUserMenu }">
-            <div class="user-avatar">
-              <i class="el-icon-user-solid"></i>
-            </div>
-            <div class="user-info" v-if="currentUser">
-              <div class="user-name">{{ currentUser.username || currentUser.email || '用户' }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </transition>
-    
-    <!-- 右侧用户菜单面板 -->
-    <transition name="slide-left">
-      <div 
-        v-show="showUserMenu" 
-        class="user-menu-container"
-        @click.stop
-      >
-        <!-- 用户菜单背景 -->
-        <div class="user-menu-background"></div>
-        
-        <!-- 用户菜单内容 -->
-        <div class="user-menu-content">
-          <!-- 用户信息头部 -->
-          <div class="user-menu-header" v-if="currentUser">
-            <div class="user-avatar-large">
-              <i class="el-icon-user-solid"></i>
-            </div>
-            <div class="user-details">
-              <div class="user-name-large">{{ currentUser.username || '用户' }}</div>
-              <div class="user-email">{{ currentUser.email || currentUser.id }}</div>
-            </div>
+            <span>修改密码</span>
           </div>
           
-          <!-- 用户菜单项 -->
-          <div class="user-menu-items">
-            <div class="user-menu-item" @click="changePassword">
-              <div class="item-icon">
-                <i class="el-icon-edit"></i>
-              </div>
-              <div class="item-label">修改密码</div>
+          <div class="nav-item submenu-item" @click="handleLogout">
+            <div class="item-icon">
+              <i class="el-icon-switch-button"></i>
             </div>
-            
-            <div class="user-menu-item logout-item" @click="logout">
-              <div class="item-icon">
-                <i class="el-icon-switch-button"></i>
-              </div>
-              <div class="item-label">退出登录</div>
-            </div>
-          </div>
-          
-          <!-- 关闭按钮 -->
-          <div class="user-menu-close" @click="closeUserMenu">
-            <i class="el-icon-close"></i>
+            <span>退出登录</span>
           </div>
         </div>
       </div>
@@ -137,6 +100,9 @@ export default {
     
     // 添加键盘事件监听
     window.addEventListener('keydown', this.handleKeyDown)
+    
+    // 添加点击事件监听器来关闭子菜单
+    document.addEventListener('click', this.handleDocumentClick)
   },
   beforeDestroy() {
     this.$bus.$off('pageChanged', this.handlePageChange)
@@ -145,6 +111,9 @@ export default {
     
     // 移除键盘事件监听
     window.removeEventListener('keydown', this.handleKeyDown)
+    
+    // 移除点击事件监听器
+    document.removeEventListener('click', this.handleDocumentClick)
   },
   methods: {
     // 显示侧边栏
@@ -225,12 +194,44 @@ export default {
     },
     
     // 切换用户菜单显示状态
-    toggleUserMenu() {
+    toggleUserMenu(event) {
       this.showUserMenu = !this.showUserMenu
+      if (this.showUserMenu && event && event.target) {
+        this.$nextTick(() => {
+          const submenu = document.querySelector('.submenu')
+          if (submenu) {
+            // 子菜单现在相对于侧边栏容器定位，所以不需要设置绝对位置
+            // 它会自动对齐到用户菜单项
+          }
+        })
+      }
     },
     
     // 关闭用户菜单
     closeUserMenu() {
+      this.showUserMenu = false
+    },
+    
+    // 处理文档点击事件
+    handleDocumentClick(e) {
+      const sidebarContainer = document.querySelector('.sidebar-container')
+      
+      if (!sidebarContainer) return
+      
+      if (!sidebarContainer.contains(e.target)) {
+        this.showUserMenu = false
+      }
+    },
+    
+    // 处理修改密码
+    handleChangePassword() {
+      this.changePassword()
+      this.showUserMenu = false
+    },
+    
+    // 处理退出登录
+    handleLogout() {
+      this.logout()
       this.showUserMenu = false
     },
     
@@ -409,9 +410,10 @@ export default {
 .sidebar-container {
   position: absolute;
   left: 0;
-  top: 0;
-  width: 240px;
-  height: 100vh;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 180px;
+  height: auto;
   pointer-events: all;
   display: flex;
   flex-direction: column;
@@ -424,497 +426,145 @@ export default {
   top: 0;
   width: 100%;
   height: 100%;
-  background: var(--bg-color);
-  border-right: 1px solid var(--border-color);
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  background-color: #2f3542;
+  border-radius: 24px;
 }
 
 /* 侧边栏内容 */
 .sidebar-content {
   position: relative;
-  padding: 40px 20px 20px;
-  flex: 1;
+  padding: 0;
+  flex: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
-/* 侧边栏项目 */
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.sidebar-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 100%;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
-  transition: width 0.3s ease;
-  z-index: -1;
-}
-
-.sidebar-item:hover {
-  background: var(--bg-color-2);
-  transform: translateX(8px);
-}
-
-.sidebar-item:hover::before {
+/* 导航项样式 */
+.nav-item {
   width: 100%;
-}
-
-.sidebar-item:hover .item-icon,
-.sidebar-item:hover .item-label {
-  color: white;
-}
-
-.sidebar-item.active {
-  background: var(--primary-color);
-  color: white;
-}
-
-.sidebar-item.active .item-icon,
-.sidebar-item.active .item-label {
-  color: white;
-}
-
-/* 图标 */
-.item-icon {
-  width: 24px;
-  height: 24px;
+  padding: 12px 20px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  font-size: 18px;
-  color: var(--text-color);
-  transition: color 0.3s ease;
-}
-
-/* 标签 */
-.item-label {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-color);
-  transition: color 0.3s ease;
-}
-
-/* 底部装饰 */
-.sidebar-footer {
+  color: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
   position: relative;
-  padding: 20px;
+  background-color: transparent;
+}
+
+.nav-item i {
+  margin-right: 10px;
+  width: 20px;
   text-align: center;
 }
 
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto;
+.nav-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  transition: background-color 0.3s;
+  z-index: 0;
+}
+
+.nav-item:hover::before {
+  background-color: #57606f;
+}
+
+.sidebar-container .nav-item:first-child::before,
+.sidebar-container .nav-item:last-child::before {
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+
+.nav-item i,
+.nav-item span {
+  position: relative;
+  z-index: 1;
+}
+
+/* 分割线 */
+.divider {
+  height: 2px;
+  background: #43d5c1;
+  width: calc(100% - 40px);
+  margin: 10px auto;
+}
+
+/* 用户名样式 */
+.username {
+  color: limegreen;   /* 亮绿色 */
+  font-size: 22px;    /* 字体大小 */
+  font-weight: bold;
+}
+
+
+/* 子菜单样式 */
+.submenu {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
-  color: white;
-  font-size: 20px;
-  opacity: 0.8;
-  transition: all 0.3s ease;
+  flex-direction: column;
+  left: 180px;
+  background-color: #2f3542;
+  border-radius: 24px;
+  position: absolute;
+  top: calc(100% - 44px); /* 对齐到用户菜单项的位置 */
+  width: 160px;
+  z-index: 2001;
+  pointer-events: all;
 }
 
-.brand-mark:hover {
-  opacity: 1;
-  transform: scale(1.1);
+.submenu .nav-item {
+  width: 100%;
+  position: relative;
 }
 
-/* 滑入动画 */
-.slide-right-enter-active,
+.submenu .nav-item::before {
+  border-radius: 0;
+}
+
+.submenu .nav-item:first-child::before {
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+}
+
+.submenu .nav-item:last-child::before {
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+
+.submenu .nav-item:hover::before {
+  background-color: #57606f;
+}
+
+.submenu .item-icon {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.submenu .item-icon i {
+  color: #fff;
+  font-size: 16px;
+}
+
+.submenu .nav-item span {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+}
+
+/* 过渡动画 */
+.slide-right-enter-active, 
 .slide-right-leave-active {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s ease;
 }
 
-.slide-right-enter,
+.slide-right-enter, 
 .slide-right-leave-to {
   transform: translateX(-100%);
 }
 
-/* 深色主题适配 */
-.isDark .sidebar-background {
-  background: #1E1E1E !important; /* 更深更清晰的背景 */
-  border-color: #404040 !important;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4) !important; /* 更强的阴影效果 */
-}
-
-.isDark .sidebar-item {
-  color: #E4E7ED !important; /* 确保文字清晰可见 */
-}
-
-.isDark .sidebar-item:hover {
-  background: #2A2A2A !important; /* 更清晰的悬停效果 */
-}
-
-.isDark .sidebar-item:hover .item-icon,
-.isDark .sidebar-item:hover .item-label {
-  color: #FFFFFF !important; /* 悬停时文字更清晰 */
-}
-
-.isDark .sidebar-item.active {
-  background: #4A9EFF !important; /* 活跃状态更清晰 */
-  color: #FFFFFF !important;
-}
-
-.isDark .item-icon {
-  color: #C0C4CC !important; /* 图标颜色更清晰 */
-}
-
-.isDark .item-label {
-  color: #E4E7ED !important; /* 标签文字颜色更清晰 */
-}
-
-.isDark .sidebar-item.active .item-icon,
-.isDark .sidebar-item.active .item-label {
-  color: #FFFFFF !important;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .sidebar-container {
-    width: 200px;
-  }
-  
-  .sidebar-content {
-    padding: 30px 15px 15px;
-  }
-  
-  .sidebar-item {
-    padding: 12px 16px;
-  }
-  
-  .item-icon {
-    font-size: 16px;
-    margin-right: 10px;
-  }
-  
-  .item-label {
-    font-size: 14px;
-  }
-}
-
-/* 高对比度模式 */
-@media (prefers-contrast: high) {
-  .sidebar-background {
-    border-width: 2px;
-  }
-  
-  .sidebar-item {
-    border: 1px solid transparent;
-  }
-  
-  .sidebar-item:hover,
-  .sidebar-item.active {
-    border-color: var(--primary-color);
-  }
-}
-
-/* 减少动画模式 */
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-item,
-  .brand-mark,
-  .slide-right-enter-active,
-  .slide-right-leave-active {
-    transition: none;
-  }
-  
-  .sidebar-item:hover {
-    transform: none;
-  }
-}
-
-/* 用户区域样式 */
-.user-area {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 8px;
-  margin: 0 8px 8px 8px;
-  background: rgba(64, 158, 255, 0.1);
-  border: 1px solid rgba(64, 158, 255, 0.2);
-}
-
-.user-area:hover {
-  background: rgba(64, 158, 255, 0.15);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
-}
-
-.user-area.active {
-  background: rgba(64, 158, 255, 0.2);
-  border-color: #409eff;
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #409eff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.user-avatar i {
-  color: white;
-  font-size: 16px;
-}
-
-.user-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-color, #333);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 右侧用户菜单容器 */
-.user-menu-container {
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 280px;
-  height: 100vh;
-  z-index: 2001;
-  pointer-events: all;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 用户菜单背景 */
-.user-menu-background {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--bg-color, #fff);
-  border-left: 1px solid var(--border-color, #e8e8e8);
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-}
-
-/* 用户菜单内容 */
-.user-menu-content {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-}
-
-/* 用户菜单头部 */
-.user-menu-header {
-  display: flex;
-  align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--border-color, #e8e8e8);
-  margin-bottom: 20px;
-}
-
-.user-avatar-large {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #409eff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.user-avatar-large i {
-  color: white;
-  font-size: 24px;
-}
-
-.user-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name-large {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-color, #333);
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-email {
-  font-size: 12px;
-  color: var(--text-secondary-color, #666);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 用户菜单项 */
-.user-menu-items {
-  flex: 1;
-}
-
-.user-menu-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.user-menu-item:hover {
-  background: var(--hover-bg-color, rgba(64, 158, 255, 0.1));
-}
-
-.user-menu-item .item-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.user-menu-item .item-icon i {
-  font-size: 16px;
-  color: var(--icon-color, #666);
-}
-
-.user-menu-item .item-label {
-  font-size: 14px;
-  color: var(--text-color, #333);
-  font-weight: 500;
-}
-
-.user-menu-item.logout-item:hover {
-  background: rgba(245, 108, 108, 0.1);
-}
-
-.user-menu-item.logout-item:hover .item-icon i,
-.user-menu-item.logout-item:hover .item-label {
-  color: #f56c6c;
-}
-
-/* 关闭按钮 */
-.user-menu-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: var(--close-bg-color, rgba(0, 0, 0, 0.1));
-}
-
-.user-menu-close:hover {
-  background: var(--close-hover-bg-color, rgba(0, 0, 0, 0.2));
-  transform: rotate(90deg);
-}
-
-.user-menu-close i {
-  font-size: 14px;
-  color: var(--close-icon-color, #666);
-}
-
-/* 动画效果 */
-.slide-left-enter-active, .slide-left-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.slide-left-enter, .slide-left-leave-to {
-  transform: translateX(100%);
-}
-
-/* 深色主题样式 */
-.leftSidebarTrigger.isDark .user-area {
-  background: rgba(64, 158, 255, 0.15);
-  border-color: rgba(64, 158, 255, 0.3);
-}
-
-.leftSidebarTrigger.isDark .user-area:hover {
-  background: rgba(64, 158, 255, 0.2);
-}
-
-.leftSidebarTrigger.isDark .user-name {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.leftSidebarTrigger.isDark .user-menu-background {
-  background: var(--bg-color, #262a2e);
-  border-left-color: rgba(255, 255, 255, 0.1);
-}
-
-.leftSidebarTrigger.isDark .user-menu-header {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.leftSidebarTrigger.isDark .user-name-large {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.leftSidebarTrigger.isDark .user-email {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.leftSidebarTrigger.isDark .user-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.leftSidebarTrigger.isDark .user-menu-item .item-icon i {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.leftSidebarTrigger.isDark .user-menu-item .item-label {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.leftSidebarTrigger.isDark .user-menu-close {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.leftSidebarTrigger.isDark .user-menu-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.leftSidebarTrigger.isDark .user-menu-close i {
-  color: rgba(255, 255, 255, 0.7);
-}
 </style>

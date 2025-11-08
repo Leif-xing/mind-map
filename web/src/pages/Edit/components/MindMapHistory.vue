@@ -160,6 +160,7 @@
 import { mapState } from 'vuex'
 import { setMindMapCache, getMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
 import { getCurrentMindMapIdFromVueInstance } from '@/utils/vue-instance-helpers'
+import TagCacheManager from '@/utils/tagCacheManager'
 
 export default {
   name: 'MindMapHistory',
@@ -572,6 +573,9 @@ export default {
         // 清理被删除思维导图的本地缓存
         removeMindMapCache(mindMap.id);
         
+        // 清理该思维导图的标签关联缓存
+        this.cleanupMindMapTagCache(mindMap.id);
+        
         // 重新加载思维导图列表
         const updatedMindMaps = await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
         this.mindMaps = updatedMindMaps
@@ -610,6 +614,11 @@ export default {
         )
         
         await Promise.all(deletePromises)
+        
+        // 批量清理标签关联缓存
+        this.selectedMindMaps.forEach(mindMap => {
+          this.cleanupMindMapTagCache(mindMap.id);
+        });
         
         this.$message.success(`成功删除了 ${this.selectedMindMaps.length} 个思维导图`)
         this.statusMessage = `共删除 ${this.selectedMindMaps.length} 个思维导图`
@@ -652,6 +661,11 @@ export default {
         )
         
         await Promise.all(deletePromises)
+        
+        // 清理所有思维导图的标签关联缓存
+        this.mindMaps.forEach(mindMap => {
+          this.cleanupMindMapTagCache(mindMap.id);
+        });
         
         this.$message.success('所有思维导图已清空')
         this.statusMessage = '已清理全部思维导图'
@@ -1083,6 +1097,19 @@ export default {
       };
       
       return countInNode(data.root);
+    },
+
+    // 清理思维导图的标签关联缓存
+    cleanupMindMapTagCache(mindMapId) {
+      try {
+        if (this.currentUser && mindMapId) {
+          // 使用TagCacheManager清理该思维导图的标签关联
+          TagCacheManager.removeMindMapFromAllTags(mindMapId);
+        }
+      } catch (error) {
+        console.warn('清理标签关联缓存失败:', error);
+        // 非关键错误，不影响主要功能
+      }
     }
   }
 }

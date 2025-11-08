@@ -70,11 +70,15 @@
           :key="mindmap.id"
           class="mindmap-card"
           :class="{ 
-            selected: selectedMindmapIds.includes(mindmap.id)
+            selected: selectedMindmapIds.includes(mindmap.id),
+            'drag-active': dragActive && dragMindmapId === mindmap.id
           }"
+          draggable="true"
           @click="handleCardClick($event, mindmap)"
           @dblclick="handleMindmapDoubleClick($event, mindmap)"
           @contextmenu.prevent="showContextMenu($event, mindmap)"
+          @dragstart="handleDragStart($event, mindmap)"
+          @dragend="handleDragEnd($event)"
         >
           <!-- 卡片内容 -->
           <div class="card-content">
@@ -227,6 +231,10 @@ export default {
       sortField: 'updated_at',
       sortOrder: 'desc',
       
+      // 拖拽相关
+      dragActive: false,
+      dragMindmapId: null,
+      
       // 重命名对话框
       renameDialogVisible: false,
       renamingMindmap: null,
@@ -274,6 +282,19 @@ export default {
       })
     }
   },
+  
+  created() {
+    // 监听数据更新事件
+    this.$bus.$on('mindmap-tag-data-updated', this.handleTagDataUpdated)
+    this.$bus.$on('force-refresh-mindmap-cards', this.forceRefreshCards)
+  },
+  
+  beforeDestroy() {
+    // 清理事件监听器
+    this.$bus.$off('mindmap-tag-data-updated', this.handleTagDataUpdated)
+    this.$bus.$off('force-refresh-mindmap-cards', this.forceRefreshCards)
+  },
+  
   methods: {
     
     // 处理排序命令
@@ -344,7 +365,60 @@ export default {
     // 显示右键菜单
     showContextMenu(event, mindmap) {
       // 可以实现自定义右键菜单
-      console.log('Right click on mindmap:', mindmap)
+    },
+    
+    // 拖拽开始
+    handleDragStart(event, mindmap) {
+      this.dragActive = true
+      this.dragMindmapId = mindmap.id
+      
+      // 设置拖拽数据
+      event.dataTransfer.setData('text/plain', JSON.stringify({
+        type: 'mindmap',
+        mindmapId: mindmap.id,
+        mindmapTitle: this.getMindmapTitle(mindmap)
+      }))
+      
+      // 设置拖拽效果
+      event.dataTransfer.effectAllowed = 'copy'
+      
+      // 通知父组件拖拽开始
+      this.$emit('drag-start', mindmap.id)
+      
+      // 向全局事件总线发送拖拽开始事件
+      this.$bus.$emit('mindmap-drag-start', {
+        mindmapId: mindmap.id,
+        mindmapTitle: this.getMindmapTitle(mindmap)
+      })
+    },
+    
+    // 拖拽结束
+    handleDragEnd(event) {
+      this.dragActive = false
+      this.dragMindmapId = null
+      
+      // 通知父组件拖拽结束
+      this.$emit('drag-end')
+      
+      // 向全局事件总线发送拖拽结束事件
+      this.$bus.$emit('mindmap-drag-end')
+    },
+    
+    // 处理标签数据更新
+    handleTagDataUpdated(data) {
+      const { mindmapId } = data
+      
+      // 强制更新显示该思维导图的标签
+      this.$nextTick(() => {
+        this.$forceUpdate()
+      })
+    },
+    
+    // 强制刷新卡片
+    forceRefreshCards() {
+      this.$nextTick(() => {
+        this.$forceUpdate()
+      })
     },
     
 
@@ -358,17 +432,32 @@ export default {
     getMindmapTitle(mindmap) {
       // 确保标题字段存在且有值
       if (mindmap && mindmap.title) {
-        const title = String(mindmap.title).trim()
+        const title = this.cleanTitle(String(mindmap.title))
         return title || '未命名思维导图'
       }
       
       // 备用字段
       if (mindmap && mindmap.name) {
-        const name = String(mindmap.name).trim()
+        const name = this.cleanTitle(String(mindmap.name))
         return name || '未命名思维导图'
       }
       
       return '未命名思维导图'
+    },
+    
+    // 清理标题，移除HTML标签和多余字符
+    cleanTitle(title) {
+      if (!title || typeof title !== 'string') {
+        return '未命名思维导图'
+      }
+      
+      let cleaned = title.trim()
+      // 移除HTML标签
+      cleaned = cleaned.replace(/<[^>]+>/g, '')
+      // 移除多余的空白字符
+      cleaned = cleaned.replace(/\s+/g, ' ').trim()
+      
+      return cleaned.length > 0 ? cleaned : '未命名思维导图'
     },
     
     // 获取思维导图标签
@@ -535,6 +624,14 @@ export default {
 .mindmap-card.selected {
   border-color: #409EFF;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.mindmap-card.drag-active {
+  opacity: 0.6;
+  border-style: dashed;
+  border-color: #409EFF;
+  background: rgba(64, 158, 255, 0.1);
+  transform: scale(0.95);
 }
 
 /* 卡片内容 */

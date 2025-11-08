@@ -363,9 +363,34 @@ const store = new Vuex.Store({
     },
     
     // 删除思维导图
-    async deleteMindMap({ commit }, { mindMapId, userId }) {
+    async deleteMindMap({ commit, state }, { mindMapId, userId }) {
       if (this.state.supabaseEnabled) {
-        return await mindMapApi.deleteMindMap(mindMapId, userId)
+        const result = await mindMapApi.deleteMindMap(mindMapId, userId)
+        
+        // 删除成功后，同步更新本地缓存
+        if (result) {
+          // 从本地思维导图列表中移除
+          const updatedLocalList = state.localMindMaps.filter(mindMap => mindMap.id !== mindMapId)
+          commit('setLocalMindMaps', updatedLocalList)
+          
+          // 清理该思维导图的内容缓存
+          try {
+            const { removeMindMapCache } = await import('@/utils/mindmap-cache-manager')
+            removeMindMapCache(mindMapId)
+          } catch (error) {
+            console.warn('清理思维导图内容缓存失败:', error)
+          }
+          
+          // 清理该思维导图的标签关联缓存
+          try {
+            const TagCacheManager = await import('@/utils/tagCacheManager')
+            TagCacheManager.default.removeMindMapFromAllTags(mindMapId)
+          } catch (error) {
+            console.warn('清理思维导图标签关联缓存失败:', error)
+          }
+        }
+        
+        return result
       } else {
         // 本地删除逻辑
         return null
@@ -555,20 +580,11 @@ const store = new Vuex.Store({
         // 检测是否为部署环境（通过环境变量手动设置）
         const IS_VERCEL_DEPLOYED = process.env.VUE_APP_IS_VERCEL_DEPLOYED !== 'false' // 默认true，只有明确设置为'false'才是本地
         
-        console.log('前端环境检测:', {
-          hostname: window.location.hostname,
-          IS_VERCEL_DEPLOYED,
-          VUE_APP_IS_VERCEL_DEPLOYED: process.env.VUE_APP_IS_VERCEL_DEPLOYED,
-          willUseNewMethod: IS_VERCEL_DEPLOYED
-        })
-        
         if (IS_VERCEL_DEPLOYED) {
           // 🚀 部署环境：使用新方式（通过代理调用）
-          console.log('部署环境：使用新方式通过代理调用AI')
           return await aiConfigApi.callAiService(userId, aiPayload)
         } else {
           // 💻 本地环境：使用旧方式（直接调用ai.js）
-          console.log('本地环境：应该使用旧方式 (ai.js)，但当前调用了新方式')
           throw new Error('本地开发环境应该使用 ai.js 直接调用，而不是通过代理')
         }
       } catch (error) {
@@ -690,7 +706,6 @@ const store = new Vuex.Store({
         const newExists = newNode !== null && newNode !== undefined;
 
         if (!oldExists && newExists) {
-          console.log(`  `.repeat(depth) + `节点新增: "${newNode.data?.text || '未知节点'}"`);
           // 继续比较新节点的子节点
           if (newNode.children) {
             newNode.children.forEach((child, index) => {
@@ -701,7 +716,6 @@ const store = new Vuex.Store({
         }
 
         if (oldExists && !newExists) {
-          console.log(`  `.repeat(depth) + `节点删除: "${oldNode.data?.text || '未知节点'}"`);
           return;
         }
 

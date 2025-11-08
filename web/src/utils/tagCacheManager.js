@@ -234,6 +234,18 @@ class TagCacheManager {
   }
 
   /**
+   * 删除思维导图时清理其所有标签关联
+   * @param {string} mindMapId - 思维导图ID
+   */
+  static removeMindMapFromAllTags(mindMapId) {
+    const mappings = this.getMindMapTagIds()
+    if (mappings[mindMapId]) {
+      delete mappings[mindMapId]
+      this.setMindMapTagIds(mappings)
+    }
+  }
+
+  /**
    * 批量设置思维导图标签（用于初始化）
    * @param {string} mindMapId - 思维导图ID
    * @param {Array} tags - 标签对象数组

@@ -24,7 +24,7 @@
         <div class="currentTagsArea" v-if="currentMindMapId">
           <div v-if="currentMindMapTags.length === 0" class="emptyState">
             <i class="el-icon-price-tag"></i>
-            <p>暂无标签，点击上方按钮添加标签</p>
+            <p>暂无标签，点击上方按钮添加标签或双击下方标签快速添加</p>
           </div>
           <div v-else class="tagsList">
             <div 
@@ -87,7 +87,7 @@
         <div class="myTagsArea">
           <div v-if="filteredTags.length === 0 && !loading" class="emptyState">
             <i class="el-icon-price-tag"></i>
-            <p>{{ searchKeyword ? '没有找到匹配的标签' : '暂无标签，点击上方按钮创建标签' }}</p>
+            <p>{{ searchKeyword ? '没有找到匹配的标签' : '暂无标签，点击上方按钮创建标签。创建后可双击标签快速添加到思维导图' }}</p>
           </div>
           <div v-else class="tagsList">
             <div 
@@ -96,8 +96,11 @@
               class="tagItem"
               :class="{ 
                 'is-public': tag.is_public,
-                'is-used': isTagUsedInCurrentMindMap(tag.id)
+                'is-used': isTagUsedInCurrentMindMap(tag.id),
+                'is-processing': isProcessing
               }"
+              @dblclick="handleDoubleClickTag(tag)"
+              :title="isProcessing ? '处理中...' : (isTagUsedInCurrentMindMap(tag.id) ? '双击移除标签' : '双击添加标签到当前思维导图')"
             >
               <div class="tagInfo">
                 <div 
@@ -199,6 +202,7 @@ export default {
   data() {
     return {
       loading: false,
+      isProcessing: false, // 防止重复操作
       searchKeyword: '',
       availableTags: [],
       currentMindMapTags: [],
@@ -352,6 +356,64 @@ export default {
     // 检查标签是否已用于当前思维导图
     isTagUsedInCurrentMindMap(tagId) {
       return this.currentMindMapTags.some(tag => tag.id === tagId)
+    },
+
+    // 双击标签处理（快速添加/移除标签）- 优化版本
+    async handleDoubleClickTag(tag) {
+      if (!this.currentMindMapId) {
+        this.$message.warning('请先选择思维导图')
+        return
+      }
+
+      // 防止重复点击
+      if (this.isProcessing) {
+        return
+      }
+      this.isProcessing = true
+
+      try {
+        const isUsed = this.isTagUsedInCurrentMindMap(tag.id)
+        
+        if (isUsed) {
+          // 立即更新UI（乐观更新）
+          TagCacheManager.removeTagFromMindMap(this.currentMindMapId, tag.id)
+          this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+          this.$message.success(`标签 "${tag.name}" 移除成功`)
+          
+          // 后台异步同步到数据库
+          tagApi.removeTagFromMindMapOptimized(
+            this.currentUser.id,
+            this.currentMindMapId,
+            tag.id
+          ).catch(error => {
+            // 如果后台同步失败，回滚UI更改
+            TagCacheManager.addTagToMindMap(this.currentMindMapId, tag.id)
+            this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+            this.$message.error('移除失败: ' + error.message)
+          })
+        } else {
+          // 立即更新UI（乐观更新）
+          TagCacheManager.addTagToMindMap(this.currentMindMapId, tag.id)
+          this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+          this.$message.success(`标签 "${tag.name}" 添加成功`)
+          
+          // 后台异步同步到数据库
+          tagApi.addTagToMindMapOptimized(
+            this.currentUser.id,
+            this.currentMindMapId,
+            tag.id
+          ).catch(error => {
+            // 如果后台同步失败，回滚UI更改
+            TagCacheManager.removeTagFromMindMap(this.currentMindMapId, tag.id)
+            this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+            this.$message.error('添加失败: ' + error.message)
+          })
+        }
+      } catch (error) {
+        this.$message.error('操作失败: ' + error.message)
+      } finally {
+        this.isProcessing = false
+      }
     },
 
     // 切换标签状态（添加/移除）（需求7：缓存同步）
@@ -701,15 +763,43 @@ export default {
     transition: all 0.2s;
     width: 100%;
     margin-bottom: 8px;
+    user-select: none;
 
     &:hover {
       background-color: #f5f7fa;
       border-color: #409eff;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(64, 158, 255, 0.15);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 3px rgba(64, 158, 255, 0.1);
     }
 
     &.is-used {
       background-color: #ecf5ff;
       border-color: #409eff;
+    }
+
+    &.is-processing {
+      opacity: 0.6;
+      cursor: wait;
+      pointer-events: none;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border: 2px solid #409eff;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: loading-spin 1s linear infinite;
+      }
     }
 
     .tagInfo {
@@ -772,6 +862,15 @@ export default {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+  }
+}
+
+@keyframes loading-spin {
+  0% {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  100% {
+    transform: translateY(-50%) rotate(360deg);
   }
 }
 </style>

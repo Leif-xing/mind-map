@@ -78,10 +78,15 @@
           class="tag-node"
           :class="{ 
             selected: selectedTagIds.includes(tagId),
-            'has-mindmaps': getTagMindmapCount(tagId) > 0
+            'has-mindmaps': getTagMindmapCount(tagId) > 0,
+            'drag-over': dragOverTagId === tagId
           }"
           @click="toggleTagSelection(tagId)"
           @contextmenu.prevent="showTagContextMenu($event, tagId, tag)"
+          @dragover.prevent="handleDragOver($event, tagId)"
+          @dragenter.prevent="handleDragEnter($event, tagId)"
+          @dragleave="handleDragLeave($event, tagId)"
+          @drop.prevent="handleDrop($event, tagId)"
         >
           <!-- 标签颜色指示器 -->
           <div 
@@ -218,6 +223,10 @@ export default {
     return {
       showOnlyUntagged: false,
       
+      // 拖拽相关
+      dragOverTagId: null,
+      isDragActive: false,
+      
       // 标签对话框
       tagDialogVisible: false,
       tagDialogMode: 'create', // 'create' | 'edit'
@@ -285,6 +294,19 @@ export default {
       this.emitTagSelection()
     }
   },
+  
+  created() {
+    // 监听数据更新事件
+    this.$bus.$on('mindmap-tag-data-updated', this.handleTagDataUpdated)
+    this.$bus.$on('force-refresh-tag-tree', this.forceRefreshTagTree)
+  },
+  
+  beforeDestroy() {
+    // 清理事件监听器
+    this.$bus.$off('mindmap-tag-data-updated', this.handleTagDataUpdated)
+    this.$bus.$off('force-refresh-tag-tree', this.forceRefreshTagTree)
+  },
+  
   methods: {
     // 获取标签下的思维导图数量
     getTagMindmapCount(tagId) {
@@ -308,6 +330,84 @@ export default {
       }
       
       this.$emit('tag-select', selectedIds)
+    },
+    
+    // 拖拽进入处理
+    handleDragEnter(event, tagId) {
+      this.dragOverTagId = tagId
+      this.isDragActive = true
+    },
+    
+    // 拖拽悬停处理
+    handleDragOver(event, tagId) {
+      event.dataTransfer.dropEffect = 'copy'
+      this.dragOverTagId = tagId
+    },
+    
+    // 拖拽离开处理
+    handleDragLeave(event, tagId) {
+      // 使用延迟来避免子元素触发的dragLeave
+      setTimeout(() => {
+        // 确保event和currentTarget存在再调用contains方法
+        if (event && event.currentTarget && 
+            (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget))) {
+          this.dragOverTagId = null
+        }
+      }, 50)
+    },
+    
+    // 拖拽放置处理
+    handleDrop(event, tagId) {
+      this.dragOverTagId = null
+      this.isDragActive = false
+      
+      try {
+        const dragData = JSON.parse(event.dataTransfer.getData('text/plain'))
+        
+        if (dragData.type === 'mindmap') {
+          this.addTagToMindmap(dragData.mindmapId, tagId, dragData.mindmapTitle)
+        }
+      } catch (error) {
+        console.error('解析拖拽数据失败:', error)
+        this.$message.error('拖拽操作失败')
+      }
+    },
+    
+    // 为思维导图添加标签
+    addTagToMindmap(mindmapId, tagId, mindmapTitle) {
+      const tagName = this.userTags[tagId]?.name || '未知标签'
+      
+      // 检查是否已经有这个标签
+      const currentTags = this.mindmapTagMapping[mindmapId] || []
+      if (currentTags.includes(tagId)) {
+        this.$message.info(`"${mindmapTitle}" 已经包含标签 "${tagName}"`)
+        return
+      }
+      
+      // 触发添加标签事件
+      this.$emit('mindmap-add-tag', {
+        mindmapId,
+        tagId,
+        mindmapTitle,
+        tagName
+      })
+      
+      // 注意：成功消息现在在TagMindmapPage中显示，避免重复提示
+    },
+    
+    // 处理标签数据更新
+    handleTagDataUpdated(data) {
+      // 强制更新标签统计
+      this.$nextTick(() => {
+        this.$forceUpdate()
+      })
+    },
+    
+    // 强制刷新标签树
+    forceRefreshTagTree() {
+      this.$nextTick(() => {
+        this.$forceUpdate()
+      })
     },
     
     // 选择所有标签
@@ -571,6 +671,14 @@ export default {
 
 .tag-node.has-mindmaps {
   font-weight: 500;
+}
+
+.tag-node.drag-over {
+  background: rgba(103, 194, 58, 0.1);
+  border-left-color: #67C23A;
+  border-style: solid;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
 }
 
 .tag-color-indicator {

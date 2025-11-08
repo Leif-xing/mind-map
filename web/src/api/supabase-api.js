@@ -1043,7 +1043,79 @@ export const tagApi = {
     return tagsWithUsage
   },
 
-  // 为思维导图添加标签
+  // 优化版：为思维导图添加标签（减少数据库查询）
+  async addTagToMindMapOptimized(userId, mindMapId, tagId) {
+    if (!userId || !mindMapId || !tagId) {
+      throw new Error('用户ID、思维导图ID和标签ID不能为空')
+    }
+
+    try {
+      // 直接尝试插入，利用数据库约束来处理重复和权限验证
+      const { data: relation, error } = await supabase
+        .from('mindmap_tags')
+        .insert([{
+          mindmap_id: mindMapId,
+          tag_id: tagId
+        }])
+        .select()
+        .single()
+
+      if (!error) {
+        return relation
+      }
+
+      // 处理特定错误
+      if (error.code === '23505') { // 唯一约束冲突
+        throw new Error('该思维导图已经添加了此标签')
+      } else if (error.code === '23503') { // 外键约束冲突
+        throw new Error('思维导图或标签不存在')
+      }
+      
+      throw new Error(error.message || '添加标签失败')
+    } catch (error) {
+      // 如果Supabase失败，使用本地存储备用方案
+      console.warn('Supabase添加标签失败，使用本地存储:', error.message)
+      return this.addTagToMindMapLocal(userId, mindMapId, tagId)
+    }
+  },
+
+  // 本地存储备用方案
+  async addTagToMindMapLocal(userId, mindMapId, tagId) {
+    const userTags = tagStorageManager.getUserTags(userId)
+    const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
+
+    // 验证标签是否存在
+    const tag = userTags.find(t => t.id === tagId)
+    if (!tag) {
+      throw new Error('标签不存在或无权限使用')
+    }
+
+    // 检查是否已经关联
+    const existingRelation = mindMapTagRelations.find(r => 
+      r.mindmap_id === mindMapId && r.tag_id === tagId
+    )
+    if (existingRelation) {
+      throw new Error('该思维导图已经添加了此标签')
+    }
+
+    // 创建新关联
+    const newRelation = {
+      id: tagStorageManager.generateId(),
+      mindmap_id: mindMapId,
+      tag_id: tagId,
+      created_at: new Date().toISOString()
+    }
+
+    mindMapTagRelations.push(newRelation)
+    
+    if (!tagStorageManager.saveMindMapTags(userId, mindMapTagRelations)) {
+      throw new Error('保存标签关联到本地存储失败')
+    }
+
+    return newRelation
+  },
+
+  // 为思维导图添加标签（原版本，保持向后兼容）
   async addTagToMindMap(userId, mindMapId, tagId) {
     if (!userId || !mindMapId || !tagId) {
       throw new Error('用户ID、思维导图ID和标签ID不能为空')
@@ -1142,7 +1214,55 @@ export const tagApi = {
     return newRelation
   },
 
-  // 从思维导图移除标签
+  // 优化版：从思维导图移除标签（减少查询）
+  async removeTagFromMindMapOptimized(userId, mindMapId, tagId) {
+    if (!userId || !mindMapId || !tagId) {
+      throw new Error('用户ID、思维导图ID和标签ID不能为空')
+    }
+
+    try {
+      // 直接尝试删除，依靠数据库约束和RLS策略
+      const { error } = await supabase
+        .from('mindmap_tags')
+        .delete()
+        .eq('mindmap_id', mindMapId)
+        .eq('tag_id', tagId)
+
+      if (error) {
+        throw new Error(error.message || '移除标签失败')
+      }
+
+      return true
+    } catch (error) {
+      // 如果Supabase失败，使用本地存储备用方案
+      console.warn('Supabase移除标签失败，使用本地存储:', error.message)
+      return this.removeTagFromMindMapLocal(userId, mindMapId, tagId)
+    }
+  },
+
+  // 本地存储备用方案
+  async removeTagFromMindMapLocal(userId, mindMapId, tagId) {
+    const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
+    
+    // 找到并移除关联
+    const relationIndex = mindMapTagRelations.findIndex(r => 
+      r.mindmap_id === mindMapId && r.tag_id === tagId
+    )
+    
+    if (relationIndex === -1) {
+      throw new Error('标签关联不存在')
+    }
+    
+    mindMapTagRelations.splice(relationIndex, 1)
+    
+    if (!tagStorageManager.saveMindMapTags(userId, mindMapTagRelations)) {
+      throw new Error('移除标签关联失败')
+    }
+    
+    return true
+  },
+
+  // 从思维导图移除标签（原版本，保持向后兼容）
   async removeTagFromMindMap(userId, mindMapId, tagId) {
     if (!userId || !mindMapId || !tagId) {
       throw new Error('用户ID、思维导图ID和标签ID不能为空')
