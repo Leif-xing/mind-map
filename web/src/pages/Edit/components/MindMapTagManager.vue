@@ -551,17 +551,30 @@ export default {
             color: tagData.color,
             is_public: tagData.is_public
           })
+          // 🔥 强制Vue响应式更新 - 使用$nextTick确保时序正确
+          this.$nextTick(() => {
+            if (this.currentMindMapId) {
+              const newTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+              this.currentMindMapTags = newTags
+              this.$forceUpdate() // 强制重新渲染
+            }
+            
+            // 更新可用标签列表
+            this.availableTags = TagCacheManager.getUserTagsArray()
+            this.handleSearch()
+          })
         } else {
           // 创建标签 - 添加到缓存
           TagCacheManager.addUserTag(tagData)
+          this.availableTags = TagCacheManager.getUserTagsArray()
+          this.handleSearch()
         }
-        
-        // 更新本地显示
-        this.availableTags = TagCacheManager.getUserTagsArray()
-        this.handleSearch() // 更新筛选结果
       } else {
         // 如果没有返回标签数据，重新加载
         this.loadAvailableTags()
+        if (this.currentMindMapId) {
+          this.loadCurrentMindMapTags()
+        }
       }
     },
 

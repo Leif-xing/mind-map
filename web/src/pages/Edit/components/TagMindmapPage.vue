@@ -120,7 +120,10 @@ export default {
       cachedMindMapTagMapping: {},
       
       // 从缓存加载的思维导图数据
-      cachedMindMaps: []
+      cachedMindMaps: [],
+      
+      // 🔥 强制响应式的用户标签数据
+      cachedUserTags: {}
     }
   },
   computed: {
@@ -132,7 +135,8 @@ export default {
     
     // 获取用户标签
     userTags() {
-      return TagCacheManager.getUserTags()
+      // 🔥 使用响应式数据，确保UI能够更新
+      return Object.keys(this.cachedUserTags).length > 0 ? this.cachedUserTags : TagCacheManager.getUserTags()
     },
     
     // 获取思维导图标签映射
@@ -231,61 +235,54 @@ export default {
     // 从缓存加载所有思维导图数据
     loadMindMapsFromCache() {
       try {
+        // 优先返回store中的完整元数据，这些数据包含正确的时间戳
+        if (this.localMindMaps && this.localMindMaps.length > 0) {
+          return [...this.localMindMaps]
+        }
+        
+        // 如果store为空，才从缓存重新构建（但这种情况下时间戳会不准确）
         const allIds = mindMapCacheManager.getAllIds()
         const mindMaps = []
-        
-        // 同时从store获取已有的元数据作为补充
-        const storeMindMaps = this.localMindMaps || []
-        const storeMap = {}
-        storeMindMaps.forEach(mindMap => {
-          storeMap[mindMap.id] = mindMap
-        })
         
         for (const id of allIds) {
           const cachedContent = mindMapCacheManager.get(id)
           if (cachedContent) {
-            // 尝试从store获取元数据
-            let mindMapMeta = storeMap[id]
+            // 创建基础的元数据对象
+            let parsedTitle = '未命名思维导图'
             
-            // 如果store中没有，尝试从内容中解析
-            if (!mindMapMeta || !mindMapMeta.title || mindMapMeta.title === '未命名思维导图') {
-              let parsedTitle = '未命名思维导图'
-              
-              // 尝试从缓存内容中提取标题
-              try {
-                if (typeof cachedContent === 'string') {
-                  // 如果是字符串，尝试解析为JSON
-                  const parsedContent = JSON.parse(cachedContent)
-                  parsedTitle = parsedContent.root?.data?.text || 
-                                parsedContent.title || 
-                                parsedContent.name ||
-                                '未命名思维导图'
-                } else if (cachedContent) {
-                  // 如果已经是对象，尝试多种可能的标题字段
-                  parsedTitle = cachedContent.root?.data?.text || 
-                                cachedContent.title || 
-                                cachedContent.name ||
-                                cachedContent.mindMap?.root?.data?.text ||
-                                '未命名思维导图'
-                }
-                
-                // 清理标题，移除HTML标签和多余字符
-                if (parsedTitle && parsedTitle !== '未命名思维导图') {
-                  parsedTitle = this.cleanTitle(parsedTitle)
-                }
-              } catch (parseError) {
-                console.warn(`解析思维导图 ${id} 的标题失败:`, parseError.message)
+            // 尝试从缓存内容中提取标题
+            try {
+              if (typeof cachedContent === 'string') {
+                const parsedContent = JSON.parse(cachedContent)
+                parsedTitle = parsedContent.root?.data?.text || 
+                              parsedContent.title || 
+                              parsedContent.name ||
+                              '未命名思维导图'
+              } else if (cachedContent) {
+                parsedTitle = cachedContent.root?.data?.text || 
+                              cachedContent.title || 
+                              cachedContent.name ||
+                              cachedContent.mindMap?.root?.data?.text ||
+                              '未命名思维导图'
               }
               
-              // 创建一个基础的元数据对象
-              mindMapMeta = {
-                id: id,
-                title: parsedTitle,
-                updated_at: cachedContent.updated_at || new Date().toISOString(),
-                created_at: cachedContent.created_at || new Date().toISOString(),
-                is_public: cachedContent.is_public || false,
-                user_id: this.currentUser?.id || 1
+              if (parsedTitle && parsedTitle !== '未命名思维导图') {
+                parsedTitle = this.cleanTitle(parsedTitle)
               }
+            } catch (parseError) {
+              console.warn(`解析思维导图 ${id} 的标题失败:`, parseError.message)
+            }
+            
+            // ⚠️ 注意：这里创建的时间戳是当前时间，不是真实的创建/更新时间
+            // 这只是一个备用方案，实际应该从数据库加载正确的元数据
+            const now = new Date().toISOString()
+            const mindMapMeta = {
+              id: id,
+              title: parsedTitle,
+              updated_at: now, // 备用时间戳（不准确）
+              created_at: now, // 备用时间戳（不准确）
+              is_public: false,
+              user_id: this.currentUser?.id || 1
             }
             
             mindMaps.push(mindMapMeta)
@@ -326,7 +323,14 @@ export default {
     
     // 获取所有思维导图数据
     getAllMindmapsData() {
-      return this.cachedMindMaps.length > 0 ? this.cachedMindMaps : (this.localMindMaps || [])
+      // 优先使用store中的数据（包含正确时间戳），然后筛选出有缓存内容的
+      if (this.localMindMaps && this.localMindMaps.length > 0) {
+        const cachedIds = mindMapCacheManager.getAllIds()
+        return this.localMindMaps.filter(mindMap => cachedIds.includes(mindMap.id))
+      }
+      
+      // 如果store为空，使用cachedMindMaps作为备用
+      return this.cachedMindMaps || []
     },
     
     // 从数据库加载思维导图数据
@@ -356,6 +360,9 @@ export default {
     updateCachedData() {
       this.cachedMindMapTagMapping = TagCacheManager.getMindMapTagIds()
       
+      // 🔥 同时更新响应式用户标签数据
+      this.cachedUserTags = { ...TagCacheManager.getUserTags() }
+      
       // 恢复重要的store更新逻辑
       if (this.cachedMindMaps.length > 0) {
         const currentStoreMindMaps = this.localMindMaps || []
@@ -372,25 +379,24 @@ export default {
       try {
         this.isLoading = true
         
-        // 更新标签缓存数据
-        this.updateCachedData()
-        
-        // 首先确保store中的数据已加载（如果需要）
-        if (this.currentUser && this.localMindMaps.length === 0) {
+        // 首先确保store中的数据已加载（从数据库获取最新元数据）
+        if (this.currentUser) {
           await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
         }
         
-        // 优先从缓存加载思维导图数据
-        this.cachedMindMaps = this.loadMindMapsFromCache()
+        // 更新标签缓存数据
+        this.updateCachedData()
         
-        if (this.cachedMindMaps.length > 0) {
+        // 优先使用store中的数据（包含正确的时间戳），然后检查缓存内容是否存在
+        if (this.localMindMaps && this.localMindMaps.length > 0) {
+          // 筛选出在缓存中有内容的思维导图
+          const cachedIds = mindMapCacheManager.getAllIds()
+          this.cachedMindMaps = this.localMindMaps.filter(mindMap => 
+            cachedIds.includes(mindMap.id)
+          )
         } else {
-          // 如果缓存为空，则从数据库加载
-          this.cachedMindMaps = await this.loadMindMapsFromDatabase()
-          
-          if (this.cachedMindMaps.length > 0) {
-          } else {
-          }
+          // 如果store为空，才从缓存重新构建
+          this.cachedMindMaps = this.loadMindMapsFromCache()
         }
         
         // 强制刷新数据以确保获取最新状态
@@ -399,12 +405,8 @@ export default {
         // 确保标签映射数据已加载
         TagCacheManager.refreshCache()
         
-        // 注释掉强制更新，让Vue的响应式系统自动处理
-        // this.$forceUpdate()
-        
         this.isLoading = false
       } catch (error) {
-        console.error('初始化页面数据失败:', error)
         this.$message.error('加载数据失败，请刷新页面重试')
         this.isLoading = false
       }
@@ -466,11 +468,45 @@ export default {
     
     handleTagEdit(tagId, tagData) {
       try {
-        TagCacheManager.updateTag(tagId, tagData)
-        this.$message.success('更新标签成功')
-        this.refreshData()
+        // 1. 先更新本地缓存 (user_tags)
+        const userTags = TagCacheManager.getUserTags()
+        
+        if (userTags[tagId]) {
+          userTags[tagId] = {
+            ...userTags[tagId],
+            ...tagData,
+            updatedAt: new Date().toISOString()
+          }
+          TagCacheManager.setUserTags(userTags)
+        }
+        
+        // 2. 异步持久化到数据库
+        if (this.currentUser) {
+          tagApi.updateTag(this.currentUser.id, tagId, tagData)
+            .then(() => {
+            })
+            .catch(error => {
+              this.$message.error('保存到数据库失败，但本地修改已生效')
+            })
+        }
+        
+        // 3. 立即更新界面 - 强制刷新所有相关数据
+        this.$nextTick(async () => {
+          // 强制刷新数据源
+          await this.forceRefreshData()
+          
+          // 通知事件总线更新
+          this.$bus.$emit('tag-updated', {
+            tagId,
+            tagData: {
+              ...userTags[tagId],
+              ...tagData
+            }
+          })
+          
+        })
+        
       } catch (error) {
-        console.error('更新标签失败:', error)
         this.$message.error('更新标签失败')
       }
     },
@@ -633,15 +669,23 @@ export default {
       // 更新标签缓存数据
       this.updateCachedData()
       
-      // 重新加载思维导图数据（优先从缓存）
-      const cachedMindMaps = this.loadMindMapsFromCache()
-      
-      if (cachedMindMaps.length > 0) {
-        this.cachedMindMaps = cachedMindMaps
+      // 优先从数据库刷新以获取最新的正确时间戳
+      if (this.currentUser) {
+        try {
+          await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
+          
+          // 使用store中的最新数据，筛选出有缓存内容的
+          const cachedIds = mindMapCacheManager.getAllIds()
+          this.cachedMindMaps = (this.localMindMaps || []).filter(mindMap => 
+            cachedIds.includes(mindMap.id)
+          )
+        } catch (error) {
+          // 如果数据库刷新失败，使用本地缓存数据
+          this.cachedMindMaps = this.loadMindMapsFromCache()
+        }
       } else {
-        // 如果缓存为空，尝试从数据库刷新
-        const dbMindMaps = await this.loadMindMapsFromDatabase()
-        this.cachedMindMaps = dbMindMaps
+        // 如果没有用户信息，使用缓存数据
+        this.cachedMindMaps = this.loadMindMapsFromCache()
       }
       
       this.$forceUpdate()
@@ -670,15 +714,27 @@ export default {
       // 刷新标签缓存
       TagCacheManager.refreshCache()
       
-      // 重新加载思维导图数据
-      const cachedMindMaps = this.loadMindMapsFromCache()
-      
-      if (cachedMindMaps.length > 0) {
-        this.cachedMindMaps = cachedMindMaps
+      // 检查标签缓存更新后的状态
+      const updatedUserTags = TagCacheManager.getUserTags()
+      // 🔥 强制更新响应式用户标签数据
+      this.cachedUserTags = { ...updatedUserTags }
+      // 重新加载思维导图数据，优先使用store中的正确时间戳
+      if (this.currentUser) {
+        try {
+          // 先从数据库刷新store数据
+          await this.$store.dispatch('getUserMindMaps', this.currentUser.id)
+          
+          // 使用store中的数据，筛选出有缓存内容的
+          const cachedIds = mindMapCacheManager.getAllIds()
+          this.cachedMindMaps = (this.localMindMaps || []).filter(mindMap => 
+            cachedIds.includes(mindMap.id)
+          )
+        } catch (error) {
+          console.error('🔥 从数据库刷新失败，使用缓存重建:', error)
+          this.cachedMindMaps = this.loadMindMapsFromCache()
+        }
       } else {
-        // 如果缓存为空，尝试从数据库刷新
-        const dbMindMaps = await this.loadMindMapsFromDatabase()
-        this.cachedMindMaps = dbMindMaps
+        this.cachedMindMaps = this.loadMindMapsFromCache()
       }
       
       // 更新本地缓存数据
@@ -687,12 +743,12 @@ export default {
       // 使用nextTick确保数据更新后再更新UI
       await this.$nextTick()
       
-      // 注释掉强制更新，让Vue的响应式系统自动处理
-      // this.$forceUpdate()
+      // 🔥 强制Vue重新渲染，确保UI立即更新
+      this.$forceUpdate()
       
-        // 通知子组件重新渲染
-        this.$bus.$emit('force-refresh-mindmap-cards')
-        this.$bus.$emit('force-refresh-tag-tree')
+      // 通知子组件重新渲染
+      this.$bus.$emit('force-refresh-mindmap-cards')
+      this.$bus.$emit('force-refresh-tag-tree')
     }
   }
 }

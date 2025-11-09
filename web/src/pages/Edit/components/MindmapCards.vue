@@ -226,6 +226,15 @@ export default {
       default: ''
     }
   },
+  watch: {
+    mindmaps: {
+      handler(newMindmaps) {
+        if (newMindmaps?.length > 0) {
+        }
+      },
+      immediate: true
+    }
+  },
   data() {
     return {
       sortField: 'updated_at',
@@ -287,12 +296,15 @@ export default {
     // 监听数据更新事件
     this.$bus.$on('mindmap-tag-data-updated', this.handleTagDataUpdated)
     this.$bus.$on('force-refresh-mindmap-cards', this.forceRefreshCards)
+    // 监听标签更新事件
+    this.$bus.$on('tag-updated', this.handleTagUpdated)
   },
   
   beforeDestroy() {
     // 清理事件监听器
     this.$bus.$off('mindmap-tag-data-updated', this.handleTagDataUpdated)
     this.$bus.$off('force-refresh-mindmap-cards', this.forceRefreshCards)
+    this.$bus.$off('tag-updated', this.handleTagUpdated)
   },
   
   methods: {
@@ -402,6 +414,22 @@ export default {
       
       // 向全局事件总线发送拖拽结束事件
       this.$bus.$emit('mindmap-drag-end')
+    },
+    
+    // 处理标签更新事件
+    handleTagUpdated(data) {
+      const { tagId } = data
+      
+      // 检查是否有思维导图使用了这个标签
+      const hasMatchingMindmap = this.sortedMindmaps.some(mindmap => {
+        const tagIds = this.mindmapTagMapping[mindmap.id] || []
+        return tagIds.includes(tagId)
+      })
+      
+      // 如果有思维导图使用了该标签，强制更新组件
+      if (hasMatchingMindmap) {
+        this.$forceUpdate()
+      }
     },
     
     // 处理标签数据更新

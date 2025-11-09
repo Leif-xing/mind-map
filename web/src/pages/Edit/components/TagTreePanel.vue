@@ -100,20 +100,14 @@
               trigger="click"
               @command="handleTagAction"
             >
-              <el-button type="text" size="mini">
+              <el-button type="text" size="mini" class="more-button">
                 <i class="el-icon-more"></i>
               </el-button>
               <el-dropdown-menu slot="dropdown">
                 <el-dropdown-item :command="{ action: 'edit', tagId }">
                   <i class="el-icon-edit"></i> 编辑
                 </el-dropdown-item>
-                <el-dropdown-item :command="{ action: 'duplicate', tagId }">
-                  <i class="el-icon-copy-document"></i> 复制
-                </el-dropdown-item>
-                <el-dropdown-item 
-                  :command="{ action: 'delete', tagId }"
-                  divided
-                >
+                <el-dropdown-item :command="{ action: 'delete', tagId }">
                   <i class="el-icon-delete"></i> 删除
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -153,6 +147,9 @@
       :visible.sync="tagDialogVisible"
       width="400px"
       :close-on-press-escape="true"
+      :modal-append-to-body="false"
+      v-drag-dialog
+      custom-class="tag-dialog"
     >
       <el-form :model="tagForm" :rules="tagFormRules" ref="tagForm" label-width="80px">
         <el-form-item label="标签名称" prop="name">
@@ -169,19 +166,20 @@
               v-model="tagForm.color"
               :predefine="predefineColors"
               show-alpha
+              @change="handleColorChange"
             ></el-color-picker>
-            <span class="color-preview" :style="{ backgroundColor: tagForm.color }"></span>
           </div>
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input 
-            v-model="tagForm.description" 
-            type="textarea"
-            placeholder="请输入标签描述（可选）"
-            maxlength="100"
-            show-word-limit
-            :rows="3"
-          ></el-input>
+          <div class="color-value-container">
+            <span 
+              class="color-value-display" 
+              :style="{ 
+                backgroundColor: tagForm.color,
+                color: getContrastColor(tagForm.color)
+              }"
+            >
+              {{ tagForm.color.toUpperCase() }}
+            </span>
+          </div>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -293,12 +291,15 @@ export default {
     // 监听数据更新事件
     this.$bus.$on('mindmap-tag-data-updated', this.handleTagDataUpdated)
     this.$bus.$on('force-refresh-tag-tree', this.forceRefreshTagTree)
+    // 监听标签更新事件
+    this.$bus.$on('tag-updated', this.handleTagUpdated)
   },
   
   beforeDestroy() {
     // 清理事件监听器
     this.$bus.$off('mindmap-tag-data-updated', this.handleTagDataUpdated)
     this.$bus.$off('force-refresh-tag-tree', this.forceRefreshTagTree)
+    this.$bus.$off('tag-updated', this.handleTagUpdated)
   },
   
   methods: {
@@ -439,7 +440,7 @@ export default {
       this.editingTagId = null
       this.tagForm = {
         name: '',
-        color: '#409EFF',
+        color: '#409EFF', // 确保是标准的十六进制格式
         description: ''
       }
       this.tagDialogVisible = true
@@ -449,13 +450,79 @@ export default {
       })
     },
     
+    // 处理颜色变化
+    handleColorChange(color) {
+      // 确保颜色格式为十六进制格式
+      if (color && color.startsWith('#')) {
+        // 如果是十六进制格式，直接使用
+        this.tagForm.color = color.toUpperCase()
+      } else if (color && color.includes('rgba')) {
+        // 如果是rgba格式，转换为十六进制（不考虑透明度）
+        const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+        if (rgbaMatch) {
+          const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
+          const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
+          const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+          this.tagForm.color = `#${r}${g}${b}`.toUpperCase()
+        }
+      }
+    },
+    
+    // 获取对比色
+    getContrastColor(hexColor) {
+      if (!hexColor) return '#333'
+      
+      // 移除 # 号
+      const hex = hexColor.replace('#', '')
+      
+      // 如果是rgba格式，只取rgb部分
+      const cleanHex = hex.split('(')[0].replace('rgba', '').replace('rgb', '')
+      
+      // 确保是6位的十六进制值
+      let finalHex = cleanHex
+      if (finalHex.length === 3) {
+        finalHex = finalHex.split('').map(c => c + c).join('')
+      } else if (finalHex.length < 6) {
+        finalHex = finalHex.padEnd(6, '0')
+      }
+      
+      // 取前6位
+      finalHex = finalHex.substring(0, 6)
+      
+      // 计算亮度
+      const r = parseInt(finalHex.substr(0, 2), 16)
+      const g = parseInt(finalHex.substr(2, 2), 16)
+      const b = parseInt(finalHex.substr(4, 2), 16)
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000
+      
+      return brightness > 128 ? '#333' : '#fff'
+    },
+    
     // 显示编辑标签对话框
     showEditTagDialog(tagId, tag) {
       this.tagDialogMode = 'edit'
       this.editingTagId = tagId
+      
+      // 确保颜色是标准的十六进制格式
+      let color = tag.color || '#409EFF'
+      if (color && !color.startsWith('#')) {
+        // 如果不是十六进制格式，尝试转换
+        const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+        if (rgbaMatch) {
+          const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
+          const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
+          const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+          color = `#${r}${g}${b}`.toUpperCase()
+        } else {
+          color = '#409EFF' // 默认颜色
+        }
+      } else if (color) {
+        color = color.toUpperCase() // 确保大写
+      }
+      
       this.tagForm = {
         name: tag.name,
-        color: tag.color || '#409EFF',
+        color: color,
         description: tag.description || ''
       }
       this.tagDialogVisible = true
@@ -469,10 +536,32 @@ export default {
     confirmTagAction() {
       this.$refs.tagForm.validate((valid) => {
         if (valid) {
+          // 确保颜色是标准的十六进制格式
+          let color = this.tagForm.color
+          if (color && !color.startsWith('#')) {
+            // 如果不是十六进制格式，尝试转换
+            const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+            if (rgbaMatch) {
+              const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
+              const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
+              const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+              color = `#${r}${g}${b}`.toUpperCase()
+            } else {
+              color = '#409EFF' // 默认颜色
+            }
+          } else if (color) {
+            color = color.toUpperCase() // 确保大写
+          }
+          
+          const tagData = {
+            ...this.tagForm,
+            color: color
+          }
+          
           if (this.tagDialogMode === 'create') {
-            this.$emit('tag-create', { ...this.tagForm })
+            this.$emit('tag-create', tagData)
           } else {
-            this.$emit('tag-edit', this.editingTagId, { ...this.tagForm })
+            this.$emit('tag-edit', this.editingTagId, tagData)
           }
           this.tagDialogVisible = false
         }
@@ -488,27 +577,13 @@ export default {
         case 'edit':
           this.showEditTagDialog(tagId, tag)
           break
-        case 'duplicate':
-          this.duplicateTag(tagId, tag)
-          break
         case 'delete':
           this.deleteTag(tagId, tag)
           break
       }
     },
     
-    // 复制标签
-    duplicateTag(tagId, tag) {
-      this.tagDialogMode = 'create'
-      this.editingTagId = null
-      this.tagForm = {
-        name: tag.name + ' 副本',
-        color: tag.color || '#409EFF',
-        description: tag.description || ''
-      }
-      this.tagDialogVisible = true
-    },
-    
+
     // 删除标签
     deleteTag(tagId, tag) {
       const mindmapCount = this.getTagMindmapCount(tagId)
@@ -531,6 +606,16 @@ export default {
     showTagContextMenu(event, tagId, tag) {
       // 这里可以实现自定义右键菜单
       // 暂时使用下拉菜单替代
+    },
+    
+    // 处理标签更新事件
+    handleTagUpdated(data) {
+      const { tagId, tagData } = data
+      
+      // 如果当前组件的userTags中包含该标签，强制更新组件
+      if (this.userTags[tagId]) {
+        this.$forceUpdate()
+      }
     },
     
     // 刷新标签
@@ -711,6 +796,11 @@ export default {
   margin-top: 2px;
 }
 
+/* 三个点按钮样式 */
+.more-button {
+  width: 60px !important; /* 增加一倍宽度 */
+}
+
 .tag-actions {
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -742,6 +832,37 @@ export default {
   margin-bottom: 16px;
 }
 
+/* 颜色选择器容器 */
+.color-picker-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 颜色值容器 */
+.color-value-container {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.color-value-display {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  border: 1px solid var(--border-color);
+  min-width: 100px;
+  text-align: center;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.color-value-display:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 /* 对话框样式 */
 .color-picker-container {
   display: flex;
@@ -754,6 +875,24 @@ export default {
   height: 24px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
+}
+
+/* 标签对话框样式 */
+.tag-dialog {
+  z-index: 10000 !important;
+}
+
+.tag-dialog .el-dialog {
+  margin-top: 0 !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* 修复遮罩层导致变暗的问题 */
+.tag-dialog + .v-modal {
+  opacity: 0.3 !important;
+  background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
 /* 深色主题适配 */

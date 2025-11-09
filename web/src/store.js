@@ -288,7 +288,6 @@ const store = new Vuex.Store({
         const mindMaps = await mindMapApi.getUserMindMaps(userId)
         return mindMaps
       } else {
-        // 返回本地存储的思维导图数据
         return []
       }
     },
