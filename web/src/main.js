@@ -12,6 +12,7 @@ import { getLang } from '@/api'
 import Message from './element-ui-config' // 导入禁用消息的配置
 import { dragDirective } from './element-ui-config' // 导入拖拽指令
 import { mindMapCacheManager } from '@/utils/mindmap-cache-manager'
+import '@/styles/dialog-z-index-fix.less' // 导入对话框层级修复样式
 
 // 初始化缓存管理器
 mindMapCacheManager.init()

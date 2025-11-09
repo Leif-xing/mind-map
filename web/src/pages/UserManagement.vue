@@ -78,49 +78,26 @@
 
     </el-dialog>
     
-    <!-- 修改密码对话框 -->
-    <el-dialog
-      title="修改密码"
+    <!-- 可拖拽的修改密码对话框 -->
+    <draggable-password-dialog
       :visible.sync="showChangePasswordDialog"
-      width="400px"
-    >
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordForm" label-width="100px">
-        <el-form-item label="当前密码" prop="currentPassword">
-          <el-input 
-            v-model="passwordForm.currentPassword" 
-            type="password" 
-            placeholder="请输入当前密码"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input 
-            v-model="passwordForm.newPassword" 
-            type="password" 
-            placeholder="请输入新密码"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmNewPassword">
-          <el-input 
-            v-model="passwordForm.confirmNewPassword" 
-            type="password" 
-            placeholder="请确认新密码"
-          ></el-input>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="showChangePasswordDialog = false">取消</el-button>
-        <el-button type="primary" @click="changePassword">确定</el-button>
-      </div>
-    </el-dialog>
+      :user-id="passwordForm.userId"
+      @cancel="handlePasswordDialogCancel"
+      @success="handlePasswordDialogSuccess"
+    ></draggable-password-dialog>
   </div>
 </template>
 
 <script>
 import { userApi } from '@/api/supabase-api'
 import supabase from '@/utils/supabase'
+import DraggablePasswordDialog from '@/components/DraggablePasswordDialog.vue'
 
 export default {
   name: 'UserManagement',
+  components: {
+    DraggablePasswordDialog
+  },
   data() {
     // 验证确认密码
     const validateConfirmPassword = (rule, value, callback) => {
@@ -324,100 +301,17 @@ export default {
     showChangePasswordDialogForUser(user) {
       this.passwordForm.userId = user.id;
       this.showChangePasswordDialog = true;
-      // 重置表单
-      this.passwordForm.currentPassword = '';
-      this.passwordForm.newPassword = '';
-      this.passwordForm.confirmNewPassword = '';
     },
-    async changePassword() {
-      const valid = await this.$refs.passwordForm.validate().catch(() => false)
-      if (!valid) return
-
-      try {
-        // 验证当前用户的密码
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
-        
-        if (!this.passwordForm.userId) {
-          // 修改当前用户密码
-          if (currentUser.password !== this.passwordForm.currentPassword) {
-            this.$message.error('当前密码错误')
-            return
-          }
-          
-          // 更新当前用户密码
-          const updatedUser = { ...currentUser, password: this.passwordForm.newPassword }
-          localStorage.setItem('currentUser', JSON.stringify(updatedUser))
-          
-          // 更新store中的用户信息
-          this.$store.commit('updateUserPassword', {
-            userId: currentUser.id,
-            newPassword: this.passwordForm.newPassword
-          })
-        } else {
-          // 管理员为其他用户修改密码
-          if (currentUser && currentUser.isAdmin) {
-            // 管理员无需输入当前密码，直接修改其他用户的密码
-            this.$store.commit('updateUserPassword', {
-              userId: this.passwordForm.userId,
-              newPassword: this.passwordForm.newPassword
-            })
-          } else {
-            this.$message.error('无权限修改其他用户密码')
-            return
-          }
-        }
-        
-        this.$message.success('密码修改成功')
-        this.showChangePasswordDialog = false
-      } catch (error) {
-        console.error('修改密码错误:', error)
-        this.$message.error('密码修改失败')
-      }
+    
+    handlePasswordDialogCancel() {
+      this.showChangePasswordDialog = false;
+      this.passwordForm.userId = null;
     },
-    async changePassword() {
-      const valid = await this.$refs.passwordForm.validate().catch(() => false)
-      if (!valid) return
-
-      try {
-        // 验证当前用户的密码
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
-        
-        if (!this.passwordForm.userId) {
-          // 修改当前用户密码
-          if (currentUser.password !== this.passwordForm.currentPassword) {
-            this.$message.error('当前密码错误')
-            return
-          }
-          
-          // 更新当前用户密码
-          const updatedUser = { ...currentUser, password: this.passwordForm.newPassword }
-          localStorage.setItem('currentUser', JSON.stringify(updatedUser))
-          
-          // 更新store中的用户信息
-          this.$store.commit('updateUserPassword', {
-            userId: currentUser.id,
-            newPassword: this.passwordForm.newPassword
-          })
-        } else {
-          // 管理员为其他用户修改密码
-          if (currentUser && currentUser.isAdmin) {
-            // 管理员无需输入当前密码，直接修改其他用户的密码
-            this.$store.commit('updateUserPassword', {
-              userId: this.passwordForm.userId,
-              newPassword: this.passwordForm.newPassword
-            })
-          } else {
-            this.$message.error('无权限修改其他用户密码')
-            return
-          }
-        }
-        
-        this.$message.success('密码修改成功')
-        this.showChangePasswordDialog = false
-      } catch (error) {
-        console.error('修改密码错误:', error)
-        this.$message.error('密码修改失败')
-      }
+    
+    handlePasswordDialogSuccess() {
+      this.showChangePasswordDialog = false;
+      this.passwordForm.userId = null;
+      this.loadUsers(); // 重新加载用户列表
     },
     goToMindMap() {
       this.$router.push('/')

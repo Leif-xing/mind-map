@@ -60,24 +60,31 @@
         </div>
       </div>
     </transition>
+    <!-- 可拖拽的修改密码对话框 -->
+    <draggable-password-dialog
+      :visible.sync="showPasswordDialog"
+      @cancel="handlePasswordDialogCancel"
+      @success="handlePasswordDialogSuccess"
+    ></draggable-password-dialog>
   </div>
 </template>
 
 <script>
 import { mapState } from 'vuex'
+import DraggablePasswordDialog from '@/components/DraggablePasswordDialog.vue'
 
 export default {
   name: 'LeftSidebarTrigger',
+  components: {
+    DraggablePasswordDialog
+  },
   data() {
     return {
       isVisible: false,
       hideTimer: null,
       currentPage: '', // 当前激活的页面
       showUserMenu: false, // 显示用户菜单
-      // 密码修改相关
-      currentPassword: '',
-      newPassword: '',
-      confirmNewPassword: ''
+      showPasswordDialog: false // 显示密码对话框
     }
   },
   computed: {
@@ -225,8 +232,19 @@ export default {
     
     // 处理修改密码
     handleChangePassword() {
-      this.changePassword()
+      this.showPasswordDialog = true
       this.showUserMenu = false
+    },
+    
+    // 处理密码对话框取消事件
+    handlePasswordDialogCancel() {
+      this.showPasswordDialog = false
+    },
+    
+    // 处理密码对话框成功事件
+    handlePasswordDialogSuccess() {
+      this.showPasswordDialog = false
+      this.$message.success('密码修改成功')
     },
     
     // 处理退出登录
@@ -240,157 +258,6 @@ export default {
       this.closeUserMenu()
       // 触发退出登录事件
       this.$bus.$emit('logout')
-    },
-    
-    // 修改密码
-    async changePassword() {
-      // 获取当前用户信息
-      const currentUser = this.currentUser;
-      if (!currentUser) {
-        this.$message.error('请先登录');
-        return;
-      }
-      
-      // 创建密码修改的弹窗
-      const h = this.$createElement;
-      
-      const inputStyle = {
-        width: '100%',
-        padding: '8px',
-        marginBottom: '10px',
-        boxSizing: 'border-box'
-      };
-      
-      // 使用 Vue 的动态组件创建对话框
-      this.$msgbox({
-        title: '修改密码',
-        message: h('div', null, [
-          h('div', { style: { marginBottom: '10px' } }, [
-            h('label', { style: { display: 'block', marginBottom: '5px' } }, '当前密码:'),
-            h('input', {
-              attrs: { type: 'password', placeholder: '请输入当前密码' },
-              style: {
-                ...inputStyle,
-                backgroundColor: '#fff', // 输入框保持白色
-                color: '#000',
-                border: '1px solid #dcdfe6'
-              },
-              domProps: { value: this.currentPassword },
-              on: {
-                input: (event) => {
-                  this.currentPassword = event.target.value;
-                }
-              }
-            })
-          ]),
-          h('div', { style: { marginBottom: '10px' } }, [
-            h('label', { style: { display: 'block', marginBottom: '5px' } }, '新密码:'),
-            h('input', {
-              attrs: { type: 'password', placeholder: '请输入新密码' },
-              style: {
-                ...inputStyle,
-                backgroundColor: '#fff', // 输入框保持白色
-                color: '#000',
-                border: '1px solid #dcdfe6'
-              },
-              domProps: { value: this.newPassword },
-              on: {
-                input: (event) => {
-                  this.newPassword = event.target.value;
-                }
-              }
-            })
-          ]),
-          h('div', { style: { marginBottom: '10px' } }, [
-            h('label', { style: { display: 'block', marginBottom: '5px' } }, '确认新密码:'),
-            h('input', {
-              attrs: { type: 'password', placeholder: '请再次输入新密码' },
-              style: {
-                ...inputStyle,
-                backgroundColor: '#fff', // 输入框保持白色
-                color: '#000',
-                border: '1px solid #dcdfe6'
-              },
-              domProps: { value: this.confirmNewPassword },
-              on: {
-                input: (event) => {
-                  this.confirmNewPassword = event.target.value;
-                }
-              }
-            })
-          ])
-        ]),
-        showCancelButton: true,
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        customClass: 'el-message-box-gray', // 使用灰色主题
-        beforeClose: (action, instance, done) => {
-          if (action === 'confirm') {
-            // 验证输入
-            if (!this.currentPassword) {
-              this.$message.error('请输入当前密码');
-              return;
-            }
-            
-            if (!this.newPassword || this.newPassword.length < 6) {
-              this.$message.error('新密码长度不能少于6位');
-              return;
-            }
-            
-            if (this.newPassword !== this.confirmNewPassword) {
-              this.$message.error('两次输入的新密码不一致');
-              return;
-            }
-            
-            // 验证当前密码是否正确
-            if (this.currentPassword !== currentUser.password) {
-              this.$message.error('当前密码输入错误');
-              return;
-            }
-            
-            // 更新用户密码
-            this.updatePassword(currentUser).then(() => {
-              this.$message.success('密码修改成功');
-              this.resetPasswordFields();
-              done();
-            }).catch(error => {
-              this.$message.error('密码修改失败: ' + error.message);
-            });
-          } else {
-            this.resetPasswordFields();
-            done();
-          }
-        }
-      });
-    },
-    
-    // 更新密码
-    async updatePassword(currentUser) {
-      try {
-        // 更新用户密码
-        const updatedUser = { ...currentUser, password: this.newPassword };
-        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        
-        // 如果使用 Supabase，也需要更新数据库中的密码
-        if (this.$store.state.supabaseEnabled) {
-          await this.$store.dispatch('updateUserPassword', {
-            userId: currentUser.id,
-            newPassword: this.newPassword
-          });
-        }
-        
-        // 重置表单数据
-        this.resetPasswordFields();
-      } catch (error) {
-        throw error;
-      }
-    },
-    
-    // 重置密码字段
-    resetPasswordFields() {
-      this.currentPassword = '';
-      this.newPassword = '';
-      this.confirmNewPassword = '';
     }
   }
 }
@@ -427,7 +294,10 @@ export default {
   width: 100%;
   height: 100%;
   background-color: #2f3542;
-  border-radius: 24px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
 }
 
 /* 侧边栏内容 */

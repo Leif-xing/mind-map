@@ -149,10 +149,10 @@ export default {
         this.showTagManager() // 显示标签管理器
       }
       
-      // 检查是否按下Shift+A - 触发左侧边栏展开
-      if (event.shiftKey && event.key.toLowerCase() === 'a') {
+      // 检查是否按下Shift+Z - 触发左侧边栏展开
+      if (event.shiftKey && event.key.toLowerCase() === 'z') {
         event.preventDefault() // 阻止默认行为
-        this.handleShiftAShortcut() // 处理Shift+A快捷键
+        this.handleShiftZShortcut() // 处理Shift+Z快捷键
       }
     },
     
@@ -209,8 +209,8 @@ export default {
       this.$message.success('已退出登录')
     },
     
-    // 处理Shift+A快捷键
-    handleShiftAShortcut() {
+    // 处理Shift+Z快捷键
+    handleShiftZShortcut() {
       // 检查左侧边栏当前是否显示
       const isLeftSidebarVisible = this.activeSidebar !== ''
       const toolbarStatus = this.getToolbarStatus()

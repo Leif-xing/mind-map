@@ -151,6 +151,14 @@
     <Export></Export>
     <Import ref="ImportRef"></Import>
     
+    <!-- 可拖拽的保存对话框 -->
+    <draggable-save-dialog
+      :visible.sync="showSaveDialog"
+      :default-title="defaultSaveTitle"
+      @cancel="handleSaveDialogCancel"
+      @success="handleSaveDialogSuccess"
+    ></draggable-save-dialog>
+    
     <!-- 思维导图历史对话框 -->
     <MindMapHistory 
       :visible.sync="showMindMapDialog"
@@ -216,6 +224,7 @@ import Export from './Export.vue'
 import Import from './Import.vue'
 import MindMapHistory from './MindMapHistory.vue'
 import MindMapTagManager from './MindMapTagManager.vue'
+import DraggableSaveDialog from '@/components/DraggableSaveDialog.vue'
 import { mapState } from 'vuex'
 import { Notification } from 'element-ui'
 import exampleData from 'simple-mind-map/example/exampleData'
@@ -262,7 +271,8 @@ export default {
     Import,
     ToolbarNodeBtnList,
     MindMapHistory,
-    MindMapTagManager
+    MindMapTagManager,
+    DraggableSaveDialog
   },
   data() {
     return {
@@ -286,6 +296,10 @@ export default {
       // 新建思维导图保存确认对话框相关
       showNewMindMapSaveConfirm: false,
       currentMindMapTitleForNew: '',
+      
+      // 保存对话框相关
+      showSaveDialog: false,
+      defaultSaveTitle: '',
       
       // 本地思维导图实例
       localMindMapInstance: null
@@ -634,9 +648,6 @@ export default {
     // 保存到数据库（手动模式，提示用户输入标题）
     async saveToDatabase() {
       try {
-        // 获取当前思维导图数据
-        let data = getData()
-        
         // 检查用户是否已登录
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
         if (!currentUser) {
@@ -644,6 +655,9 @@ export default {
           this.$router.push('/login')
           return
         }
+        
+        // 获取当前思维导图数据
+        let data = getData()
         
         // 使用思维导图的根节点文本作为默认标题
         let defaultTitle = `思维导图_${new Date().toLocaleDateString()}`
@@ -654,66 +668,11 @@ export default {
           defaultTitle = tempDiv.textContent || tempDiv.innerText || ''
         }
         
-        // 弹出对话框让用户输入标题
-        const title = await this.$prompt('请输入思维导图标题:', '保存思维导图', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          inputValue: defaultTitle,
-          inputPattern: /.+/,
-          inputErrorMessage: '标题不能为空'
-        }).then(({ value }) => {
-          return value
-        }).catch(() => {
-          // 用户取消保存
-          return null
-        })
-        
-        // 如果用户取消，则不保存
-        if (title === null) {
-          return
-        }
-        
-        const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
-        // 调用store中的保存方法，根据是否有ID决定是更新还是创建
-        const result = await this.$store.dispatch('saveMindMap', {
-          id: currentMindMapId,  // 传递ID参数，如果有ID则更新，否则创建
-          userId: currentUser.id,
-          title: title,
-          content: data
-        })
-        
-        // 如果之前没有ID但保存后获得了ID，则更新当前ID
-        if (result && result.id) {
-          const updatedCurrentMindMapId = this.$store.state.currentMindMapId;
-          if (!updatedCurrentMindMapId) {
-            this.$store.commit('setCurrentMindMapId', result.id);
-          } else {
-          }
-          
-          // 保存成功后，立即更新本地缓存
-          try {
-            setMindMapCache(result.id, data);
-          } catch (error) {
-          }
-        } else {
-          // 如果是更新操作，使用当前ID更新缓存
-          const currentMindMapId = this.$store.state.currentMindMapId || getCurrentMindMapIdFromVueInstance();
-          if (currentMindMapId) {
-            try {
-              const cacheKey = `mindmap_cache_${currentMindMapId}`;
-              localStorage.setItem(cacheKey, JSON.stringify(data));
-            } catch (error) {
-            }
-          }
-        }
-        
-        this.$message.success('思维导图保存成功')
+        // 显示可拖拽的保存对话框
+        this.defaultSaveTitle = defaultTitle
+        this.showSaveDialog = true
       } catch (error) {
-        if (error && error.message && error.message.includes('取消')) {
-          // 用户取消操作，不显示错误消息
-          return
-        }
-        this.$message.error('保存思维导图失败: ' + error.message)
+        this.$message.error('准备保存失败: ' + error.message)
       }
     },
     
@@ -1489,6 +1448,28 @@ export default {
       if (this.newMindMapSaveConfirmDragHandler) {
         this.newMindMapSaveConfirmDragHandler.element.removeEventListener('mousedown', this.newMindMapSaveConfirmDragHandler.mousedownHandler);
         this.newMindMapSaveConfirmDragHandler = null;
+      }
+    },
+
+    // 处理保存对话框取消事件
+    handleSaveDialogCancel() {
+      this.showSaveDialog = false
+      this.defaultSaveTitle = ''
+    },
+    
+    // 处理保存对话框成功事件
+    handleSaveDialogSuccess(result) {
+      this.showSaveDialog = false
+      this.defaultSaveTitle = ''
+      
+      // 保存成功后的缓存处理逻辑已在 DraggableSaveDialog 组件内部处理
+      if (result && result.id) {
+        try {
+          const data = getData()
+          setMindMapCache(result.id, data)
+        } catch (error) {
+          // 缓存失败不影响主流程
+        }
       }
     },
 

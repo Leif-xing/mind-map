@@ -7,19 +7,13 @@
         <span>标签分类</span>
       </div>
       <div class="header-actions">
-        <el-button 
-          type="text" 
-          icon="el-icon-plus" 
-          size="mini"
-          @click="showCreateTagDialog"
-          title="新建标签"
-        ></el-button>
-        <el-button 
-          type="text" 
-          icon="el-icon-refresh" 
+        <el-button
+          type="text"
+          icon="el-icon-refresh"
           size="mini"
           @click="refreshTags"
           title="刷新"
+          class="refresh-button"
         ></el-button>
       </div>
     </div>
@@ -590,6 +584,11 @@ export default {
 
 .header-actions .el-button:hover {
   color: var(--primary-color);
+}
+
+/* 刷新按钮样式 */
+.refresh-button {
+  width: 60px !important; /* 增加一倍宽度 */
 }
 
 /* 标签统计 */

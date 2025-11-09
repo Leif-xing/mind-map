@@ -31,14 +31,7 @@
         </div>
         
         <el-button-group class="action-buttons">
-          <el-button 
-            type="primary" 
-            icon="el-icon-plus"
-            @click="createNewMindmap"
-          >
-            新建导图
-          </el-button>
-          <el-button 
+          <el-button
             icon="el-icon-setting"
             @click="openSettings"
           >
@@ -453,11 +446,6 @@ export default {
       this.backToEditor()
     },
     
-    // 创建新思维导图
-    createNewMindmap() {
-      this.$bus.$emit('createNewMindmap')
-      this.backToEditor()
-    },
     
     // 打开设置
     openSettings() {
