@@ -122,7 +122,8 @@ export default {
       'search_match_node_list_change',
       this.onSearchMatchNodeListChange
     )
-    this.mindMap.keyCommand.addShortcut('Control+f', this.showSearch)
+    // 使用新的统一快捷键管理系统 - 通过事件总线通信
+    this.$eventBus.$on('show-search', this.showSearch)
     window.addEventListener('resize', this.setSearchResultListHeight)
     this.$bus.$on('setData', this.close)
   },
@@ -139,7 +140,8 @@ export default {
       'search_match_node_list_change',
       this.onSearchMatchNodeListChange
     )
-    this.mindMap.keyCommand.removeShortcut('Control+f', this.showSearch)
+    // 清理事件总线监听器
+    this.$eventBus.$off('show-search', this.showSearch)
     window.removeEventListener('resize', this.setSearchResultListHeight)
     this.$bus.$off('setData', this.close)
   },

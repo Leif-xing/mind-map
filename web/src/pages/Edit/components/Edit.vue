@@ -139,6 +139,7 @@ import AiCreate from './AiCreate.vue'
 import UnifiedAiManager from './UnifiedAiManager.vue'
 import AiChat from './AiChat.vue'
 import { sortIconList } from '@/utils/index.js'
+import { initializeShortcutSystem } from '@/utils/shortcut-integration.js'
 
 // 注册插件
 MindMap.usePlugin(MiniMap)
@@ -290,6 +291,10 @@ export default {
     this.$bus.$off('openMindmapManager', this.handleOpenMindmapManager)
     this.$bus.$off('backToEditor', this.handleBackToEditor)
     this.$bus.$off('execCommand', this.handleExecCommand)
+    
+    // 清理事件总线监听器
+    this.cleanupShortcutEventListeners()
+    
     this.mindMap.destroy()
   },
   methods: {
@@ -487,18 +492,12 @@ export default {
       })
 
       this.loadPlugins()
-      this.mindMap.keyCommand.addShortcut('Control+s', () => {
-        this.manualSave()
-      })
-      this.mindMap.keyCommand.addShortcut('Shift+a', () => {
-        this.handleToggleNumbering()
-      })
-      this.mindMap.keyCommand.addShortcut('Shift+w', () => {
-        this.handleToggleTodoCheckbox()
-      })
-      this.mindMap.keyCommand.addShortcut('Shift+s', () => {
-        this.handleToggleTodoStatus()
-      })
+      
+      // 初始化统一快捷键管理系统
+      this.initializeShortcutSystem()
+      
+      // 注册组件级快捷键事件监听
+      this.setupShortcutEventListeners()
       
       // 设置编号更新监听器
       this.setupNumberingUpdateListener()
@@ -562,6 +561,32 @@ export default {
       }
       // 协同测试
       this.cooperateTest()
+    },
+
+    // 初始化统一快捷键管理系统
+    async initializeShortcutSystem() {
+      try {
+        await initializeShortcutSystem(this.mindMap)
+      } catch (error) {
+        console.error('Edit component: Failed to initialize shortcut system:', error)
+      }
+    },
+
+    // 设置快捷键事件监听器
+    setupShortcutEventListeners() {
+      // 监听来自统一快捷键系统的事件
+      this.$eventBus.$on('manual-save', this.manualSave)
+      this.$eventBus.$on('toggle-numbering', this.handleToggleNumbering)
+      this.$eventBus.$on('toggle-todo-checkbox', this.handleToggleTodoCheckbox)
+      this.$eventBus.$on('toggle-todo-status', this.handleToggleTodoStatus)
+    },
+
+    // 清理快捷键事件监听器
+    cleanupShortcutEventListeners() {
+      this.$eventBus.$off('manual-save', this.manualSave)
+      this.$eventBus.$off('toggle-numbering', this.handleToggleNumbering)
+      this.$eventBus.$off('toggle-todo-checkbox', this.handleToggleTodoCheckbox)
+      this.$eventBus.$off('toggle-todo-status', this.handleToggleTodoStatus)
     },
 
     // 加载相关插件
@@ -682,8 +707,8 @@ export default {
         await this.mindMap.export(...args)
         hideLoading()
       } catch (error) {
-        console.log(error)
         hideLoading()
+        console.error(error)
       }
     },
 

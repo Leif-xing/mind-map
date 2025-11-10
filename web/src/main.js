@@ -2,6 +2,10 @@ import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 import store from './store'
+
+// 导入统一快捷键系统
+import './utils/shortcut-integration.js'
+import './utils/shortcut-activator.js'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 import '@/assets/icon-font/iconfont.css'
