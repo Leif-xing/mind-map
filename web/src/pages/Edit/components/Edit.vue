@@ -1519,6 +1519,9 @@ export default {
     // 处理打开思维导图管理页面
     handleOpenMindmapManager() {
       this.currentPage = 'mindmap-manager'
+      
+      // 确保在导图管理页面时工具栏保持隐藏
+      this.$bus.$emit('ensureToolbarHiddenInMindmapManager')
     },
 
     // 处理返回编辑器

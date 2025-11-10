@@ -65,55 +65,75 @@
     <!-- 标签树 -->
     <div class="tag-tree-container">
       <div class="tree-content">
-        <!-- 所有标签节点 -->
-        <div 
-          v-for="(tag, tagId) in userTags" 
-          :key="tagId"
-          class="tag-node"
-          :class="{ 
-            selected: selectedTagIds.includes(tagId),
-            'has-mindmaps': getTagMindmapCount(tagId) > 0,
-            'drag-over': dragOverTagId === tagId
-          }"
-          @click="toggleTagSelection(tagId)"
-          @contextmenu.prevent="showTagContextMenu($event, tagId, tag)"
-          @dragover.prevent="handleDragOver($event, tagId)"
-          @dragenter.prevent="handleDragEnter($event, tagId)"
-          @dragleave="handleDragLeave($event, tagId)"
-          @drop.prevent="handleDrop($event, tagId)"
-        >
-          <!-- 标签颜色指示器 -->
-          <div 
-            class="tag-color-indicator"
-            :style="{ backgroundColor: tag.color || '#409EFF' }"
-          ></div>
-          
-          <!-- 标签信息 -->
-          <div class="tag-info">
-            <div class="tag-name">{{ tag.name }}</div>
-            <div class="tag-count">{{ getTagMindmapCount(tagId) }} 个导图</div>
+        <!-- 标签列表 -->
+        <template v-for="(tag, index) in sortedTags">
+          <!-- 公共标签分隔符 -->
+          <div v-if="tag.isPublic && (index === 0 || !sortedTags[index-1].isPublic)" 
+               :key="`separator-${tag.id}`" 
+               class="tag-separator">
+            <div class="separator-line"></div>
+            <div class="separator-text">
+              <i class="el-icon-unlock"></i>
+              <span>公共标签</span>
+            </div>
+            <div class="separator-line"></div>
           </div>
           
-          <!-- 标签操作 -->
-          <div class="tag-actions" @click.stop>
-            <el-dropdown 
-              trigger="click"
-              @command="handleTagAction"
-            >
-              <el-button type="text" size="mini" class="more-button">
-                <i class="el-icon-more"></i>
-              </el-button>
-              <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item :command="{ action: 'edit', tagId }">
-                  <i class="el-icon-edit"></i> 编辑
-                </el-dropdown-item>
-                <el-dropdown-item :command="{ action: 'delete', tagId }">
-                  <i class="el-icon-delete"></i> 删除
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </el-dropdown>
+          <!-- 标签节点 -->
+          <div
+            :key="tag.id"
+            class="tag-node"
+            :class="{ 
+              selected: selectedTagIds.includes(tag.id),
+              'has-mindmaps': tag.mindmapCount > 0,
+              'drag-over': dragOverTagId === tag.id,
+              'public-tag': tag.isPublic
+            }"
+            @click="toggleTagSelection(tag.id)"
+            @contextmenu.prevent="showTagContextMenu($event, tag.id, tag)"
+            @dragover.prevent="handleDragOver($event, tag.id)"
+            @dragenter.prevent="handleDragEnter($event, tag.id)"
+            @dragleave="handleDragLeave($event, tag.id)"
+            @drop.prevent="handleDrop($event, tag.id)"
+          >
+            <!-- 标签颜色指示器 -->
+            <div 
+              class="tag-color-indicator"
+              :style="{ backgroundColor: tag.color || '#409EFF' }"
+            ></div>
+            
+            <!-- 标签信息 -->
+            <div class="tag-info">
+              <div class="tag-name">
+                {{ tag.name }}
+                <span v-if="tag.isPublic" class="public-indicator">
+                  <i class="el-icon-unlock"></i>
+                </span>
+              </div>
+              <div class="tag-count">{{ tag.mindmapCount }} 个导图</div>
+            </div>
+            
+            <!-- 标签操作 - 只有私有标签才显示 -->
+            <div v-if="!tag.isPublic" class="tag-actions" @click.stop>
+              <el-dropdown 
+                trigger="click"
+                @command="handleTagAction"
+              >
+                <el-button type="text" size="mini" class="more-button">
+                  <i class="el-icon-more"></i>
+                </el-button>
+                <el-dropdown-menu slot="dropdown">
+                  <el-dropdown-item :command="{ action: 'edit', tagId: tag.id }">
+                    <i class="el-icon-edit"></i> 编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item :command="{ action: 'delete', tagId: tag.id }">
+                    <i class="el-icon-delete"></i> 删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </el-dropdown>
+            </div>
           </div>
-        </div>
+        </template>
 
         <!-- 未分类节点 -->
         <div 
@@ -272,6 +292,25 @@ export default {
         const tags = this.mindmapTagMapping[mindmap.id] || []
         return tags.length === 0
       }).length
+    },
+
+    // 排序后的标签（私有标签在前，按关联导图数降序）
+    sortedTags() {
+      return Object.entries(this.userTags)
+        .map(([tagId, tag]) => ({
+          id: tagId,
+          ...tag,
+          mindmapCount: this.getTagMindmapCount(tagId),
+          isPublic: tag.is_public === true || tag.isOwned === false
+        }))
+        .sort((a, b) => {
+          // 先按是否为公共标签排序（私有在前）
+          if (a.isPublic !== b.isPublic) {
+            return a.isPublic ? 1 : -1
+          }
+          // 然后按关联导图数降序排序
+          return b.mindmapCount - a.mindmapCount
+        })
     }
   },
   watch: {
@@ -734,6 +773,51 @@ export default {
   padding: 8px 0;
 }
 
+/* 标签区域标题 */
+.tag-section {
+  margin-bottom: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color-2);
+  background: var(--bg-color-2);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.section-title i {
+  font-size: 14px;
+}
+
+/* 标签分隔符 */
+.tag-separator {
+  display: flex;
+  align-items: center;
+  margin: 12px 20px 8px;
+  gap: 8px;
+}
+
+.separator-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.separator-text {
+  font-size: 12px;
+  color: var(--text-color-2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 /* 标签节点 */
 .tag-node {
   padding: 12px 20px;
@@ -742,6 +826,14 @@ export default {
   cursor: pointer;
   transition: all 0.2s ease;
   border-left: 3px solid transparent;
+}
+
+.tag-node.public-tag {
+  opacity: 0.85;
+}
+
+.tag-node.public-tag:hover {
+  opacity: 1;
 }
 
 .tag-node:hover {
@@ -788,6 +880,15 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.public-indicator {
+  font-size: 12px;
+  color: var(--text-color-2);
+  opacity: 0.7;
 }
 
 .tag-count {

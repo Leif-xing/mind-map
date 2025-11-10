@@ -641,6 +641,7 @@ export default {
   display: flex;
   flex-direction: column;
   height: auto;
+  min-height: 120px;
 }
 
 .mindmap-card:hover {

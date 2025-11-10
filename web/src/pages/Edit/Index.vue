@@ -219,7 +219,6 @@ export default {
         // 如果左侧边栏已经显示，关闭它并恢复到用户偏好的工具栏状态
         this.closeLeftSidebarAndRestoreToolbar()
       } else {
-        
         // 如果工具栏当前显示，则隐藏工具栏（为左侧边栏让出空间）
         if (toolbarStatus.current_state) {
           this.hideToolbars()
@@ -312,7 +311,6 @@ export default {
       
       // 如果当前状态与用户偏好状态不一致，则恢复到用户偏好状态
       if (toolbarStatus.current_state !== toolbarStatus.user_state) {
-        
         // 直接更新current_state到user_state，不改变user_state
         this.updateToolbarStatus(toolbarStatus.user_state, toolbarStatus.user_state)
         
@@ -323,6 +321,46 @@ export default {
           document.body.classList.add('toolbars-hidden')
         }
       } else {
+      }
+    },
+    
+    // 根据当前页面状态智能恢复工具栏状态
+    restoreToolbarStateIfNeeded() {
+      // 检查当前是否在导图管理页面
+      const isInMindmapManager = this.isCurrentlyInMindmapManager()
+      
+      if (isInMindmapManager) {
+        // 如果在导图管理页面，确保工具栏保持隐藏状态
+        this.ensureToolbarHiddenInMindmapManager()
+        return
+      }
+      
+      // 如果不在导图管理页面，正常恢复工具栏状态
+      this.restoreToolbarState()
+    },
+    
+    // 检查当前是否在导图管理页面
+    isCurrentlyInMindmapManager() {
+      // 通过检查Edit组件的currentPage状态来判断
+      // 这需要通过$refs或者事件总线来获取
+      // 先通过DOM检查TagMindmapPage是否显示
+      const tagMindmapPage = document.querySelector('.tagMindmapPage')
+      if (tagMindmapPage) {
+        const isVisible = window.getComputedStyle(tagMindmapPage).display !== 'none'
+        return isVisible
+      }
+      
+      return false
+    },
+    
+    // 确保在导图管理页面时工具栏保持隐藏
+    ensureToolbarHiddenInMindmapManager() {
+      const toolbarStatus = this.getToolbarStatus()
+      
+      if (toolbarStatus.current_state) {
+        // 只更新current_state，保持user_state不变
+        this.updateToolbarStatus(false, toolbarStatus.user_state)
+        document.body.classList.add('toolbars-hidden')
       }
     },
     
@@ -368,6 +406,9 @@ export default {
       
       // 监听从思维导图管理页面返回的事件
       this.$bus.$on('backFromMindmapManager', this.handleBackFromMindmapManager)
+      
+      // 监听确保导图管理页面工具栏隐藏的事件
+      this.$bus.$on('ensureToolbarHiddenInMindmapManager', this.ensureToolbarHiddenInMindmapManager)
     },
     
     // 设置页面可见性监听器
@@ -375,7 +416,8 @@ export default {
       const handleVisibilityChange = () => {
         if (!document.hidden) {
           // 页面重新显示时检查是否需要恢复工具栏状态
-          this.restoreToolbarState()
+          // 但需要考虑当前页面状态
+          this.restoreToolbarStateIfNeeded()
         }
       }
       
@@ -411,6 +453,9 @@ export default {
     
     // 移除从思维导图管理页面返回的事件监听
     this.$bus.$off('backFromMindmapManager', this.handleBackFromMindmapManager)
+    
+    // 移除确保导图管理页面工具栏隐藏的事件监听
+    this.$bus.$off('ensureToolbarHiddenInMindmapManager', this.ensureToolbarHiddenInMindmapManager)
   }
 }
 </script>
