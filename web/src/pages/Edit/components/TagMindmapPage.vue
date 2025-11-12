@@ -414,6 +414,13 @@ export default {
     
     // 返回编辑器
     backToEditor() {
+      // 获取当前可能存在的快捷键屏蔽处理器
+      const preventDefaultShortcuts = window.preventDefaultShortcutsHandler
+      if (preventDefaultShortcuts) {
+        window.removeEventListener('keydown', preventDefaultShortcuts, true)
+        window.preventDefaultShortcutsHandler = null
+      }
+      
       this.$bus.$emit('backToEditor')
     },
     

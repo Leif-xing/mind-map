@@ -382,14 +382,28 @@ class Render {
   registerShortcutKeys() {
     // 插入下级节点
     this.mindMap.keyCommand.addShortcut('Tab', () => {
+      // 如果当前正在编辑节点，则不执行INSERT_CHILD_NODE命令
+      // 因为在编辑状态下Tab键应该是结束编辑而不是创建新节点
+      if (this.textEdit.isShowTextEdit()) {
+        return
+      }
       this.mindMap.execCommand('INSERT_CHILD_NODE')
     })
     // 插入下级节点
     this.mindMap.keyCommand.addShortcut('Insert', () => {
+      // 如果当前正在编辑节点，则不执行INSERT_CHILD_NODE命令
+      if (this.textEdit.isShowTextEdit()) {
+        return
+      }
       this.mindMap.execCommand('INSERT_CHILD_NODE')
     })
     // 插入同级节点
     this.mindMap.keyCommand.addShortcut('Enter', () => {
+      // 如果当前正在编辑节点，则不执行INSERT_NODE命令
+      // 因为在编辑状态下Enter键应该是结束编辑而不是创建新节点
+      if (this.textEdit.isShowTextEdit()) {
+        return
+      }
       this.mindMap.execCommand('INSERT_NODE')
     })
     // 插入父节点

@@ -111,17 +111,20 @@ export default {
     // 添加点击事件监听器来关闭子菜单
     document.addEventListener('click', this.handleDocumentClick)
   },
-  beforeDestroy() {
-    this.$bus.$off('pageChanged', this.handlePageChange)
-    this.$bus.$off('showLeftSidebar', this.showSidebar)
-    this.cancelHideTimer()
-    
-    // 移除键盘事件监听
-    window.removeEventListener('keydown', this.handleKeyDown)
-    
-    // 移除点击事件监听器
-    document.removeEventListener('click', this.handleDocumentClick)
-  },
+    beforeDestroy() {
+      this.$bus.$off('pageChanged', this.handlePageChange)
+      this.$bus.$off('showLeftSidebar', this.showSidebar)
+      this.cancelHideTimer()
+      
+      // 移除键盘事件监听
+      window.removeEventListener('keydown', this.handleKeyDown)
+      
+      // 恢复快捷键功能
+      this.restoreShortcuts()
+      
+      // 移除点击事件监听器
+      document.removeEventListener('click', this.handleDocumentClick)
+    },
   methods: {
     // 显示侧边栏
     showSidebar() {
@@ -159,7 +162,30 @@ export default {
       // 更新store中的activeSidebar状态
       this.$store.commit('setActiveSidebar', '')
       
+      // 屏蔽所有快捷键
+      this.preventDefaultShortcuts = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        return false
+      }
+      // 将快捷键屏蔽处理器保存到全局window对象上，方便其他组件访问
+      window.preventDefaultShortcutsHandler = this.preventDefaultShortcuts
+      window.addEventListener('keydown', this.preventDefaultShortcuts, true)
+      
       this.$bus.$emit('openMindmapManager')
+    },
+    
+    // 恢复快捷键功能
+    restoreShortcuts() {
+      if (this.preventDefaultShortcuts) {
+        window.removeEventListener('keydown', this.preventDefaultShortcuts, true)
+        this.preventDefaultShortcuts = null
+      }
+      // 同时清理全局window对象上的处理器
+      if (window.preventDefaultShortcutsHandler) {
+        window.removeEventListener('keydown', window.preventDefaultShortcutsHandler, true)
+        window.preventDefaultShortcutsHandler = null
+      }
     },
     
     // 打开关于页面
