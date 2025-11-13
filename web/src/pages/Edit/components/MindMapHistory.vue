@@ -3,7 +3,7 @@
     <!-- 思维导图历史对话框 -->
     <el-dialog
     title="思维导图"
-    :visible.sync="visible"
+    :visible.sync="internalVisible"
     width="800px"
     :modal-append-to-body="false"
     :close-on-click-modal="false"
@@ -12,6 +12,9 @@
     custom-class="draggable-dialog mind-map-history-dialog"
     :class="{ isDark: isDark }"
     ref="mindMapDialog"
+    v-draggable="draggableOptions"
+    @opened="handleDialogOpened"
+    :style="{ visibility: dialogReady ? 'visible' : 'hidden' }"
   >
     <!-- 统一容器 -->
     <div class="mindmap-content-wrapper">
@@ -120,6 +123,8 @@
     :before-close="handleSaveConfirmClose"
     custom-class="draggable-save-confirm-dialog saveConfirmDialog"
     :class="{ isDark: isDark }"
+    v-draggable="saveConfirmVisible ? saveConfirmDraggableOptions : null"
+    @opened="handleSaveConfirmOpened"
   >
     <div class="confirm-content">
       <p class="confirm-text">
@@ -161,9 +166,13 @@ import { mapState } from 'vuex'
 import { setMindMapCache, getMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
 import { getCurrentMindMapIdFromVueInstance } from '@/utils/vue-instance-helpers'
 import TagCacheManager from '@/utils/tagCacheManager'
+import draggableDirective from 'vue-draggable-directive'
 
 export default {
   name: 'MindMapHistory',
+  directives: {
+    draggable: draggableDirective
+  },
   props: {
     visible: {
       type: Boolean,
@@ -181,14 +190,6 @@ export default {
       searchQuery: '',
       selectedMindMaps: [],
       currentUser: null,
-      // 对话框拖拽相关
-      dialogDragData: {
-        isDragging: false,
-        startX: 0,
-        startY: 0,
-        initialLeft: 0,
-        initialTop: 0
-      },
       // 状态栏消息
       statusMessage: '',
       // mindMap实例
@@ -197,7 +198,14 @@ export default {
       // 保存提示对话框相关
       saveConfirmVisible: false,
       targetMindMapForSwitch: null,  // 目标切换的思维导图
-      currentMindMapTitle: ''       // 当前思维导图标题
+      currentMindMapTitle: '',       // 当前思维导图标题
+      
+      // 对话框显示控制
+      internalVisible: false,
+      dialogReady: false,
+      
+      // 拖拽配置选项 - 使用函数返回新对象强制重新初始化
+      draggableOptionsKey: 0
     }
   },
   computed: {
@@ -205,6 +213,30 @@ export default {
       supabaseEnabled: state => state.supabaseEnabled,
       isDark: state => state.localConfig.isDark
     }),
+    
+    // 动态生成拖拽配置，每次都是新对象
+    draggableOptions() {
+      return {
+        handle: '.el-dialog__header',
+        boundary: 'viewport',
+        resetOnEscape: true,
+        preventDefault: false,
+        stopPropagation: false,
+        key: this.draggableOptionsKey // 强制重新渲染
+      }
+    },
+    
+    // 保存确认对话框拖拽配置选项
+    saveConfirmDraggableOptions() {
+      return {
+        handle: '.el-dialog__header',
+        boundary: 'viewport',
+        resetOnEscape: true,
+        preventDefault: false,
+        stopPropagation: false,
+        key: this.draggableOptionsKey // 强制重新渲染
+      }
+    },
     
     // 使用本地mindMap（优先）或传入的mindMap
     currentMindMap() {
@@ -225,12 +257,17 @@ export default {
   watch: {
     visible(newVal) {
       if (newVal) {
+        // 先隐藏对话框，准备数据
+        this.dialogReady = false
+        this.internalVisible = true
+        
         this.loadCurrentUser()
         this.loadMindMaps()
         this.selectedMindMaps = []
         this.updateStatusMessage()
-        // 初始化拖拽功能
-        this.initDialogDrag()
+      } else {
+        this.internalVisible = false
+        this.dialogReady = false
       }
     }
   },
@@ -240,10 +277,6 @@ export default {
     this.$bus.$on('mind_map_inited', this.handleMindMapInited);
   },
   beforeDestroy() {
-    // 清理拖拽事件监听
-    this.cleanupDragEvents()
-    // 清理保存确认对话框拖拽事件
-    this.cleanupSaveConfirmDragEvents()
     // 取消订阅事件
     this.$bus.$off('mind_map_inited', this.handleMindMapInited);
   },
@@ -332,127 +365,11 @@ export default {
     
     // 关闭对话框
     handleClose(done) {
-      // 重置对话框位置和样式
-      const dialogEl = document.querySelector('.mind-map-history-dialog')
-      if (dialogEl) {
-        // 恢复默认样式
-        dialogEl.style.position = ''
-        dialogEl.style.left = ''
-        dialogEl.style.top = ''
-        dialogEl.style.marginLeft = ''
-        dialogEl.style.marginTop = ''
-      }
+      // 先隐藏对话框内容，再关闭
+      this.dialogReady = false
       this.$emit('update:visible', false)
       if (done) {
         done()
-      }
-    },
-    
-    // 初始化对话框拖拽功能
-    initDialogDrag() {
-      this.$nextTick(() => {
-        const dialogEl = document.querySelector('.mind-map-history-dialog')
-        if (!dialogEl) return
-        
-        const headerEl = dialogEl.querySelector('.el-dialog__header')
-        if (!headerEl) return
-        
-        // 设置拖拽样式
-        headerEl.style.cursor = 'move'
-        headerEl.style.userSelect = 'none'
-        
-        // 绑定拖拽事件
-        headerEl.addEventListener('mousedown', this.startDrag)
-      })
-    },
-    
-    // 开始拖拽
-    startDrag(e) {
-      const dialogEl = document.querySelector('.mind-map-history-dialog')
-      if (!dialogEl) return
-      
-      // 记录初始位置
-      this.dialogDragData.isDragging = true
-      this.dialogDragData.startX = e.clientX
-      this.dialogDragData.startY = e.clientY
-      
-      // 获取当前对话框位置
-      const rect = dialogEl.getBoundingClientRect()
-      this.dialogDragData.initialLeft = rect.left
-      this.dialogDragData.initialTop = rect.top
-      
-      // 绑定移动和结束事件
-      document.addEventListener('mousemove', this.onDrag)
-      document.addEventListener('mouseup', this.endDrag)
-      
-      // 添加拖拽样式
-      dialogEl.classList.add('dragging')
-      
-      // 防止选中文本
-      e.preventDefault()
-    },
-    
-    // 拖拽中
-    onDrag(e) {
-      if (!this.dialogDragData.isDragging) return
-      
-      const dialogEl = document.querySelector('.mind-map-history-dialog')
-      if (!dialogEl) return
-      
-      // 计算新位置
-      const deltaX = e.clientX - this.dialogDragData.startX
-      const deltaY = e.clientY - this.dialogDragData.startY
-      
-      const newLeft = this.dialogDragData.initialLeft + deltaX
-      const newTop = this.dialogDragData.initialTop + deltaY
-      
-      // 获取窗口尺寸，确保对话框不会拖出视口
-      const windowWidth = window.innerWidth
-      const windowHeight = window.innerHeight
-      const dialogRect = dialogEl.getBoundingClientRect()
-      
-      const maxLeft = windowWidth - dialogRect.width
-      const maxTop = windowHeight - dialogRect.height
-      
-      const finalLeft = Math.max(0, Math.min(newLeft, maxLeft))
-      const finalTop = Math.max(0, Math.min(newTop, maxTop))
-      
-      // 应用新位置
-      dialogEl.style.position = 'fixed'
-      dialogEl.style.left = finalLeft + 'px'
-      dialogEl.style.top = finalTop + 'px'
-      dialogEl.style.marginLeft = '0'
-      dialogEl.style.marginTop = '0'
-    },
-    
-    // 结束拖拽
-    endDrag() {
-      this.dialogDragData.isDragging = false
-      
-      // 移除拖拽样式
-      const dialogEl = document.querySelector('.mind-map-history-dialog')
-      if (dialogEl) {
-        dialogEl.classList.remove('dragging')
-        // 确保拖拽后的位置被正确应用
-        dialogEl.style.marginLeft = '0'
-        dialogEl.style.marginTop = '0'
-      }
-      
-      // 移除事件监听
-      document.removeEventListener('mousemove', this.onDrag)
-      document.removeEventListener('mouseup', this.endDrag)
-    },
-    
-    // 清理拖拽事件监听
-    cleanupDragEvents() {
-      // 移除可能残留的事件监听
-      document.removeEventListener('mousemove', this.onDrag)
-      document.removeEventListener('mouseup', this.endDrag)
-      
-      // 清理对话框头部的事件监听
-      const headerEl = document.querySelector('.mind-map-history-dialog .el-dialog__header')
-      if (headerEl) {
-        headerEl.removeEventListener('mousedown', this.startDrag)
       }
     },
     
@@ -473,15 +390,6 @@ export default {
       if (event) {
         event.stopPropagation();
       }
-      // 确保对话框保持在拖拽后的位置，而不是跳回居中
-      this.$nextTick(() => {
-        const dialogEl = document.querySelector('.mind-map-history-dialog');
-        if (dialogEl && dialogEl.style.position === 'fixed') {
-          // 如果是拖拽后的位置，保持fixed定位
-          dialogEl.style.marginLeft = '0';
-          dialogEl.style.marginTop = '0';
-        }
-      });
     },
     
     // 切换选中状态
@@ -733,6 +641,23 @@ export default {
       this.localMindMap = mindMap;
     },
 
+    // 处理主对话框打开完成事件
+    handleDialogOpened() {
+      // 对话框DOM完全渲染后，等待拖拽插件恢复位置
+      this.$nextTick(() => {
+        // 稍微延迟以确保拖拽插件已恢复到上次位置
+        setTimeout(() => {
+          this.dialogReady = true
+        }, 50)
+      })
+    },
+
+    // 处理保存确认对话框打开完成事件
+    handleSaveConfirmOpened() {
+      // 保存确认对话框完全打开后，重置拖拽插件状态
+      this.draggableOptionsKey++;
+    },
+
     // 显示保存确认对话框（用于切换）
     showSaveConfirmDialogForSwitch(targetMindMap) {
       // 保存目标思维导图信息
@@ -743,13 +668,6 @@ export default {
       
       // 显示确认对话框
       this.saveConfirmVisible = true;
-      
-      // 延迟初始化拖拽功能，确保DOM完全渲染
-      this.$nextTick(() => {
-        setTimeout(() => {
-          this.initDragForDialog('.draggable-save-confirm-dialog', '温馨提示');
-        }, 100);
-      });
     },
 
     // 获取当前思维导图标题
@@ -771,6 +689,7 @@ export default {
         this.currentMindMapTitle = '未命名思维导图';
       }
     },
+
 
     // 开始实际的切换过程
     async startActualSwitching(targetMindMap) {
@@ -910,96 +829,6 @@ export default {
       }
     },
 
-    // 为指定对话框初始化拖拽功能
-    initDragForDialog(dialogClass, dialogTitle) {
-      // 尝试多种选择器方式
-      let dialogHeaderEl = document.querySelector(`${dialogClass} .el-dialog__header`);
-      let dragDom = document.querySelector(`${dialogClass} .el-dialog`);
-      
-      // 如果通过custom-class找不到，尝试通过class找
-      if (!dialogHeaderEl || !dragDom) {
-        const allDialogs = document.querySelectorAll('.el-dialog');
-        for (let dialog of allDialogs) {
-          const title = dialog.querySelector('.el-dialog__title');
-          if (title && title.textContent.includes(dialogTitle)) {
-            dragDom = dialog;
-            dialogHeaderEl = dialog.querySelector('.el-dialog__header');
-            break;
-          }
-        }
-      }
-
-      if (!dialogHeaderEl || !dragDom) {
-        return;
-      }
-      
-      // 设置标题栏样式
-      dialogHeaderEl.style.cursor = 'move';
-      dialogHeaderEl.style.userSelect = 'none';
-
-      let startX = 0;
-      let startY = 0;
-      let lastX = 0;
-      let lastY = 0;
-
-      const mousedownHandler = (e) => {
-        // 只有点击标题栏才触发拖拽
-        if (e.target !== dialogHeaderEl && !dialogHeaderEl.contains(e.target)) {
-          return;
-        }
-
-        startX = e.clientX;
-        startY = e.clientY;
-
-        // 获取当前transform值
-        const style = window.getComputedStyle(dragDom);
-        const transform = style.transform;
-        if (transform && transform !== 'none') {
-          const matrix = new DOMMatrix(transform);
-          lastX = matrix.m41;
-          lastY = matrix.m42;
-        } else {
-          lastX = 0;
-          lastY = 0;
-        }
-
-        const mousemoveHandler = (e) => {
-          const offsetX = e.clientX - startX;
-          const offsetY = e.clientY - startY;
-          dragDom.style.transform = `translate(${lastX + offsetX}px, ${lastY + offsetY}px)`;
-          dragDom.style.willChange = 'transform'; // 优化性能
-        };
-
-        const mouseupHandler = () => {
-          dragDom.style.willChange = 'auto';
-          document.removeEventListener('mousemove', mousemoveHandler);
-          document.removeEventListener('mouseup', mouseupHandler);
-        };
-
-        document.addEventListener('mousemove', mousemoveHandler);
-        document.addEventListener('mouseup', mouseupHandler);
-
-        e.preventDefault();
-      };
-
-      dialogHeaderEl.addEventListener('mousedown', mousedownHandler);
-
-      // 保存拖拽处理器以便清理
-      if (dialogTitle.includes('温馨提示')) {
-        this.saveConfirmDragHandler = {
-          element: dialogHeaderEl,
-          mousedownHandler: mousedownHandler
-        };
-      }
-    },
-
-    // 清理保存确认对话框拖拽事件
-    cleanupSaveConfirmDragEvents() {
-      if (this.saveConfirmDragHandler) {
-        this.saveConfirmDragHandler.element.removeEventListener('mousedown', this.saveConfirmDragHandler.mousedownHandler);
-        this.saveConfirmDragHandler = null;
-      }
-    },
 
     // 验证和清理思维导图数据
     validateAndCleanMindMapData(data) {
@@ -1309,6 +1138,7 @@ export default {
     
     .el-dialog__header {
       border-bottom: 1px solid hsla(0, 0%, 100%, 0.1) !important;
+      cursor: move !important;
     }
     
     .el-dialog__title {
@@ -1390,6 +1220,16 @@ export default {
   }
 }
 
+// 拖拽光标样式
+.mind-map-history-dialog .el-dialog__header {
+  cursor: move !important;
+}
+
+// 保存确认对话框拖拽光标样式
+.saveConfirmDialog .el-dialog__header {
+  cursor: move !important;
+}
+
 // 拖拽时的样式
 .mind-map-history-dialog.dragging {
   .el-dialog__header {
@@ -1438,6 +1278,7 @@ export default {
   .el-dialog__header {
     background-color: #2b2f33 !important;
     border-bottom: 1px solid #404040 !important;
+    cursor: move !important;
   }
   
   .el-dialog__title {

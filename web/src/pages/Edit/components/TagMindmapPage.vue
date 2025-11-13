@@ -73,6 +73,7 @@
           @mindmap-rename="handleMindmapRename"
           @mindmap-tag-update="handleMindmapTagUpdate"
           @batch-operation="handleBatchOperation"
+          @tag-data-changed="handleTagDataChanged"
         />
       </div>
     </div>
@@ -200,6 +201,7 @@ export default {
     
     // 监听相关事件
     this.$bus.$on('refreshMindmapData', this.refreshData)
+    this.$bus.$on('tag-statistics-update-needed', this.handleTagStatisticsUpdate)
   },
   mounted() {
     // 页面加载完成后再次更新缓存
@@ -215,6 +217,7 @@ export default {
   },
   beforeDestroy() {
     this.$bus.$off('refreshMindmapData', this.refreshData)
+    this.$bus.$off('tag-statistics-update-needed', this.handleTagStatisticsUpdate)
   },
   methods: {
     // 清理标题，移除HTML标签和多余字符
@@ -756,6 +759,50 @@ export default {
       // 通知子组件重新渲染
       this.$bus.$emit('force-refresh-mindmap-cards')
       this.$bus.$emit('force-refresh-tag-tree')
+    },
+    
+    // 处理标签数据变化事件（从MindmapCards传来）
+    async handleTagDataChanged(data) {
+      // 轻量级更新：只更新必要的数据
+      this.lightweightDataUpdate(data);
+    },
+    
+    // 处理标签统计更新需求
+    async handleTagStatisticsUpdate(data) {
+      // 根据数据类型进行针对性更新
+      if (data && data.type === 'remove') {
+        // 标签移除：只更新缓存映射，不重新获取数据库数据
+        this.updateCachedTagMapping();
+      } else {
+        // 其他情况：进行完整刷新
+        await this.forceRefreshData();
+      }
+    },
+    
+    // 轻量级数据更新
+    lightweightDataUpdate(data) {
+      // 1. 立即更新本地缓存映射
+      this.updateCachedTagMapping();
+      
+      // 2. 异步进行后台数据同步（不阻塞UI）
+      this.$nextTick(async () => {
+        try {
+          // 静默更新缓存，不影响当前显示
+          TagCacheManager.refreshCache();
+          this.cachedUserTags = { ...TagCacheManager.getUserTags() };
+        } catch (error) {
+          console.error('后台数据同步失败:', error);
+        }
+      });
+      
+      // 3. 通知左边栏更新统计数字
+      this.$bus.$emit('force-refresh-tag-tree');
+    },
+    
+    // 更新缓存的标签映射
+    updateCachedTagMapping() {
+      this.cachedMindMapTagMapping = TagCacheManager.getMindMapTagIds();
+      this.cachedUserTags = { ...TagCacheManager.getUserTags() };
     }
   }
 }
