@@ -45,7 +45,17 @@ export const SYSTEM_SHORTCUTS = {
     priority: 10
   },
   'Del|Backspace': {
-    action: function() { this.mindMap.renderer.removeNode() },
+    action: function() { 
+      // 检查RichText是否正在处理，如果是则不删除节点
+      if (this.mindMap.richText && this.mindMap.richText.showTextEdit) {
+        return
+      }
+      // 检查RichText是否正在处理Backspace键
+      if (this.mindMap._isProcessingRichTextBackspace) {
+        return
+      }
+      this.mindMap.renderer.removeNode()
+    },
     layer: LAYERS.SYSTEM,
     description: '删除节点',
     priority: 10
@@ -65,11 +75,17 @@ export const SYSTEM_SHORTCUTS = {
     priority: 10
   },
   'Enter': {
-    action: function() { this.mindMap.execCommand('INSERT_NODE') },
+    action: function() { 
+      // 检查RichText是否正在处理Enter键
+      if (this.mindMap._isProcessingRichTextEnter) {
+        return
+      }
+      this.mindMap.execCommand('INSERT_NODE')
+    },
     layer: LAYERS.SYSTEM,
     context: CONTEXTS.NORMAL,
     description: '插入同级节点',
-    priority: 10
+    priority: 9
   },
   'Shift+Backspace': {
     action: function() { this.mindMap.execCommand('REMOVE_CURRENT_NODE') },
