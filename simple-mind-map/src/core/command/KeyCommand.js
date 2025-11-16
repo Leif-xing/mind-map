@@ -103,10 +103,11 @@ export default class KeyCommand {
     for (let i = 0; i < this.mindMap.editNodeClassList.length; i++) {
       const cur = this.mindMap.editNodeClassList[i]
       if (target.classList.contains(cur)) {
-        return true
+        // 如果目标是编辑节点，则不处理快捷键
+        return false
       }
     }
-    return false
+    return true
   }
 
   // 按键事件
