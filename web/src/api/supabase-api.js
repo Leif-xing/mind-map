@@ -164,7 +164,6 @@ export const userApi = {
       .eq('id', userId)
 
     if (error) {
-      console.error('Update error:', error);
       throw new Error(error.message || '更新用户权限失败')
     }
 
@@ -176,7 +175,6 @@ export const userApi = {
       .single()
 
     if (selectError) {
-      console.error('Select error:', selectError);
       throw new Error(selectError.message || '获取更新后的用户数据失败')
     }
 
@@ -265,7 +263,6 @@ export const mindMapApi = {
       try {
         mindMap.content = decompressMindMap(mindMap.content)
       } catch (decompressError) {
-        // console.error('解压缩思维导图失败:', decompressError)
         throw new Error('思维导图数据损坏或解压缩失败')
       }
     }
@@ -401,7 +398,6 @@ export const aiConfigApi = {
       .single()
 
     if (error) {
-      // console.error('创建AI提供商配置失败:', error);
       throw new Error(error.message || '创建AI配置失败')
     }
     
@@ -444,7 +440,6 @@ export const aiConfigApi = {
       .single()
 
     if (error) {
-      // console.error('更新AI提供商配置失败:', error);
       throw new Error(error.message || '更新AI配置失败')
     }
     
@@ -459,7 +454,6 @@ export const aiConfigApi = {
       .eq('id', configId)
 
     if (error) {
-      // console.error('删除AI提供商配置失败:', error);
       throw new Error(error.message || '删除AI配置失败')
     }
     
@@ -474,7 +468,6 @@ export const aiConfigApi = {
       .order('created_at', { ascending: false })
     
     if (error) {
-      // console.error('获取AI提供商配置失败:', error);
       throw new Error(error.message || '获取AI配置失败')
     }
     
@@ -492,7 +485,6 @@ export const aiConfigApi = {
       .single()
     
     if (userError) {
-      // console.error('验证用户权限失败:', userError);
       throw new Error('验证用户权限失败')
     }
     
@@ -518,7 +510,6 @@ export const aiConfigApi = {
     const { data, error } = await query
     
     if (error) {
-      // console.error('获取可用AI配置失败:', error);
       throw new Error(error.message || '获取AI配置失败')
     }
     
@@ -540,7 +531,6 @@ export const aiConfigApi = {
       .eq('id', userId)
     
     if (error) {
-      // console.error('更新密码失败:', error);
       throw new Error(error.message || '更新密码失败');
     }
     
@@ -585,7 +575,6 @@ export const aiConfigApi = {
       .eq('id', userId)
     
     if (error) {
-      // console.error('更新用户AI配置选择失败:', error);
       throw new Error(error.message || '更新AI配置选择失败')
     }
     
@@ -650,17 +639,12 @@ export const aiConfigApi = {
         .eq('api_endpoint', validatedEndpoint)  // 根据API接口匹配
       
       if (error) {
-        console.error('根据API接口获取AI提供商配置失败:', error); // 添加详细错误日志
         throw new Error(error.message || '获取AI配置失败')
       }
       
       // 转换数据格式以适配前端使用
       return configs.map(config => transformAiConfigForFrontend(config));
     } catch (error) {
-      console.error('查询AI提供商配置时发生错误:', {
-        apiEndpoint: validatedEndpoint,
-        error: error
-      }); // 详细错误日志
       throw error;
     }
   },
@@ -775,7 +759,6 @@ const tagStorageManager = {
       const tags = JSON.parse(localStorage.getItem(key) || '[]')
       return tags
     } catch (error) {
-      console.error('获取用户标签失败:', error)
       return []
     }
   },
@@ -787,7 +770,6 @@ const tagStorageManager = {
       localStorage.setItem(key, JSON.stringify(tags))
       return true
     } catch (error) {
-      console.error('保存用户标签失败:', error)
       return false
     }
   },
@@ -799,7 +781,6 @@ const tagStorageManager = {
       const relations = JSON.parse(localStorage.getItem(key) || '[]')
       return relations
     } catch (error) {
-      console.error('获取思维导图标签关联失败:', error)
       return []
     }
   },
@@ -811,7 +792,6 @@ const tagStorageManager = {
       localStorage.setItem(key, JSON.stringify(relations))
       return true
     } catch (error) {
-      console.error('保存思维导图标签关联失败:', error)
       return false
     }
   },
@@ -900,7 +880,6 @@ export const tagApi = {
       }
       return user
     } catch (error) {
-      console.error('用户权限验证失败:', error)
       throw new Error('用户权限验证失败: ' + error.message)
     }
   },
@@ -1491,6 +1470,52 @@ export const tagApi = {
       ...tag,
       isOwned: tag.owner_id === userId
     }))
+  },
+
+  // 获取用户所有思维导图与标签的关联数据
+  async getAllMindMapTagRelations(userId) {
+    if (!userId) {
+      throw new Error('用户ID不能为空')
+    }
+
+    try {
+      // 首先尝试从Supabase获取
+      const { data, error } = await supabase
+        .from('mind_maps')
+        .select(`
+          id,
+          mindmap_tags (
+            tag_id
+          )
+        `)
+        .eq('user_id', userId)
+
+      if (!error) {
+        // 转换数据格式为缓存所需的结构
+        const mindmapTagIds = {}
+        data.forEach(mindmap => {
+          mindmapTagIds[mindmap.id] = mindmap.mindmap_tags.map(mt => mt.tag_id)
+        })
+        return mindmapTagIds
+      }
+
+      console.warn('Supabase获取思维导图标签关联失败，使用本地存储:', error.message)
+    } catch (error) {
+      console.warn('Supabase连接失败，使用本地存储:', error.message)
+    }
+
+    // 本地存储备用方案
+    const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
+    const mindmapTagIds = {}
+    
+    mindMapTagRelations.forEach(relation => {
+      if (!mindmapTagIds[relation.mindmap_id]) {
+        mindmapTagIds[relation.mindmap_id] = []
+      }
+      mindmapTagIds[relation.mindmap_id].push(relation.tag_id)
+    })
+
+    return mindmapTagIds
   },
 
   // 获取标签使用统计

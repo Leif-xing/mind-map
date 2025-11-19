@@ -82,6 +82,7 @@
           <!-- 标签节点 -->
           <div
             :key="tag.id"
+            :data-tag-id="tag.id"
             class="tag-node"
             :class="{ 
               selected: selectedTagIds.includes(tag.id),

@@ -63,7 +63,7 @@
             <el-button 
               size="mini" 
               icon="el-icon-refresh"
-              @click="refreshTags"
+              @click="refreshAllTagData"
               :loading="loading"
             >
               刷新
@@ -629,6 +629,40 @@ export default {
       
       // 思维导图标签不需要刷新，映射关系保持不变
       this.$message.success('刷新完成')
+    },
+
+    // 清除思维导图标签缓存
+    clearMindMapTagsCache() {
+      // 清除思维导图标签映射缓存
+      localStorage.removeItem(TagCacheManager.CACHE_KEYS.MINDMAP_TAG_IDS)
+      this.$message.success('思维导图标签缓存已清除')
+    },
+
+    // 刷新所有标签关联数据（包括思维导图标签关联）
+    async refreshAllTagData() {
+      try {
+        this.loading = true
+        
+        // 从数据库获取所有思维导图与标签的关联数据
+        const mindmapTagIds = await tagApi.getAllMindMapTagRelations(this.currentUser.id)
+        
+        // 更新缓存中的思维导图标签映射
+        TagCacheManager.setMindMapTagIds(mindmapTagIds)
+        
+        // 重新加载用户标签列表
+        await this.loadAvailableTags()
+        
+        // 如果有当前思维导图，重新加载其标签
+        if (this.currentMindMapId) {
+          this.loadCurrentMindMapTags()
+        }
+        
+        this.$message.success('数据刷新完成')
+      } catch (error) {
+        this.$message.error('刷新数据失败: ' + error.message)
+      } finally {
+        this.loading = false
+      }
     },
 
 
