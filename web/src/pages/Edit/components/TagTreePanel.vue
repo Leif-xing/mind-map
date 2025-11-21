@@ -24,11 +24,11 @@
         <span class="stat-number">{{ Object.keys(userTags).length }}</span>
         <span class="stat-label">标签</span>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" data-stat-type="categorized">
         <span class="stat-number">{{ taggedMindmapsCount }}</span>
         <span class="stat-label">已分类</span>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" data-stat-type="uncategorized">
         <span class="stat-number">{{ untaggedMindmapsCount }}</span>
         <span class="stat-label">未分类</span>
       </div>
@@ -212,6 +212,8 @@
 </template>
 
 <script>
+import TagCacheManager from '@/utils/tagCacheManager'
+
 export default {
   name: 'TagTreePanel',
   props: {
@@ -412,8 +414,9 @@ export default {
     addTagToMindmap(mindmapId, tagId, mindmapTitle) {
       const tagName = this.userTags[tagId]?.name || '未知标签'
       
-      // 检查是否已经有这个标签
-      const currentTags = this.mindmapTagMapping[mindmapId] || []
+      // 🔥 修复：使用统一数据源 TagCacheManager.getMindMapTagIds()
+      const currentTags = TagCacheManager.getMindMapTagIds()[mindmapId] || []
+      
       if (currentTags.includes(tagId)) {
         this.$message.info(`"${mindmapTitle}" 已经包含标签 "${tagName}"`)
         return
@@ -662,6 +665,14 @@ export default {
     refreshTags() {
       this.$emit('refresh-tags')
       this.$message.success('已刷新标签数据')
+    },
+    
+    // 🔥 强制刷新方法，供父组件调用
+    forceRefresh() {
+      // 触发组件强制更新
+      this.$forceUpdate()
+      // 触发刷新事件
+      this.$emit('refresh-tags')
     }
   }
 }

@@ -46,6 +46,7 @@
       <!-- 左侧标签树面板 -->
       <div class="left-panel">
         <TagTreePanel 
+          ref="tagTreePanel"
           :user-tags="userTags"
           :selected-tag-ids="selectedTagIds"
           :mindmap-tag-mapping="mindMapTagMapping"
@@ -55,6 +56,7 @@
           @tag-edit="handleTagEdit"
           @tag-delete="handleTagDelete"
           @mindmap-add-tag="handleMindmapAddTag"
+          @refresh-tags="refreshTagData"
         />
       </div>
 
@@ -140,9 +142,17 @@ export default {
       return Object.keys(this.cachedUserTags).length > 0 ? this.cachedUserTags : TagCacheManager.getUserTags()
     },
     
-    // 获取思维导图标签映射
+    // 🔥 修复：获取思维导图标签映射 - 使用统一数据源
     mindMapTagMapping() {
-      return this.cachedMindMapTagMapping
+      // 优先使用响应式缓存数据，否则从TagCacheManager获取最新数据
+      const cacheData = this.cachedMindMapTagMapping
+      const latestData = TagCacheManager.getMindMapTagIds()
+      
+      // 如果缓存为空或数据不一致，使用最新数据
+      if (Object.keys(cacheData).length === 0 || JSON.stringify(cacheData) !== JSON.stringify(latestData)) {
+        return latestData
+      }
+      return cacheData
     },
     
     // 筛选后的思维导图
@@ -273,7 +283,6 @@ export default {
                 parsedTitle = this.cleanTitle(parsedTitle)
               }
             } catch (parseError) {
-              console.warn(`解析思维导图 ${id} 的标题失败:`, parseError.message)
             }
             
             // ⚠️ 注意：这里创建的时间戳是当前时间，不是真实的创建/更新时间
@@ -339,7 +348,6 @@ export default {
     // 从数据库加载思维导图数据
     async loadMindMapsFromDatabase() {
       if (!this.currentUser) {
-        console.warn('当前用户不存在，无法从数据库加载思维导图')
         return []
       }
       
@@ -361,7 +369,8 @@ export default {
     
     // 更新本地缓存数据
     updateCachedData() {
-      this.cachedMindMapTagMapping = TagCacheManager.getMindMapTagIds()
+      // 🔥 使用展开运算符确保响应式更新
+      this.cachedMindMapTagMapping = { ...TagCacheManager.getMindMapTagIds() }
       
       // 🔥 同时更新响应式用户标签数据
       this.cachedUserTags = { ...TagCacheManager.getUserTags() }
@@ -517,14 +526,30 @@ export default {
       }
     },
     
-    handleTagDelete(tagId) {
+    async handleTagDelete(tagId) {
       try {
+        // 🔥 修复：同时删除数据库和本地缓存
+        if (this.currentUser) {
+          await tagApi.deleteTag(this.currentUser.id, tagId)
+        }
+        
+        // 删除本地缓存
         TagCacheManager.deleteTag(tagId)
+        
+        // 🔥 强制更新响应式缓存数据，触发filteredMindMaps重新计算
+        this.cachedMindMapTagMapping = { ...TagCacheManager.getMindMapTagIds() }
+        this.cachedUserTags = { ...TagCacheManager.getUserTags() }
+        
+        // 🔥 强制刷新组件
+        this.$nextTick(() => {
+          this.$forceUpdate()
+          this.$refs.tagTreePanel?.forceRefresh()
+        })
+        
         this.$message.success('删除标签成功')
         this.refreshData()
       } catch (error) {
-        console.error('删除标签失败:', error)
-        this.$message.error('删除标签失败')
+        this.$message.error(error.message || '删除标签失败')
       }
     },
     
@@ -557,6 +582,16 @@ export default {
     handleMindmapTagUpdate(mindmapId, tagIds) {
       try {
         TagCacheManager.setMindMapTags(mindmapId, tagIds)
+        
+        // 🔥 强制更新响应式缓存数据，触发filteredMindMaps重新计算
+        this.cachedMindMapTagMapping = { ...TagCacheManager.getMindMapTagIds() }
+        
+        // 🔥 强制刷新组件
+        this.$nextTick(() => {
+          this.$forceUpdate()
+          this.$refs.tagTreePanel?.forceRefresh()
+        })
+        
         this.$message.success('更新标签成功')
         this.refreshData()
       } catch (error) {
@@ -588,13 +623,26 @@ export default {
           const newTags = [...currentTags, tagId]
           TagCacheManager.setMindMapTags(mindmapId, newTags)
           
-          // 3. 手动DOM操作更新UI
-          this.updateMindmapTagsDirectly(mindmapId, tagId, 'add')
+          // 3. 🔥 强制更新响应式缓存数据，触发filteredMindMaps重新计算
+          this.cachedMindMapTagMapping = { ...TagCacheManager.getMindMapTagIds() }
           
-          // 4. 更新左侧栏标签计数（+1）
+          // 4. 🔥 强制刷新TagTreePanel的数据
+          this.$nextTick(() => {
+            // 触发父组件强制更新
+            this.$forceUpdate()
+            // 通知左侧标签树刷新
+            this.$refs.tagTreePanel?.forceRefresh()
+          })
+          
+          // 5. 更新左侧栏标签计数（+1）
           this.updateSidebarTagCountDirectly(tagId, 'add')
           
-          // 5. 显示成功消息
+          // 则已分类+1，未分类-1
+          if (currentTags.length === 0) {
+            this.updateCategoryStats('add');
+          }
+
+          // 6. 显示成功消息
           this.$message.success(`已为 "${mindmapTitle}" 添加标签 "${tagName}"`)
         } else {
           this.$message.info(`"${mindmapTitle}" 已经包含标签 "${tagName}"`)
@@ -607,6 +655,47 @@ export default {
         TagCacheManager.setMindMapTags(mindmapId, currentTags)
       }
     },
+
+    // 更新已分类/未分类统计
+updateCategoryStats(action) {
+  try {
+    // 查找已分类和未分类的DOM元素
+    const categorizedElement = document.querySelector('[data-stat-type="categorized"] .stat-number');
+const uncategorizedElement = document.querySelector('[data-stat-type="uncategorized"] .stat-number');
+    
+    if (!categorizedElement || !uncategorizedElement) {
+      console.warn('未找到已分类/未分类统计元素');
+      return;
+    }
+    
+    // 获取当前计数
+    const categorizedMatch = categorizedElement.textContent.match(/(\d+)/);
+    const uncategorizedMatch = uncategorizedElement.textContent.match(/(\d+)/);
+    
+    let categorizedCount = categorizedMatch ? parseInt(categorizedMatch[1]) : 0;
+    let uncategorizedCount = uncategorizedMatch ? parseInt(uncategorizedMatch[1]) : 0;
+    
+    // 根据操作类型更新计数
+    if (action === 'add') {
+      // 添加标签：从无标签变为有标签
+      // 已分类+1，未分类-1
+      categorizedCount += 1;
+      uncategorizedCount = Math.max(0, uncategorizedCount - 1);
+    } else if (action === 'remove') {
+      // 删除标签：从有标签变为无标签
+      // 已分类-1，未分类+1
+      categorizedCount = Math.max(0, categorizedCount - 1);
+      uncategorizedCount += 1;
+    }
+    
+    // 更新DOM显示
+    categorizedElement.textContent = `${categorizedCount}`;
+    uncategorizedElement.textContent = `${uncategorizedCount}`;
+    
+  } catch (error) {
+    console.error('更新分类统计失败:', error);
+  }
+},
     
     // 批量操作处理
     handleBatchOperation(operation, mindmapIds, data) {
@@ -670,10 +759,46 @@ export default {
     },
     
     // 处理标签数据变化事件（从MindmapCards传来）
-    async handleTagDataChanged(data) {
-      // 轻量级更新：只更新必要的数据
-      this.lightweightDataUpdate(data);
-    },
+async handleTagDataChanged(data) {
+  const { type, mindmapId, tagId } = data;
+  
+  // 1. 更新缓存
+  TagCacheManager.refreshCache();
+  
+  // 2. 强制更新响应式数据，触发Vue重新计算
+  this.cachedMindMapTagMapping = { ...TagCacheManager.getMindMapTagIds() };
+  
+  // 3. 如果是删除操作，确保响应式数据已更新
+  if (type === 'remove' && mindmapId && tagId) {
+    // 确保从响应式对象中移除标签
+    if (this.cachedMindMapTagMapping[mindmapId]) {
+      const tagIds = this.cachedMindMapTagMapping[mindmapId];
+      const index = tagIds.indexOf(tagId);
+      if (index > -1) {
+        // 创建新数组以触发响应式更新
+        const newTagIds = [...tagIds];
+        newTagIds.splice(index, 1);
+        this.$set(this.cachedMindMapTagMapping, mindmapId, newTagIds);
+      }
+    }
+  }
+  
+  // 4. 强制刷新组件以更新左侧栏和列表排序
+  this.$nextTick(() => {
+    this.$forceUpdate();
+    this.$refs.tagTreePanel?.forceRefresh();
+  });
+
+  // 5. 更新已分类/未分类统计
+  // 如果是删除操作，检查删除后该思维导图是否还有标签
+  if (type === 'remove' && mindmapId) {
+    const remainingTags = this.cachedMindMapTagMapping[mindmapId] || [];
+    // 如果删除后没有标签了，则已分类-1，未分类+1
+    if (remainingTags.length === 0) {
+      this.updateCategoryStats('remove');
+    }
+  }
+},
     
     // 处理标签统计更新需求 - 精简版本
     handleTagStatisticsUpdate(data) {
@@ -720,7 +845,7 @@ export default {
             } else if (action === 'remove') {
               newCount = Math.max(0, currentCount - 1);
             } else {
-              console.warn('⚠️ 未知的操作类型:', action);
+
               return;
             }
             
@@ -731,12 +856,11 @@ export default {
               countElement.textContent = '0 个导图';
             }
           } else {
-            console.warn('⚠️ 在标签节点中未找到.tag-count元素');
+
           }
           
         } else {
-          console.warn('⚠️ 未找到标签节点:', tagId);
-          
+
           // 调试：查看所有带data-tag-id的元素
           const allTagElements = document.querySelectorAll('[data-tag-id]');
         }

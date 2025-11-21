@@ -353,8 +353,14 @@ export default {
   },
   watch: {
     mindmaps: {
-      handler(newMindmaps) {
+      handler(newMindmaps, oldMindmaps) {
         if (newMindmaps?.length > 0) {
+          // 🔍 延迟进行批量一致性检查，确保DOM已更新
+          this.$nextTick(() => {
+            setTimeout(() => {
+              this.batchCheckAllCardsConsistency('思维导图数据更新');
+            }, 100);
+          });
         }
       },
       immediate: true
@@ -795,7 +801,15 @@ export default {
         // 3. 直接DOM操作：更新左侧栏标签计数
         this.updateSidebarTagCountDOM(tag.id, tag.name);
         
-        // 4. 触发数据同步更新事件（但不再触发DOM操作）
+        // 4. 发出事件通知父组件更新响应式数据
+        // this.$emit('tag-data-changed', {
+        //   type: 'remove',
+        //   mindmapId: mindmap.id,
+        //   tagId: tag.id,
+        //   tagName: tag.name
+        // });
+        
+        // 5. 触发数据同步更新事件（但不再触发DOM操作）
         this.triggerTagUpdateEventsWithoutDom(mindmap.id, tag.id, tag.name);
         
       } catch (error) {
@@ -931,7 +945,6 @@ export default {
         TagCacheManager.removeTagFromMindMap(mindMapId, tagId);
         
       } catch (error) {
-        console.warn('清理特定标签关联缓存失败:', error);
         
         // 备用的简单缓存清理逻辑
         try {
@@ -947,7 +960,6 @@ export default {
             }
           }
         } catch (fallbackError) {
-          console.warn('备用缓存清理也失败了:', fallbackError);
         }
       }
     },
@@ -1010,8 +1022,14 @@ export default {
     handleTagDataUpdated(data) {
       const { mindmapId, tagId, action } = data
       
+      
       // 方案一：直接DOM操作更新标签显示，不触发Vue响应式系统
       this.updateMindmapTagsDirectly(mindmapId, tagId, action)
+      
+      // 🔍 异步检查数据一致性
+      this.$nextTick(() => {
+        this.checkAndFixTagConsistency(mindmapId, `标签数据更新-${action}`);
+      });
     },
     
     // 直接DOM操作更新思维导图标签显示
@@ -1019,7 +1037,6 @@ export default {
       // 1. 找到对应的思维导图卡片DOM元素
       const cardElement = this.findMindmapCardElement(mindmapId)
       if (!cardElement) {
-        console.warn('⚠️ 未找到思维导图卡片DOM元素:', mindmapId)
         return
       }
       
@@ -1039,7 +1056,6 @@ export default {
       if (cardElement) {
         return cardElement
       } else {
-        console.warn('⚠️ 未找到对应的卡片DOM元素:', mindmapId)
         return null
       }
     },
@@ -1059,7 +1075,6 @@ export default {
       // 获取标签信息
       const tag = this.userTags[tagId]
       if (!tag) {
-        console.warn('⚠️ 标签信息未找到:', tagId)
         return
       }
       
@@ -1112,7 +1127,6 @@ export default {
       if (actualTagId) {
         tagEl.setAttribute('data-tag-id', actualTagId)
       } else {
-        console.warn('⚠️ 标签ID未定义:', { tag, tagId })
       }
       tagEl.style.backgroundColor = tag.color
       tagEl.style.borderColor = tag.color
@@ -1196,14 +1210,36 @@ export default {
     
     // 强制刷新卡片
     forceRefreshCards() {
-      // 移除强制刷新，改为依赖Vue的响应式数据更新
+      
+      // 🔍 进行全面的一致性检查和修复
+      this.$nextTick(() => {
+        const result = this.batchCheckAllCardsConsistency('强制刷新卡片');
+        
+        if (result.fixedCount > 0) {
+        } else {
+        }
+      });
+      
+      // 依赖Vue的响应式数据更新
       // 只有在确实需要强制更新的特殊情况下才调用此方法
       // 一般情况下Vue的响应式系统会自动处理数据更新
+    },
+    
+    // 🛠️ 手动触发全面的标签一致性检查和修复（供外部调用）
+    manualConsistencyCheck() {
+      
+      return new Promise((resolve) => {
+        this.$nextTick(() => {
+          const result = this.batchCheckAllCardsConsistency('手动触发检查');
+          resolve(result);
+        });
+      });
     },
     
     // 处理标签移除事件
     handleTagRemoved(data) {
       const { mindmapId, tagId, tagName, skipDomUpdate } = data;
+      
       
       // 只有当没有skipDomUpdate标记时才进行DOM更新
       if (!skipDomUpdate) {
@@ -1211,20 +1247,27 @@ export default {
         this.optimisticUpdateTagRemoval(mindmapId, tagId);
       }
       
-      // 异步通知父组件进行轻量级更新
+      // 异步检查一致性并通知父组件
       this.$nextTick(() => {
-        this.$emit('tag-data-changed', {
-          type: 'remove',
-          mindmapId: mindmapId,
-          tagId: tagId
-        });
+        // 🔍 检查并修复DOM与缓存的一致性
+        const wasFixed = this.checkAndFixTagConsistency(mindmapId, '标签移除事件处理');
         
-        // 触发轻量级的标签统计更新
-        this.$bus.$emit('tag-statistics-update-needed', {
-          type: 'remove',
-          mindmapId: mindmapId,
-          tagId: tagId
-        });
+        if (!wasFixed) {
+          // 只有在没有进行修复的情况下才发送常规更新事件
+          this.$emit('tag-data-changed', {
+            type: 'remove',
+            mindmapId: mindmapId,
+            tagId: tagId
+          });
+          
+          // 触发轻量级的标签统计更新
+          this.$bus.$emit('tag-statistics-update-needed', {
+            type: 'remove',
+            mindmapId: mindmapId,
+            tagId: tagId
+          });
+        } else {
+        }
       });
     },
     
@@ -1349,7 +1392,6 @@ export default {
         }
         
         if (!mindMapId) {
-          console.warn('⚠️ 未找到思维导图ID，无法调整显示');
           return;
         }
       
@@ -1367,19 +1409,20 @@ export default {
       
       // 从缓存中获取标签数据
       let cacheTagsCount = 0; // d
+      let cacheTagsData = [];
       try {
-        cacheTagsCount = TagCacheManager.getMindMapTags(mindMapId).length;
+        cacheTagsData = TagCacheManager.getMindMapTags(mindMapId);
+        cacheTagsCount = cacheTagsData.length;
       } catch (error) {
-        console.warn('⚠️ 从缓存获取标签数量失败:', error);
         cacheTagsCount = domTagsCount; // 使用DOM计算作为备用
+        cacheTagsData = [];
       }
       
-      // 数据一致性校验
+      // 数据一致性校验和自动修复
       if (domTagsCount !== cacheTagsCount) {
-        console.warn('⚠️ DOM元素数量与缓存数量不一致', {
-          DOM数量: domTagsCount,
-          缓存数量: cacheTagsCount
-        });
+        // 🔧 自动修复：使用缓存数据重新渲染标签卡片UI
+        this.rebuildCardTagsFromCache(tagsContainer, mindMapId, cacheTagsData);
+        return; // 重新渲染后直接返回，无需继续处理
       }
       
       // 简化的处理逻辑
@@ -1403,10 +1446,203 @@ export default {
         }
       }
       
-        // 统一处理+N标签的显示
-        this.updateMoreTagsDisplayOptimized(tagsContainer, cacheTagsCount);
+      // 统一处理+N标签的显示
+      this.updateMoreTagsDisplayOptimized(tagsContainer, cacheTagsCount);
       } catch (error) {
         console.error('❌ 标签显示调整失败:', error);
+      }
+    },
+    
+    // 🔍 批量检查所有可见思维导图卡片的标签一致性
+    batchCheckAllCardsConsistency(triggerContext = '批量检查') {
+      try {
+        
+        let checkedCount = 0;
+        let fixedCount = 0;
+        const results = [];
+        
+        // 遍历所有排序后的思维导图
+        this.sortedMindmaps.forEach((mindmap, index) => {
+          try {
+            checkedCount++;
+            const wasFixed = this.checkAndFixTagConsistency(mindmap.id, `${triggerContext}-批量检查第${index + 1}项`);
+            
+            results.push({
+              mindmapId: mindmap.id,
+              mindmapTitle: this.getMindmapTitle(mindmap),
+              wasFixed: wasFixed
+            });
+            
+            if (wasFixed) {
+              fixedCount++;
+            }
+          } catch (error) {
+            console.error(`❌ 检查思维导图 ${mindmap.id} 时发生错误:`, error);
+          }
+        });
+        
+        return {
+          checkedCount,
+          fixedCount,
+          results
+        };
+        
+      } catch (error) {
+        console.error(`❌ 批量检查标签一致性失败 [${triggerContext}]:`, error);
+        return {
+          checkedCount: 0,
+          fixedCount: 0,
+          results: [],
+          error: error.message
+        };
+      }
+    },
+    
+    // 🔍 检查并修复DOM与缓存的一致性
+    checkAndFixTagConsistency(mindMapId, triggerContext = '未知') {
+      try {
+        if (!mindMapId) {
+          return false;
+        }
+        
+        
+        // 1. 获取DOM元素
+        const cardElement = this.findMindmapCardElement(mindMapId);
+        if (!cardElement) {
+          return false;
+        }
+        
+        const tagsContainer = cardElement.querySelector('.card-tags');
+        if (!tagsContainer) {
+          
+          // 检查缓存是否也为空
+          try {
+            const cacheTagsData = TagCacheManager.getMindMapTags(mindMapId);
+            if (cacheTagsData.length > 0) {
+              // 创建标签容器并重新构建
+              this.createTagsContainerAndRebuild(cardElement, mindMapId, cacheTagsData);
+              return true;
+            }
+          } catch (error) {
+          }
+          return false;
+        }
+        
+        // 2. 统计DOM标签数量
+        const allTagElements = tagsContainer.querySelectorAll('.el-tag:not(.more-tags)[data-tag-id]');
+        const domTagsCount = allTagElements.length;
+        
+        // 3. 获取缓存数据
+        let cacheTagsData = [];
+        try {
+          cacheTagsData = TagCacheManager.getMindMapTags(mindMapId);
+        } catch (error) {
+          return false;
+        }
+        
+        const cacheTagsCount = cacheTagsData.length;
+        
+        // 4. 检查一致性
+        if (domTagsCount === cacheTagsCount) {
+          return false; // 无需修复
+        }
+        
+        // 5. 发现不一致，进行修复
+        this.rebuildCardTagsFromCache(tagsContainer, mindMapId, cacheTagsData);
+        return true; // 已修复
+        
+      } catch (error) {
+        console.error(`❌ 检查标签一致性失败 [${triggerContext}]:`, error);
+        return false;
+      }
+    },
+    
+    // 🔧 创建标签容器并重新构建
+    createTagsContainerAndRebuild(cardElement, mindMapId, cacheTagsData) {
+      try {
+        
+        // 创建标签容器
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'card-tags';
+        
+        // 找到插入位置（标题和元信息之间）
+        const cardContent = cardElement.querySelector('.card-content');
+        const cardMeta = cardContent.querySelector('.card-meta');
+        
+        if (cardMeta) {
+          cardContent.insertBefore(tagsContainer, cardMeta);
+        } else {
+          cardContent.appendChild(tagsContainer);
+        }
+        
+        // 重新构建标签
+        this.rebuildCardTagsFromCache(tagsContainer, mindMapId, cacheTagsData);
+        
+      } catch (error) {
+        console.error('❌ 创建标签容器失败:', error);
+      }
+    },
+    
+    // 🔧 使用缓存数据重新构建卡片标签UI
+    rebuildCardTagsFromCache(tagsContainer, mindMapId, cacheTagsData) {
+      try {
+        // 1. 清除现有的所有标签DOM元素（保留容器）
+        const existingTags = tagsContainer.querySelectorAll('.el-tag');
+        existingTags.forEach(tag => tag.remove());
+        
+        // 2. 根据缓存数据重新创建标签元素
+        if (cacheTagsData.length === 0) {
+          tagsContainer.style.display = 'none';
+          return;
+        }
+        
+        tagsContainer.style.display = '';
+        
+        // 3. 为每个缓存标签创建DOM元素
+        let visibleCount = 0;
+        cacheTagsData.forEach((cacheTag, index) => {
+          // 从userTags获取完整的标签信息
+          const fullTagInfo = this.userTags[cacheTag.id] || cacheTag;
+          
+          if (!fullTagInfo.name) {
+            return;
+          }
+          
+          // 创建标签DOM元素
+          const tagElement = this.createTagElement(fullTagInfo, cacheTag.id);
+          
+          // 判断是否应该可见（前3个标签可见）
+          if (visibleCount < 3) {
+            tagElement.style.display = '';
+            visibleCount++;
+          } else {
+            tagElement.style.display = 'none';
+          }
+          
+          tagsContainer.appendChild(tagElement);
+        });
+        
+        // 4. 创建"+N"标签（如果需要）
+        if (cacheTagsData.length > 3) {
+          const moreCount = cacheTagsData.length - 3;
+          const moreTagEl = document.createElement('span');
+          moreTagEl.className = 'el-tag el-tag--mini el-tag--info el-tag--light more-tags';
+          moreTagEl.textContent = `+${moreCount}`;
+          tagsContainer.appendChild(moreTagEl);
+        }
+        
+        // 5. 清理该思维导图的所有显示状态覆盖（重新开始）
+        this.clearMindmapTagDisplayOverrides(mindMapId);
+        
+      } catch (error) {
+        console.error('❌ 重新构建卡片标签UI失败:', error);
+        // 发生错误时的备用处理：至少确保容器不显示损坏的内容
+        try {
+          tagsContainer.innerHTML = '';
+          tagsContainer.style.display = 'none';
+        } catch (cleanupError) {
+          console.error('❌ 清理损坏标签容器也失败:', cleanupError);
+        }
       }
     },
     
@@ -1444,7 +1680,6 @@ export default {
     // 优化的"+N"标签显示更新
     updateMoreTagsDisplayOptimized(tagsContainer, totalTagsCount) {
       if (!tagsContainer || typeof totalTagsCount !== 'number') {
-        console.warn('⚠️ 无效的参数:', { tagsContainer, totalTagsCount });
         return;
       }
       
@@ -1634,7 +1869,6 @@ export default {
           localStorage.setItem(cacheKey, JSON.stringify(cache));
         }
       } catch (error) {
-        console.warn('清理思维导图缓存失败:', error);
       }
     },
 
@@ -1650,7 +1884,6 @@ export default {
           localStorage.setItem(tagCacheKey, JSON.stringify(tagCache));
         }
       } catch (error) {
-        console.warn('清理标签关联缓存失败:', error);
         // 非关键错误，不影响主要功能
       }
     },
@@ -1667,7 +1900,6 @@ export default {
         }
         
         if (!cardElement) {
-          console.warn('⚠️ 尝试查找所有卡片元素进行调试');
           const allCards = document.querySelectorAll('.mindmap-card, [class*="mindmap"], [class*="card"]');
           return;
         }
@@ -1679,7 +1911,6 @@ export default {
         }
         
         if (!tagsContainer) {
-          console.warn('⚠️ 未找到标签容器，查看卡片内部结构');
           return;
         }
         
@@ -1709,10 +1940,8 @@ export default {
           }
           
           if (!tagElement) {
-            console.warn('⚠️ 通过标签名称也未找到元素:', tagName);
           }
         } else if (!tagElement) {
-          console.warn('⚠️ 没有提供标签名称，无法进行名称匹配');
         }
         
         if (tagElement) {
@@ -1721,7 +1950,6 @@ export default {
           // 4. 处理超过3个标签的情况：检查是否需要调整显示
           this.adjustTagDisplayAfterRemoval(tagsContainer, mindmap.id);
         } else {
-          console.warn('⚠️ 未找到要删除的标签元素:', tagId);
         }
         
       } catch (error) {
@@ -1813,11 +2041,9 @@ export default {
               countElement.textContent = '0 个导图';
             }
           } else {
-            console.warn('⚠️ 在标签节点中未找到.tag-count元素');
           }
           
         } else {
-          console.warn('⚠️ 未找到标签节点，data-tag-id可能未正确设置:', tagId);
           
           // 调试：查看是否有其他带data-tag-id的元素
           const allTagElements = document.querySelectorAll('[data-tag-id]');
@@ -2157,9 +2383,10 @@ export default {
   cursor: move;
   user-select: none;
   
-  &:hover {
-    background-color: #f5f7fa;
-  }
+}
+
+.saveConfirmDialog .el-dialog__header:hover {
+  background-color: #f5f7fa;
 }
 
 .confirm-content {
@@ -2175,10 +2402,8 @@ export default {
 }
 
 /* 深色主题下的保存确认对话框样式 */
-.isDark .saveConfirmDialog .el-dialog__header {
-  &:hover {
-    background-color: #1a1a1a;
-  }
+.isDark .saveConfirmDialog .el-dialog__header:hover {
+  background-color: #1a1a1a;
 }
 
 .isDark .confirm-text {
@@ -2186,16 +2411,16 @@ export default {
 }
 
 /* 拖拽对话框的z-index调整 */
-/deep/ .draggable-save-confirm-dialog {
+::v-deep .draggable-save-confirm-dialog {
   z-index: 10000 !important;
-  
-  .el-dialog {
-    z-index: 10000 !important;
-  }
-  
-  .el-dialog__wrapper {
-    z-index: 10000 !important;
-  }
+}
+
+::v-deep .draggable-save-confirm-dialog .el-dialog {
+  z-index: 10000 !important;
+}
+
+::v-deep .draggable-save-confirm-dialog .el-dialog__wrapper {
+  z-index: 10000 !important;
 }
 
 /* 右键菜单样式 */
