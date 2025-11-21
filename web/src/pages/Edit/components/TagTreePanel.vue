@@ -669,10 +669,8 @@ export default {
     
     // 🔥 强制刷新方法，供父组件调用
     forceRefresh() {
-      // 触发组件强制更新
+      // 只触发组件强制更新，不发送事件避免循环
       this.$forceUpdate()
-      // 触发刷新事件
-      this.$emit('refresh-tags')
     }
   }
 }

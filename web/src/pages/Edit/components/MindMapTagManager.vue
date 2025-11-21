@@ -26,7 +26,7 @@
             <i class="el-icon-price-tag"></i>
             <p>暂无标签，点击上方按钮添加标签或双击下方标签快速添加</p>
           </div>
-          <div v-else class="tagsList">
+          <div v-else class="currentTagsList">
             <div 
               v-for="tag in currentMindMapTags" 
               :key="tag.id"
@@ -36,8 +36,8 @@
               <span class="tagText">{{ tag.name }}</span>
               <i 
                 class="el-icon-close removeTag" 
-                @click="removeTagFromMindMap(tag.id)"
-                :title="'移除标签: ' + tag.name"
+                @click="handleDeleteTag(tag)"
+                :title="'删除标签: ' + tag.name"
               ></i>
             </div>
           </div>
@@ -100,36 +100,21 @@
                 'is-processing': isProcessing
               }"
               @dblclick="handleDoubleClickTag(tag)"
+              @contextmenu.prevent="showTagContextMenu($event, tag)"
               :title="isProcessing ? '处理中...' : (isTagUsedInCurrentMindMap(tag.id) ? '双击移除标签' : '双击添加标签到当前思维导图')"
             >
               <div class="tagInfo">
-                <div 
-                  class="tagColor"
-                  :style="{ backgroundColor: tag.color }"
-                ></div>
-                <span class="tagName">{{ tag.name }}</span>
+                <div class="tagHeader">
+                  <div 
+                    class="tagColor"
+                    :style="{ backgroundColor: tag.color }"
+                  ></div>
+                  <div class="tagName">{{ tag.name }}</div>
+                </div>
                 <div class="tagMeta">
                   <span v-if="tag.is_public" class="publicTag">公共</span>
                   <span v-else class="privateTag">私有</span>
-                  <span class="usageCount">{{ tag.usageCount || 0 }}次使用</span>
                 </div>
-              </div>
-              <div class="tagActions" v-if="tag.isOwned">
-                <el-button 
-                  size="mini" 
-                  type="text" 
-                  icon="el-icon-edit"
-                  @click="editTag(tag)"
-                  title="编辑标签"
-                />
-                <el-button 
-                  size="mini" 
-                  type="text" 
-                  icon="el-icon-delete"
-                  @click="deleteTag(tag)"
-                  title="删除标签"
-                  class="deleteBtn"
-                />
               </div>
             </div>
           </div>
@@ -179,6 +164,44 @@
       @close="closeSelectionDialog"
       @success="handleAddTagsSuccess"
     />
+
+    <!-- 右键菜单 -->
+    <div 
+      v-show="contextMenu.visible" 
+      class="tag-context-menu"
+      :class="{ 'dark-theme': isDark }"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+    >
+      <div 
+        class="menu-item"
+        @click="handleContextMenuAction('add', contextMenu.tag)"
+      >
+        <i class="el-icon-plus"></i>
+        {{ isTagUsedInCurrentMindMap(contextMenu.tag?.id) ? '移除标签' : '添加标签' }}
+      </div>
+      <div 
+        class="menu-item"
+        @click="handleContextMenuAction('delete', contextMenu.tag)"
+      >
+        <i class="el-icon-delete"></i>
+        删除标签
+      </div>
+      <div 
+        v-if="contextMenu.tag && !contextMenu.tag.is_public"
+        class="menu-item"
+        @click="handleContextMenuAction('edit', contextMenu.tag)"
+      >
+        <i class="el-icon-edit"></i>
+        编辑标签
+      </div>
+    </div>
+
+    <!-- 遮罩层，用于关闭右键菜单 -->
+    <div 
+      v-show="contextMenu.visible" 
+      class="context-menu-overlay"
+      @click="hideContextMenu"
+    ></div>
   </Sidebar>
 </template>
 
@@ -215,7 +238,15 @@ export default {
       editingTag: null,
       
       // 刷新定时器
-      refreshTimer: null
+      refreshTimer: null,
+      
+      // 右键菜单
+      contextMenu: {
+        visible: false,
+        x: 0,
+        y: 0,
+        tag: null
+      }
     }
   },
   computed: {
@@ -239,6 +270,7 @@ export default {
   },
   created() {
     this.$bus.$on('showTagManager', this.show)
+    this.$bus.$on('mindmap-tag-association-changed', this.handleMindmapTagAssociationChanged)
     this.loadAvailableTags()
   },
   mounted() {
@@ -247,6 +279,7 @@ export default {
   },
   beforeDestroy() {
     this.$bus.$off('showTagManager', this.show)
+    this.$bus.$off('mindmap-tag-association-changed', this.handleMindmapTagAssociationChanged)
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
     }
@@ -343,14 +376,24 @@ export default {
 
     // 搜索处理
     handleSearch() {
+      let tags = []
       if (!this.searchKeyword.trim()) {
-        this.filteredTags = [...this.availableTags]
+        tags = [...this.availableTags]
       } else {
         const keyword = this.searchKeyword.toLowerCase()
-        this.filteredTags = this.availableTags.filter(tag => 
+        tags = this.availableTags.filter(tag => 
           tag.name.toLowerCase().includes(keyword)
         )
       }
+      
+      // 排序：私有标签在前，公共标签在后
+      this.filteredTags = tags.sort((a, b) => {
+        // 私有标签 (is_public: false) 排在前面
+        if (!a.is_public && b.is_public) return -1
+        if (a.is_public && !b.is_public) return 1
+        // 同类型按名称排序
+        return a.name.localeCompare(b.name)
+      })
     },
 
     // 检查标签是否已用于当前思维导图
@@ -391,6 +434,13 @@ export default {
             this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
             this.$message.error('移除失败: ' + error.message)
           })
+          
+          // 通知导图管理页面标签关联已更新
+          this.$bus.$emit('tag-mindmap-association-changed', {
+            type: 'remove',
+            mindmapId: this.currentMindMapId,
+            tagId: tag.id
+          })
         } else {
           // 立即更新UI（乐观更新）
           TagCacheManager.addTagToMindMap(this.currentMindMapId, tag.id)
@@ -407,6 +457,13 @@ export default {
             TagCacheManager.removeTagFromMindMap(this.currentMindMapId, tag.id)
             this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
             this.$message.error('添加失败: ' + error.message)
+          })
+          
+          // 通知导图管理页面标签关联已更新
+          this.$bus.$emit('tag-mindmap-association-changed', {
+            type: 'add',
+            mindmapId: this.currentMindMapId,
+            tagId: tag.id
           })
         }
       } catch (error) {
@@ -568,6 +625,9 @@ export default {
           TagCacheManager.addUserTag(tagData)
           this.availableTags = TagCacheManager.getUserTagsArray()
           this.handleSearch()
+          
+          // 通知其他组件标签已创建
+          this.$bus.$emit('tag-created', tagData)
         }
       } else {
         // 如果没有返回标签数据，重新加载
@@ -665,6 +725,113 @@ export default {
       }
     },
 
+    // 从当前标签直接移除（无确认对话框）
+    async removeTagFromCurrentMindMapDirectly(tag) {
+      if (!this.currentMindMapId) return
+
+      try {
+        // 立即更新UI（乐观更新）
+        TagCacheManager.removeTagFromMindMap(this.currentMindMapId, tag.id)
+        this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+        this.$message.success(`标签 "${tag.name}" 移除成功`)
+        
+        // 后台异步同步到数据库
+        tagApi.removeTagFromMindMapOptimized(
+          this.currentUser.id,
+          this.currentMindMapId,
+          tag.id
+        ).catch(error => {
+          // 如果后台同步失败，回滚UI更改
+          TagCacheManager.addTagToMindMap(this.currentMindMapId, tag.id)
+          this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+          this.$message.error('移除失败: ' + error.message)
+        })
+        
+        // 通知导图管理页面标签关联已更新
+        this.$bus.$emit('tag-mindmap-association-changed', {
+          type: 'remove',
+          mindmapId: this.currentMindMapId,
+          tagId: tag.id
+        })
+      } catch (error) {
+        this.$message.error('移除标签失败: ' + error.message)
+      }
+    },
+
+
+    // 处理来自导图管理页面的标签-导图关联变化
+    handleMindmapTagAssociationChanged(data) {
+      const { type, mindmapId, tagId } = data
+      
+      // 如果变化的不是当前思维导图，忽略
+      if (mindmapId !== this.currentMindMapId) {
+        return
+      }
+      
+      // 更新当前思维导图标签显示
+      this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+    },
+
+    // 显示右键菜单
+    showTagContextMenu(event, tag) {
+      this.contextMenu = {
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+        tag: tag
+      }
+    },
+
+    // 隐藏右键菜单
+    hideContextMenu() {
+      this.contextMenu.visible = false
+    },
+
+    // 处理右键菜单操作
+    handleContextMenuAction(action, tag) {
+      this.hideContextMenu()
+      
+      if (!tag) return
+      
+      switch (action) {
+        case 'add':
+          this.handleDoubleClickTag(tag)
+          break
+        case 'delete':
+          // 统一使用删除标签功能
+          this.handleDeleteTag(tag)
+          break
+        case 'edit':
+          this.editTag(tag)
+          break
+      }
+    },
+
+    // 统一的删除标签处理方法
+    async handleDeleteTag(tag) {
+      try {
+        // 如果是在当前标签列表中，先从当前思维导图移除
+        if (this.isTagUsedInCurrentMindMap(tag.id)) {
+          await this.removeTagFromCurrentMindMapDirectly(tag)
+        }
+        
+        // 删除标签本身
+        await tagApi.deleteTag(this.currentUser.id, tag.id)
+        
+        // 同步更新缓存（自动清理所有映射关系）
+        TagCacheManager.deleteTag(tag.id)
+        
+        // 更新本地显示
+        this.availableTags = TagCacheManager.getUserTagsArray()
+        this.currentMindMapTags = TagCacheManager.getMindMapTags(this.currentMindMapId)
+        this.handleSearch() // 更新筛选结果
+        
+        this.$message.success(`标签 "${tag.name}" 删除成功`)
+      } catch (error) {
+        this.$message.error('删除标签失败: ' + error.message)
+      }
+    },
+
 
   }
 }
@@ -694,9 +861,33 @@ export default {
     .tagItem {
       background-color: #363a3f;
       border-color: hsla(0, 0%, 100%, 0.1);
+      color: #e4e7ed;
 
       &:hover {
         background-color: #404449;
+        border-color: #409eff;
+      }
+
+      &.is-used {
+        background-color: #2d3741;
+        border-color: #409eff;
+        box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.1);
+      }
+
+      .tagName {
+        color: #f0f0f0;
+      }
+
+      .tagMeta {
+        color: #b4b4b4;
+      }
+
+      .publicTag {
+        color: #ffd700;
+      }
+
+      .privateTag {
+        color: #67c23a;
       }
     }
 
@@ -768,9 +959,15 @@ export default {
   }
 
   .tagsList {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .currentTagsList {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
   }
 
   .tagChip {
@@ -800,7 +997,7 @@ export default {
 
   .tagItem {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
     padding: 12px;
     border: 1px solid #e8e8e8;
@@ -809,8 +1006,9 @@ export default {
     cursor: pointer;
     transition: all 0.2s;
     width: 100%;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     user-select: none;
+    min-height: 68px;
 
     &:hover {
       background-color: #f5f7fa;
@@ -827,6 +1025,7 @@ export default {
     &.is-used {
       background-color: #ecf5ff;
       border-color: #409eff;
+      box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.1);
     }
 
     &.is-processing {
@@ -851,9 +1050,19 @@ export default {
 
     .tagInfo {
       display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      padding-bottom: 18px;
+    }
+
+    .tagHeader {
+      display: flex;
       align-items: center;
+      gap: 8px;
       flex: 1;
-      gap: 12px;
+      min-height: 20px;
     }
 
     .tagColor {
@@ -865,44 +1074,30 @@ export default {
 
     .tagName {
       font-weight: 500;
+      line-height: 1.3;
       flex: 1;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .tagMeta {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
-      color: #999;
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      font-size: 11px;
+      line-height: 1;
     }
 
     .publicTag {
-      color: #67c23a;
+      color: #ffd700;
+      font-weight: 500;
     }
 
     .privateTag {
-      color: #909399;
+      color: #67c23a;
+      font-weight: 500;
     }
 
-    .tagActions {
-      display: flex;
-      gap: 5px;
-      opacity: 0;
-      transition: opacity 0.2s;
-
-      .deleteBtn {
-        color: #f56c6c;
-
-        &:hover {
-          color: #f56c6c;
-          background-color: #fef0f0;
-        }
-      }
-    }
-
-    &:hover .tagActions {
-      opacity: 1;
-    }
   }
 
   .batchActions {
@@ -919,5 +1114,65 @@ export default {
   100% {
     transform: translateY(-50%) rotate(360deg);
   }
+}
+
+// 右键菜单样式
+.tag-context-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 6px 0;
+  min-width: 120px;
+  z-index: 3000;
+  font-size: 14px;
+
+  &.dark-theme {
+    background: #2c2c2c;
+    border-color: #4c4d4f;
+    color: #e4e7ed;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+    user-select: none;
+
+    &:hover {
+      background-color: #f5f7fa;
+    }
+
+    i {
+      font-size: 14px;
+      width: 14px;
+      color: #909399;
+    }
+  }
+
+  &.dark-theme .menu-item {
+    &:hover {
+      background-color: #3c3c3c;
+    }
+
+    i {
+      color: #b4b4b4;
+    }
+  }
+}
+
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2999;
+  background: transparent;
 }
 </style>

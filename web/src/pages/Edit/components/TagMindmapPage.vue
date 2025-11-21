@@ -212,6 +212,8 @@ export default {
     // 监听相关事件
     this.$bus.$on('refreshMindmapData', this.refreshData)
     this.$bus.$on('tag-statistics-update-needed', this.handleTagStatisticsUpdate)
+    this.$bus.$on('tag-created', this.handleTagCreated)
+    this.$bus.$on('tag-mindmap-association-changed', this.handleTagMindmapAssociationChanged)
   },
   mounted() {
     // 页面加载完成后再次更新缓存
@@ -228,6 +230,8 @@ export default {
   beforeDestroy() {
     this.$bus.$off('refreshMindmapData', this.refreshData)
     this.$bus.$off('tag-statistics-update-needed', this.handleTagStatisticsUpdate)
+    this.$bus.$off('tag-created', this.handleTagCreated)
+    this.$bus.$off('tag-mindmap-association-changed', this.handleTagMindmapAssociationChanged)
   },
   methods: {
     // 清理标题，移除HTML标签和多余字符
@@ -474,14 +478,44 @@ export default {
     },
     
     // 标签管理操作
-    handleTagCreate(tagData) {
+    async handleTagCreate(tagData) {
       try {
-        TagCacheManager.createTag(tagData)
+        // 🔥 修复：同时创建到数据库和本地缓存
+        let newTag = null
+        
+        if (this.currentUser) {
+          // 1. 先创建到数据库
+          const { tagApi } = await import('@/api/supabase-api')
+          newTag = await tagApi.createTag(
+            this.currentUser.id,
+            tagData.name,
+            tagData.color
+          )
+        }
+        
+        // 2. 更新本地缓存（使用数据库返回的完整标签数据）
+        if (newTag) {
+          TagCacheManager.createTag(newTag)
+        } else {
+          // 如果没有用户信息，只本地创建
+          TagCacheManager.createTag(tagData)
+        }
+        
+        // 3. 立即更新响应式缓存数据，确保UI能够实时刷新
+        this.cachedUserTags = { ...TagCacheManager.getUserTags() }
+        
+        // 4. 强制刷新左侧标签树组件
+        this.$nextTick(() => {
+          this.$forceUpdate()
+          if (this.$refs.tagTreePanel) {
+            this.$refs.tagTreePanel.$forceUpdate()
+          }
+        })
+        
         this.$message.success('创建标签成功')
-        this.refreshData()
       } catch (error) {
         console.error('创建标签失败:', error)
-        this.$message.error('创建标签失败')
+        this.$message.error('创建标签失败: ' + error.message)
       }
     },
     
@@ -642,7 +676,14 @@ export default {
             this.updateCategoryStats('add');
           }
 
-          // 6. 显示成功消息
+          // 6. 通知右侧标签管理器更新
+          this.$bus.$emit('mindmap-tag-association-changed', {
+            type: 'add',
+            mindmapId: mindmapId,
+            tagId: tagId
+          })
+
+          // 7. 显示成功消息
           this.$message.success(`已为 "${mindmapTitle}" 添加标签 "${tagName}"`)
         } else {
           this.$message.info(`"${mindmapTitle}" 已经包含标签 "${tagName}"`)
@@ -757,6 +798,7 @@ const uncategorizedElement = document.querySelector('[data-stat-type="uncategori
       // 仅刷新标签缓存，不触发响应式更新
       TagCacheManager.refreshCache()
     },
+
     
     // 处理标签数据变化事件（从MindmapCards传来）
 async handleTagDataChanged(data) {
@@ -804,6 +846,52 @@ async handleTagDataChanged(data) {
     handleTagStatisticsUpdate(data) {
       // 仅刷新标签缓存，不触发响应式更新
       TagCacheManager.refreshCache()
+    },
+    
+    // 处理从右侧边栏标签管理器创建的新标签
+    handleTagCreated(tagData) {
+      // 立即更新响应式缓存数据，确保UI能够实时刷新
+      this.cachedUserTags = { ...TagCacheManager.getUserTags() }
+      
+      // 强制刷新左侧标签树组件
+      this.$nextTick(() => {
+        this.$forceUpdate()
+        if (this.$refs.tagTreePanel) {
+          this.$refs.tagTreePanel.$forceUpdate()
+        }
+      })
+    },
+
+    // 处理从右侧标签管理器的标签-导图关联变化
+    handleTagMindmapAssociationChanged(data) {
+      const { type, mindmapId, tagId } = data
+      
+      // 立即更新响应式缓存数据
+      this.cachedMindMapTagMapping = { ...TagCacheManager.getMindMapTagIds() }
+      
+      // 强制刷新组件
+      this.$nextTick(() => {
+        this.$forceUpdate()
+        if (this.$refs.tagTreePanel) {
+          this.$refs.tagTreePanel.$forceUpdate()
+        }
+      })
+
+      // 更新左侧栏标签计数
+      this.updateSidebarTagCountDirectly(tagId, type)
+
+      // 更新已分类/未分类统计
+      if (type === 'add') {
+        const currentTags = TagCacheManager.getMindMapTagIds()[mindmapId] || []
+        if (currentTags.length === 1) { // 如果是第一个标签
+          this.updateCategoryStats('add')
+        }
+      } else if (type === 'remove') {
+        const currentTags = TagCacheManager.getMindMapTagIds()[mindmapId] || []
+        if (currentTags.length === 0) { // 如果没有标签了
+          this.updateCategoryStats('remove')
+        }
+      }
     },
     
     // 轻量级数据更新 - 精简版本
