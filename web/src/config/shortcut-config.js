@@ -226,6 +226,13 @@ export const BROWSER_SHORTCUTS = {
     priority: 8,
     preventDefault: true
   },
+  'Alt+G': {
+    action: 'openMindmapManager',
+    layer: LAYERS.APPLICATION,
+    description: '打开导图管理',
+    priority: 8,
+    preventDefault: true
+  },
   'Shift+C': {
     action: 'openNoteDialog',
     layer: LAYERS.APPLICATION,
@@ -288,6 +295,14 @@ export const CONTEXT_SHORTCUTS = {
       action: 'confirmDialog',
       layer: LAYERS.CONTEXT,
       description: '确认对话框',
+      priority: 9
+    }
+  },
+  [CONTEXTS.MINDMAP_MANAGER]: {
+    'Alt+C': {
+      action: 'backToEditor',
+      layer: LAYERS.CONTEXT,
+      description: '返回编辑器',
       priority: 9
     }
   }

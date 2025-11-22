@@ -7,14 +7,8 @@
         <span>标签分类</span>
       </div>
       <div class="header-actions">
-        <el-button
-          type="text"
-          icon="el-icon-refresh"
-          size="mini"
-          @click="refreshTags"
-          title="刷新"
-          class="refresh-button"
-        ></el-button>
+        <el-button type="text" icon="el-icon-refresh" size="mini" @click="refreshTags" title="刷新"
+          class="refresh-button"></el-button>
       </div>
     </div>
 
@@ -38,25 +32,13 @@
     <div class="quick-filters">
       <div class="filter-title">快速筛选</div>
       <div class="filter-buttons">
-        <el-button
-          size="mini"
-          :type="selectedTagIds.length === 0 ? 'primary' : 'default'"
-          @click="selectAllTags"
-        >
+        <el-button size="mini" :type="selectedTagIds.length === 0 ? 'primary' : 'default'" @click="selectAllTags">
           全部
         </el-button>
-        <el-button
-          size="mini"
-          :type="showOnlyUntagged ? 'primary' : 'default'"
-          @click="toggleUntaggedFilter"
-        >
+        <el-button size="mini" :type="showOnlyUntagged ? 'primary' : 'default'" @click="toggleUntaggedFilter">
           未分类
         </el-button>
-        <el-button
-          size="mini"
-          @click="clearSelection"
-          v-if="selectedTagIds.length > 0"
-        >
+        <el-button size="mini" @click="clearSelection" v-if="selectedTagIds.length > 0">
           清除选择
         </el-button>
       </div>
@@ -68,9 +50,8 @@
         <!-- 标签列表 -->
         <template v-for="(tag, index) in sortedTags">
           <!-- 公共标签分隔符 -->
-          <div v-if="tag.isPublic && (index === 0 || !sortedTags[index-1].isPublic)" 
-               :key="`separator-${tag.id}`" 
-               class="tag-separator">
+          <div v-if="tag.isPublic && (index === 0 || !sortedTags[index - 1].isPublic)" :key="`separator-${tag.id}`"
+            class="tag-separator">
             <div class="separator-line"></div>
             <div class="separator-text">
               <i class="el-icon-unlock"></i>
@@ -78,31 +59,19 @@
             </div>
             <div class="separator-line"></div>
           </div>
-          
+
           <!-- 标签节点 -->
-          <div
-            :key="tag.id"
-            :data-tag-id="tag.id"
-            class="tag-node"
-            :class="{ 
-              selected: selectedTagIds.includes(tag.id),
-              'has-mindmaps': tag.mindmapCount > 0,
-              'drag-over': dragOverTagId === tag.id,
-              'public-tag': tag.isPublic
-            }"
-            @click="toggleTagSelection(tag.id)"
-            @contextmenu.prevent="showTagContextMenu($event, tag.id, tag)"
-            @dragover.prevent="handleDragOver($event, tag.id)"
-            @dragenter.prevent="handleDragEnter($event, tag.id)"
-            @dragleave="handleDragLeave($event, tag.id)"
-            @drop.prevent="handleDrop($event, tag.id)"
-          >
+          <div :key="tag.id" :data-tag-id="tag.id" class="tag-node" :class="{
+            selected: selectedTagIds.includes(tag.id),
+            'has-mindmaps': tag.mindmapCount > 0,
+            'drag-over': dragOverTagId === tag.id,
+            'public-tag': tag.isPublic
+          }" @click="toggleTagSelection(tag.id)" @contextmenu.prevent="showTagContextMenu($event, tag.id, tag)"
+            @dragover.prevent="handleDragOver($event, tag.id)" @dragenter.prevent="handleDragEnter($event, tag.id)"
+            @dragleave="handleDragLeave($event, tag.id)" @drop.prevent="handleDrop($event, tag.id)">
             <!-- 标签颜色指示器 -->
-            <div 
-              class="tag-color-indicator"
-              :style="{ backgroundColor: tag.color || '#409EFF' }"
-            ></div>
-            
+            <div class="tag-color-indicator" :style="{ backgroundColor: tag.color || '#409EFF' }"></div>
+
             <!-- 标签信息 -->
             <div class="tag-info">
               <div class="tag-name">
@@ -113,13 +82,10 @@
               </div>
               <div class="tag-count">{{ tag.mindmapCount }} 个导图</div>
             </div>
-            
+
             <!-- 标签操作 - 只有私有标签才显示 -->
             <div v-if="!tag.isPublic" class="tag-actions" @click.stop>
-              <el-dropdown 
-                trigger="click"
-                @command="handleTagAction"
-              >
+              <el-dropdown trigger="click" @command="handleTagAction">
                 <el-button type="text" size="mini" class="more-button">
                   <i class="el-icon-more"></i>
                 </el-button>
@@ -137,11 +103,7 @@
         </template>
 
         <!-- 未分类节点 -->
-        <div 
-          class="tag-node untagged-node"
-          :class="{ selected: showOnlyUntagged }"
-          @click="toggleUntaggedFilter"
-        >
+        <div class="tag-node untagged-node" :class="{ selected: showOnlyUntagged }" @click="toggleUntaggedFilter">
           <div class="tag-color-indicator untagged-color"></div>
           <div class="tag-info">
             <div class="tag-name">未分类</div>
@@ -163,41 +125,22 @@
     </div>
 
     <!-- 创建/编辑标签对话框 -->
-    <el-dialog
-      :title="tagDialogMode === 'create' ? '创建标签' : '编辑标签'"
-      :visible.sync="tagDialogVisible"
-      width="400px"
-      :close-on-press-escape="true"
-      :modal-append-to-body="false"
-      v-drag-dialog
-      custom-class="tag-dialog"
-    >
+    <el-dialog :title="tagDialogMode === 'create' ? '创建标签' : '编辑标签'" :visible.sync="tagDialogVisible" width="400px"
+      :close-on-press-escape="true" :modal-append-to-body="false" v-drag-dialog custom-class="tag-dialog">
       <el-form :model="tagForm" :rules="tagFormRules" ref="tagForm" label-width="80px">
         <el-form-item label="标签名称" prop="name">
-          <el-input 
-            v-model="tagForm.name" 
-            placeholder="请输入标签名称"
-            maxlength="20"
-            show-word-limit
-          ></el-input>
+          <el-input v-model="tagForm.name" placeholder="请输入标签名称" maxlength="20" show-word-limit></el-input>
         </el-form-item>
         <el-form-item label="标签颜色" prop="color">
           <div class="color-picker-container">
-            <el-color-picker 
-              v-model="tagForm.color"
-              :predefine="predefineColors"
-              show-alpha
-              @change="handleColorChange"
-            ></el-color-picker>
+            <el-color-picker v-model="tagForm.color" :predefine="predefineColors" show-alpha
+              @change="handleColorChange"></el-color-picker>
           </div>
           <div class="color-value-container">
-            <span 
-              class="color-value-display" 
-              :style="{ 
-                backgroundColor: tagForm.color,
-                color: getContrastColor(tagForm.color)
-              }"
-            >
+            <span class="color-value-display" :style="{
+              backgroundColor: tagForm.color,
+              color: getContrastColor(tagForm.color)
+            }">
               {{ tagForm.color.toUpperCase() }}
             </span>
           </div>
@@ -206,6 +149,34 @@
       <div slot="footer" class="dialog-footer">
         <el-button @click="tagDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="confirmTagAction">确定</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 删除标签确认对话框 -->
+    <el-dialog title="删除标签确认" :visible.sync="deleteTagDialogVisible" width="450px" :close-on-press-escape="true"
+      :modal-append-to-body="false" custom-class="delete-tag-confirm-dialog" :class="{ isDark: isDark }">
+      <div class="confirm-content">
+        <div class="confirm-icon">
+          <i class="el-icon-warning" style="color: #F56C6C; font-size: 48px;"></i>
+        </div>
+        <p class="confirm-text">
+          <template v-if="deleteTagMindmapCount > 0">
+            确定要删除标签"<strong>{{ deleteTagName }}</strong>"吗？<br />
+            <span class="warning-text">这将影响 <strong>{{ deleteTagMindmapCount }}</strong> 个思维导图。</span>
+          </template>
+          <template v-else>
+            确定要删除标签"<strong>{{ deleteTagName }}</strong>"吗？
+          </template>
+        </p>
+      </div>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button size="small" @click="deleteTagDialogVisible = false">
+          取消
+        </el-button>
+        <el-button size="small" type="danger" @click="confirmDeleteTag" icon="el-icon-delete">
+          确定删除
+        </el-button>
       </div>
     </el-dialog>
   </div>
@@ -237,11 +208,11 @@ export default {
   data() {
     return {
       showOnlyUntagged: false,
-      
+
       // 拖拽相关
       dragOverTagId: null,
       isDragActive: false,
-      
+
       // 标签对话框
       tagDialogVisible: false,
       tagDialogMode: 'create', // 'create' | 'edit'
@@ -260,7 +231,7 @@ export default {
           { required: true, message: '请选择标签颜色', trigger: 'change' }
         ]
       },
-      
+
       // 预定义颜色
       predefineColors: [
         '#409EFF',
@@ -273,14 +244,20 @@ export default {
         '#722ED1',
         '#EB2F96',
         '#FA541C'
-      ]
+      ],
+
+      // 删除标签确认对话框
+      deleteTagDialogVisible: false,
+      deleteTagName: '',
+      deleteTagMindmapCount: 0,
+      pendingDeleteTagId: null
     }
   },
   computed: {
     isDark() {
       return this.$store?.state?.localConfig?.isDark || false
     },
-    
+
     // 已分类的思维导图数量
     taggedMindmapsCount() {
       return this.localMindmaps.filter(mindmap => {
@@ -288,7 +265,7 @@ export default {
         return tags.length > 0
       }).length
     },
-    
+
     // 未分类的思维导图数量
     untaggedMindmapsCount() {
       return this.localMindmaps.filter(mindmap => {
@@ -323,12 +300,12 @@ export default {
       },
       immediate: true
     },
-    
+
     showOnlyUntagged() {
       this.emitTagSelection()
     }
   },
-  
+
   created() {
     // 监听数据更新事件
     this.$bus.$on('mindmap-tag-data-updated', this.handleTagDataUpdated)
@@ -336,14 +313,14 @@ export default {
     // 监听标签更新事件
     this.$bus.$on('tag-updated', this.handleTagUpdated)
   },
-  
+
   beforeDestroy() {
     // 清理事件监听器
     this.$bus.$off('mindmap-tag-data-updated', this.handleTagDataUpdated)
     this.$bus.$off('force-refresh-tag-tree', this.forceRefreshTagTree)
     this.$bus.$off('tag-updated', this.handleTagUpdated)
   },
-  
+
   methods: {
     // 获取标签下的思维导图数量
     getTagMindmapCount(tagId) {
@@ -352,55 +329,55 @@ export default {
         return tags.includes(tagId)
       }).length
     },
-    
+
     // 切换标签选择
     toggleTagSelection(tagId) {
       this.showOnlyUntagged = false
-      
+
       const selectedIds = [...this.selectedTagIds]
       const index = selectedIds.indexOf(tagId)
-      
+
       if (index > -1) {
         selectedIds.splice(index, 1)
       } else {
         selectedIds.push(tagId)
       }
-      
+
       this.$emit('tag-select', selectedIds)
     },
-    
+
     // 拖拽进入处理
     handleDragEnter(event, tagId) {
       this.dragOverTagId = tagId
       this.isDragActive = true
     },
-    
+
     // 拖拽悬停处理
     handleDragOver(event, tagId) {
       event.dataTransfer.dropEffect = 'copy'
       this.dragOverTagId = tagId
     },
-    
+
     // 拖拽离开处理
     handleDragLeave(event, tagId) {
       // 使用延迟来避免子元素触发的dragLeave
       setTimeout(() => {
         // 确保event和currentTarget存在再调用contains方法
-        if (event && event.currentTarget && 
-            (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget))) {
+        if (event && event.currentTarget &&
+          (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget))) {
           this.dragOverTagId = null
         }
       }, 50)
     },
-    
+
     // 拖拽放置处理
     handleDrop(event, tagId) {
       this.dragOverTagId = null
       this.isDragActive = false
-      
+
       try {
         const dragData = JSON.parse(event.dataTransfer.getData('text/plain'))
-        
+
         if (dragData.type === 'mindmap') {
           this.addTagToMindmap(dragData.mindmapId, tagId, dragData.mindmapTitle)
         }
@@ -409,19 +386,19 @@ export default {
         this.$message.error('拖拽操作失败')
       }
     },
-    
+
     // 为思维导图添加标签
     addTagToMindmap(mindmapId, tagId, mindmapTitle) {
       const tagName = this.userTags[tagId]?.name || '未知标签'
-      
+
       // 🔥 修复：使用统一数据源 TagCacheManager.getMindMapTagIds()
       const currentTags = TagCacheManager.getMindMapTagIds()[mindmapId] || []
-      
+
       if (currentTags.includes(tagId)) {
         this.$message.info(`"${mindmapTitle}" 已经包含标签 "${tagName}"`)
         return
       }
-      
+
       // 触发添加标签事件
       this.$emit('mindmap-add-tag', {
         mindmapId,
@@ -429,10 +406,10 @@ export default {
         mindmapTitle,
         tagName
       })
-      
+
       // 注意：成功消息现在在TagMindmapPage中显示，避免重复提示
     },
-    
+
     // 处理标签数据更新
     handleTagDataUpdated(data) {
       // 强制更新标签统计
@@ -440,20 +417,20 @@ export default {
         this.$forceUpdate()
       })
     },
-    
+
     // 强制刷新标签树
     forceRefreshTagTree() {
       this.$nextTick(() => {
         this.$forceUpdate()
       })
     },
-    
+
     // 选择所有标签
     selectAllTags() {
       this.showOnlyUntagged = false
       this.$emit('tag-select', [])
     },
-    
+
     // 切换未分类筛选
     toggleUntaggedFilter() {
       this.showOnlyUntagged = !this.showOnlyUntagged
@@ -461,13 +438,13 @@ export default {
         this.$emit('tag-select', [])
       }
     },
-    
+
     // 清除选择
     clearSelection() {
       this.showOnlyUntagged = false
       this.$emit('tag-select', [])
     },
-    
+
     // 发送标签选择事件
     emitTagSelection() {
       if (this.showOnlyUntagged) {
@@ -476,7 +453,7 @@ export default {
         this.$emit('tag-select', this.selectedTagIds)
       }
     },
-    
+
     // 显示创建标签对话框
     showCreateTagDialog() {
       this.tagDialogMode = 'create'
@@ -487,12 +464,12 @@ export default {
         description: ''
       }
       this.tagDialogVisible = true
-      
+
       this.$nextTick(() => {
         this.$refs.tagForm?.clearValidate()
       })
     },
-    
+
     // 处理颜色变化
     handleColorChange(color) {
       // 确保颜色格式为十六进制格式
@@ -510,17 +487,17 @@ export default {
         }
       }
     },
-    
+
     // 获取对比色
     getContrastColor(hexColor) {
       if (!hexColor) return '#333'
-      
+
       // 移除 # 号
       const hex = hexColor.replace('#', '')
-      
+
       // 如果是rgba格式，只取rgb部分
       const cleanHex = hex.split('(')[0].replace('rgba', '').replace('rgb', '')
-      
+
       // 确保是6位的十六进制值
       let finalHex = cleanHex
       if (finalHex.length === 3) {
@@ -528,24 +505,24 @@ export default {
       } else if (finalHex.length < 6) {
         finalHex = finalHex.padEnd(6, '0')
       }
-      
+
       // 取前6位
       finalHex = finalHex.substring(0, 6)
-      
+
       // 计算亮度
       const r = parseInt(finalHex.substr(0, 2), 16)
       const g = parseInt(finalHex.substr(2, 2), 16)
       const b = parseInt(finalHex.substr(4, 2), 16)
       const brightness = (r * 299 + g * 587 + b * 114) / 1000
-      
+
       return brightness > 128 ? '#333' : '#fff'
     },
-    
+
     // 显示编辑标签对话框
     showEditTagDialog(tagId, tag) {
       this.tagDialogMode = 'edit'
       this.editingTagId = tagId
-      
+
       // 确保颜色是标准的十六进制格式
       let color = tag.color || '#409EFF'
       if (color && !color.startsWith('#')) {
@@ -562,19 +539,19 @@ export default {
       } else if (color) {
         color = color.toUpperCase() // 确保大写
       }
-      
+
       this.tagForm = {
         name: tag.name,
         color: color,
         description: tag.description || ''
       }
       this.tagDialogVisible = true
-      
+
       this.$nextTick(() => {
         this.$refs.tagForm?.clearValidate()
       })
     },
-    
+
     // 确认标签操作
     confirmTagAction() {
       this.$refs.tagForm.validate((valid) => {
@@ -595,12 +572,12 @@ export default {
           } else if (color) {
             color = color.toUpperCase() // 确保大写
           }
-          
+
           const tagData = {
             ...this.tagForm,
             color: color
           }
-          
+
           if (this.tagDialogMode === 'create') {
             this.$emit('tag-create', tagData)
           } else {
@@ -610,12 +587,12 @@ export default {
         }
       })
     },
-    
+
     // 处理标签操作
     handleTagAction(command) {
       const { action, tagId } = command
       const tag = this.userTags[tagId]
-      
+
       switch (action) {
         case 'edit':
           this.showEditTagDialog(tagId, tag)
@@ -625,48 +602,61 @@ export default {
           break
       }
     },
-    
+
 
     // 删除标签
     deleteTag(tagId, tag) {
-      const mindmapCount = this.getTagMindmapCount(tagId)
-      const message = mindmapCount > 0 
-        ? `确定要删除标签"${tag.name}"吗？这将影响 ${mindmapCount} 个思维导图。`
-        : `确定要删除标签"${tag.name}"吗？`
-      
-      this.$confirm(message, '确认删除', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        this.$emit('tag-delete', tagId)
-      }).catch(() => {
-        this.$message.info('已取消删除')
-      })
+      const mindmapCount = this.getTagMindmapCount(tagId);
+
+      // 保存待删除的标签信息
+      this.pendingDeleteTagId = tagId;
+      this.deleteTagName = tag.name;
+      this.deleteTagMindmapCount = mindmapCount;
+
+      // 显示确认对话框
+      this.deleteTagDialogVisible = true;
     },
-    
+
+    // 确认删除标签
+    confirmDeleteTag() {
+      // 关闭对话框
+      this.deleteTagDialogVisible = false;
+
+      const tagId = this.pendingDeleteTagId;
+
+      if (!tagId) {
+        return;
+      }
+
+      // 发出删除事件
+      this.$emit('tag-delete', tagId);
+
+      // 清理临时数据
+      this.pendingDeleteTagId = null;
+    },
+
     // 显示标签右键菜单
     showTagContextMenu(event, tagId, tag) {
       // 这里可以实现自定义右键菜单
       // 暂时使用下拉菜单替代
     },
-    
+
     // 处理标签更新事件
     handleTagUpdated(data) {
       const { tagId, tagData } = data
-      
+
       // 如果当前组件的userTags中包含该标签，强制更新组件
       if (this.userTags[tagId]) {
         this.$forceUpdate()
       }
     },
-    
+
     // 刷新标签
     refreshTags() {
       this.$emit('refresh-tags')
       this.$message.success('已刷新标签数据')
     },
-    
+
     // 🔥 强制刷新方法，供父组件调用
     forceRefresh() {
       // 只触发组件强制更新，不发送事件避免循环
@@ -722,7 +712,8 @@ export default {
 
 /* 刷新按钮样式 */
 .refresh-button {
-  width: 60px !important; /* 增加一倍宽度 */
+  width: 60px !important;
+  /* 增加一倍宽度 */
 }
 
 /* 标签统计 */
@@ -909,7 +900,8 @@ export default {
 
 /* 三个点按钮样式 */
 .more-button {
-  width: 60px !important; /* 增加一倍宽度 */
+  width: 60px !important;
+  /* 增加一倍宽度 */
 }
 
 .tag-actions {
@@ -1001,7 +993,7 @@ export default {
 }
 
 /* 修复遮罩层导致变暗的问题 */
-.tag-dialog + .v-modal {
+.tag-dialog+.v-modal {
   opacity: 0.3 !important;
   background-color: rgba(0, 0, 0, 0.3) !important;
 }
@@ -1017,32 +1009,40 @@ export default {
 
 .isDark .panel-header {
   border-color: #404040 !important;
-  background: #1E1E1E !important; /* 使用更深的背景色 */
+  background: #1E1E1E !important;
+  /* 使用更深的背景色 */
 }
 
 .isDark .tag-node {
-  color: #E4E7ED !important; /* 文字颜色更亮 */
-  background: #252525 !important; /* 添加节点背景色 */
+  color: #E4E7ED !important;
+  /* 文字颜色更亮 */
+  background: #252525 !important;
+  /* 添加节点背景色 */
   border-left: 3px solid transparent !important;
 }
 
 .isDark .tag-node:hover {
-  background: #2D2D2D !important; /* 更清晰的悬停背景 */
+  background: #2D2D2D !important;
+  /* 更清晰的悬停背景 */
   color: #FFFFFF !important;
 }
 
 .isDark .tag-node.selected {
-  background: #2A2A2A !important; /* 深色选中背景 */
+  background: #2A2A2A !important;
+  /* 深色选中背景 */
   color: #FFFFFF !important;
-  border-left-color: #4A9EFF !important; /* 选中状态的高亮条 */
+  border-left-color: #4A9EFF !important;
+  /* 选中状态的高亮条 */
 }
 
 .isDark .tag-name {
-  color: #E4E7ED !important; /* 增强标签名称对比度 */
+  color: #E4E7ED !important;
+  /* 增强标签名称对比度 */
 }
 
 .isDark .tag-count {
-  color: #A3A6AD !important; /* 增强标签计数对比度 */
+  color: #A3A6AD !important;
+  /* 增强标签计数对比度 */
 }
 
 .isDark .empty-state {
@@ -1058,21 +1058,71 @@ export default {
   .panel-header {
     padding: 12px 16px;
   }
-  
+
   .tag-stats {
     padding: 12px 16px;
   }
-  
+
   .quick-filters {
     padding: 12px 16px;
   }
-  
+
   .tag-node {
     padding: 10px 16px;
   }
-  
+
   .stat-number {
     font-size: 18px;
   }
+}
+
+/* 删除标签确认对话框样式 */
+.delete-tag-confirm-dialog .confirm-content {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.delete-tag-confirm-dialog .confirm-icon {
+  margin-bottom: 16px;
+}
+
+.delete-tag-confirm-dialog .confirm-text {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.delete-tag-confirm-dialog .confirm-text strong {
+  color: #303133;
+  font-weight: 600;
+}
+
+.delete-tag-confirm-dialog .warning-text {
+  color: #E6A23C;
+  font-size: 13px;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.delete-tag-confirm-dialog .warning-text strong {
+  color: #E6A23C;
+}
+
+/* 深色主题下的对话框样式 */
+.isDark .delete-tag-confirm-dialog .confirm-text {
+  color: #e4e7ed;
+}
+
+.isDark .delete-tag-confirm-dialog .confirm-text strong {
+  color: #ffffff;
+}
+
+.isDark .delete-tag-confirm-dialog .warning-text {
+  color: #F0B429;
+}
+
+.isDark .delete-tag-confirm-dialog .warning-text strong {
+  color: #F0B429;
 }
 </style>

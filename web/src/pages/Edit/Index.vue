@@ -79,7 +79,7 @@ export default {
     this.checkAndRestoreMindMapId()
     
     // 监听键盘事件来处理快捷键
-    window.addEventListener('keydown', this.handleKeyDown)
+    window.addEventListener('keydown', this.handleKeyDown, { capture: true })
     
     // 监听退出登录事件
     this.$bus.$on('logout', this.handleLogout)
@@ -130,6 +130,11 @@ export default {
     
     // 处理键盘快捷键
     handleKeyDown(event) {
+      // 忽略单独的修饰键按下事件
+      if (['Alt', 'Shift', 'Control', 'Meta'].includes(event.key)) {
+        return
+      }
+      
       // 检查是否按下 Ctrl+G (或 Cmd+G on Mac)
       if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
         event.preventDefault() // 阻止默认的Ctrl+G浏览器行为
@@ -153,6 +158,12 @@ export default {
       if (event.shiftKey && event.key.toLowerCase() === 'z') {
         event.preventDefault() // 阻止默认行为
         this.handleShiftZShortcut() // 处理Shift+Z快捷键
+      }
+      
+      // 检查是否按下Alt+G - 直接进入导图管理页面
+      if (event.altKey && event.key.toLowerCase() === 'g') {
+        event.preventDefault() // 阻止默认行为
+        this.handleAltGShortcut() // 处理Alt+G快捷键
       }
     },
     
@@ -227,6 +238,12 @@ export default {
         // 展开左侧边栏
         this.openLeftSidebar()
       }
+    },
+    
+    // 处理Alt+G快捷键 - 直接进入导图管理页面
+    handleAltGShortcut() {
+      // 触发进入导图管理页面的事件
+      this.$bus.$emit('openMindmapManager')
     },
     
     // 获取工具栏状态

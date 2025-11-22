@@ -11,7 +11,8 @@ export const CONTEXTS = {
   MULTI_SELECTED: 'multiSelect', // 多选状态
   READONLY: 'readonly',       // 只读状态
   DIALOG_OPEN: 'dialogOpen',  // 对话框打开状态
-  SEARCH_MODE: 'searchMode'   // 搜索模式
+  SEARCH_MODE: 'searchMode',  // 搜索模式
+  MINDMAP_MANAGER: 'mindmapManager' // 导图管理页面状态
 }
 
 // 快捷键层级定义

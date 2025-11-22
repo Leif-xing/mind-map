@@ -269,6 +269,7 @@ export default {
     this.$bus.$on('loadMindMap', this.handleLoadMindMap)
     this.$bus.$on('openMindmapManager', this.handleOpenMindmapManager)
     this.$bus.$on('backToEditor', this.handleBackToEditor)
+    this.$bus.$on('pageChanged', this.handlePageChanged)
     // this.webTip() // 已注释：移除网页版更新提示
   },
   beforeDestroy() {
@@ -290,6 +291,7 @@ export default {
     this.$bus.$off('loadMindMap', this.handleLoadMindMap)
     this.$bus.$off('openMindmapManager', this.handleOpenMindmapManager)
     this.$bus.$off('backToEditor', this.handleBackToEditor)
+    this.$bus.$off('pageChanged', this.handlePageChanged)
     this.$bus.$off('execCommand', this.handleExecCommand)
     
     // 清理事件总线监听器
