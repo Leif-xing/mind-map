@@ -1,29 +1,16 @@
 <template>
   <div class="navigatorContainer customScrollbar" :class="{ isDark: isDark }">
     <!-- 可折叠的右侧边栏 -->
-    <div class="sidebar-container" :class="{ expanded: isSidebarExpanded }" @mouseenter="expandSidebar" @mouseleave="collapseSidebar">
+    <div class="sidebar-container" :class="{ expanded: isSidebarExpanded }" @mouseenter="expandSidebar"
+      @mouseleave="collapseSidebar">
       <div class="sidebar-content" v-show="isSidebarExpanded" @mouseenter="expandSidebar">
         <div class="item">
-          <el-select
-            v-model="lang"
-            size="small"
-            style="width: 100px"
-            @change="onLangChange"
-          >
-            <el-option
-              v-for="item in langList"
-              :key="item.value"
-              :label="item.name"
-              :value="item.value"
-            />
+          <el-select v-model="lang" size="small" style="width: 100px" @change="onLangChange">
+            <el-option v-for="item in langList" :key="item.value" :label="item.name" :value="item.value" />
           </el-select>
         </div>
         <div class="item">
-          <el-tooltip
-            effect="dark"
-            :content="$t('navigatorToolbar.backToRoot')"
-            placement="top"
-          >
+          <el-tooltip effect="dark" :content="$t('navigatorToolbar.backToRoot')" placement="top">
             <div class="btn iconfont icondingwei" @click="backToRoot"></div>
           </el-tooltip>
         </div>
@@ -34,15 +21,10 @@
           <MouseAction :isDark="isDark" :mindMap="mindMap"></MouseAction>
         </div>
         <div class="item">
-          <el-tooltip
-            effect="dark"
-            :content="
-              openMiniMap
-                ? $t('navigatorToolbar.closeMiniMap')
-                : $t('navigatorToolbar.openMiniMap')
-            "
-            placement="top"
-          >
+          <el-tooltip effect="dark" :content="openMiniMap
+              ? $t('navigatorToolbar.closeMiniMap')
+              : $t('navigatorToolbar.openMiniMap')
+            " placement="top">
             <div class="btn iconfont icondaohang1" @click="toggleMiniMap"></div>
           </el-tooltip>
         </div>
@@ -54,20 +36,12 @@
             @change="readonlyChange"
           >
           </el-switch> -->
-          <el-tooltip
-            effect="dark"
-            :content="
-              isReadonly
-                ? $t('navigatorToolbar.edit')
-                : $t('navigatorToolbar.readonly')
-            "
-            placement="top"
-          >
-            <div
-              class="btn iconfont"
-              :class="[isReadonly ? 'iconyanjing' : 'iconbianji1']"
-              @click="readonlyChange"
-            ></div>
+          <el-tooltip effect="dark" :content="isReadonly
+              ? $t('navigatorToolbar.edit')
+              : $t('navigatorToolbar.readonly')
+            " placement="top">
+            <div class="btn iconfont" :class="[isReadonly ? 'iconyanjing' : 'iconbianji1']" @click="readonlyChange">
+            </div>
           </el-tooltip>
         </div>
         <div class="item">
@@ -77,11 +51,7 @@
           <Scale :isDark="isDark" :mindMap="mindMap"></Scale>
         </div>
         <div class="item">
-          <div
-            class="btn iconfont"
-            :class="[isDark ? 'iconmoon_line' : 'iconlieri']"
-            @click="toggleDark"
-          ></div>
+          <div class="btn iconfont" :class="[isDark ? 'iconmoon_line' : 'iconlieri']" @click="toggleDark"></div>
         </div>
         <!-- <div class="item">
           <el-tooltip
@@ -107,7 +77,7 @@
                 <span class="iconfont iconAIshengcheng"></span>
                 {{ $t('navigatorToolbar.ai') }}
               </el-dropdown-item>
-              <el-dropdown-item command="client">
+              <!-- <el-dropdown-item command="client">
                 <span class="iconfont iconxiazai"></span>
                 {{ $t('navigatorToolbar.downloadClient') }}
               </el-dropdown-item>
@@ -118,12 +88,10 @@
               <el-dropdown-item command="site">
                 <span class="iconfont iconwangzhan"></span>
                 {{ $t('navigatorToolbar.site') }}
-              </el-dropdown-item>
-              <el-dropdown-item disabled
-                >{{ $t('navigatorToolbar.current') }}v{{
-                  version
-                }}</el-dropdown-item
-              >
+              </el-dropdown-item> -->
+              <el-dropdown-item disabled>{{ $t('navigatorToolbar.current') }}v{{
+                version
+              }}</el-dropdown-item>
             </el-dropdown-menu>
           </el-dropdown>
         </div>
@@ -261,12 +229,12 @@ export default {
     openSourceCodeEdit() {
       this.setIsSourceCodeEdit(true)
     },
-    
+
     // 展开侧边栏
     expandSidebar() {
       this.isSidebarExpanded = true
     },
-    
+
     // 收起侧边栏
     collapseSidebar() {
       // 添加延迟，允许用户点击内容
@@ -274,7 +242,7 @@ export default {
         this.isSidebarExpanded = false
       }, 300)
     },
-    
+
     // 立即收起侧边栏（用于点击触发器）
     toggleSidebar() {
       this.isSidebarExpanded = !this.isSidebarExpanded
@@ -328,14 +296,15 @@ export default {
       font-size: 18px;
     }
   }
-  
+
   /* 新的可折叠侧边栏样式 */
   .sidebar-container {
     position: relative;
     display: flex;
     align-items: center;
     height: 100%;
-    min-width: 24px; /* 确保收起时占据一定空间 */
+    min-width: 24px;
+    /* 确保收起时占据一定空间 */
   }
 
   .sidebar-trigger {
@@ -350,7 +319,7 @@ export default {
     z-index: 10;
     transition: all 0.3s ease;
   }
-  
+
   .sidebar-content {
     display: flex;
     align-items: center;
@@ -359,16 +328,17 @@ export default {
     visibility: visible;
     transition: opacity 0.3s ease;
   }
-  
+
   /* 收起状态：隐藏内容，只显示触发器 */
   .sidebar-container:not(.expanded) .sidebar-content {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     position: absolute;
-    right: 24px; /* 触发器的宽度 */
+    right: 24px;
+    /* 触发器的宽度 */
   }
-  
+
   .sidebar-container.expanded .sidebar-content {
     opacity: 1;
     visibility: visible;
@@ -379,10 +349,11 @@ export default {
     background-color: #4c5156;
     color: hsla(0, 0%, 100%, 0.8);
   }
-  
+
   /* 将触发器放置在右侧 */
   .sidebar-container {
-    flex-direction: row-reverse; /* 反转顺序，让触发器在右侧 */
+    flex-direction: row-reverse;
+    /* 反转顺序，让触发器在右侧 */
   }
 }
 

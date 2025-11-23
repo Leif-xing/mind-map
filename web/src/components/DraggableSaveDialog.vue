@@ -146,27 +146,40 @@ export default {
 
       this.saving = true
       
+      // 检查用户是否已登录
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+      if (!currentUser) {
+        this.$message.error('请先登录')
+        this.$router.push('/login')
+        this.saving = false
+        return
+      }
+      
+      // 获取当前思维导图数据
+      let data = getData()
+      const currentMindMapId = this.$store.state.currentMindMapId
+      const saveTitle = this.saveForm.title
+      
+      // 立即关闭对话框
+      this.dialogVisible = false
+      this.saving = false
+      
+      // 显示保存中的提示
+      this.$message.info('正在保存思维导图...')
+      
+      // 在后台异步执行保存操作
+      this.performSaveInBackground({
+        id: currentMindMapId,
+        userId: currentUser.id,
+        title: saveTitle,
+        content: data
+      })
+    },
+    
+    async performSaveInBackground(saveData) {
       try {
-        // 获取当前思维导图数据
-        let data = getData()
-        
-        // 检查用户是否已登录
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
-        if (!currentUser) {
-          this.$message.error('请先登录')
-          this.$router.push('/login')
-          return
-        }
-        
-        const currentMindMapId = this.$store.state.currentMindMapId
-        
         // 调用store中的保存方法
-        const result = await this.$store.dispatch('saveMindMap', {
-          id: currentMindMapId,
-          userId: currentUser.id,
-          title: this.saveForm.title,
-          content: data
-        })
+        const result = await this.$store.dispatch('saveMindMap', saveData)
         
         // 如果之前没有ID但保存后获得了ID，则更新当前ID
         if (result && result.id) {
@@ -177,13 +190,10 @@ export default {
         }
         
         this.$message.success('思维导图保存成功')
-        this.dialogVisible = false
         this.$emit('success', result)
       } catch (error) {
         console.error('保存思维导图失败:', error)
         this.$message.error('保存思维导图失败: ' + error.message)
-      } finally {
-        this.saving = false
       }
     }
   }

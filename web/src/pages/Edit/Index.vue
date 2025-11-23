@@ -47,6 +47,9 @@ export default {
     })
   },
   created() {
+    // 🚀 优先执行工具栏状态恢复 - 确保视觉效果快速响应
+    this.applyToolbarStateImmediately()
+    
     // 检查用户是否已登录，如果没有则重定向到登录页面
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
     if (!currentUser) {
@@ -95,8 +98,10 @@ export default {
     // 添加路由监听来恢复工具栏状态
     this.setupRouteWatcher()
     
-    // 组件挂载时检查是否需要恢复工具栏状态
-    this.restoreToolbarState()
+    // 🚀 确保工具栏状态在DOM完全渲染后再次检查
+    this.$nextTick(() => {
+      this.restoreToolbarStateIfNeeded()
+    })
   },
   methods: {
     ...mapMutations(['setLocalConfig', 'setCurrentMindMapId']),
@@ -399,6 +404,21 @@ export default {
       }
     },
     
+    // 立即应用工具栏状态（在页面加载最开始执行）
+    applyToolbarStateImmediately() {
+      const toolbarStatus = this.getToolbarStatus()
+      
+      // 立即同步应用CSS类，无需等待DOM操作
+      if (!toolbarStatus.current_state) {
+        document.body.classList.add('toolbars-hidden')
+      } else {
+        document.body.classList.remove('toolbars-hidden')
+      }
+      
+      // 然后执行完整的状态恢复逻辑
+      this.restoreToolbarState()
+    },
+
     // 更新工具栏状态到localStorage
     updateToolbarStatus(currentState, userState) {
       const status = {

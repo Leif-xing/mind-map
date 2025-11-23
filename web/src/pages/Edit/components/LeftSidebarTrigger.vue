@@ -24,7 +24,7 @@
           <!-- 用户区域 -->
           <div class="nav-item" @click="toggleUserMenu" :class="{ active: showUserMenu }">
             <i>👤</i><span class="username" v-if="currentUser">{{ currentUser.username || currentUser.email || '用户'
-              }}</span>
+            }}</span>
           </div>
         </div>
 
@@ -179,11 +179,30 @@ export default {
     openAbout() {
       this.currentPage = 'about'
       this.isVisible = false
+      this.cancelHideTimer()
 
       // 更新store中的activeSidebar状态
       this.$store.commit('setActiveSidebar', '')
 
-      this.$message.info('关于页面功能开发中...')
+      // 屏蔽所有快捷键，但允许Alt+C和ESC通过
+      this.preventDefaultShortcuts = (e) => {
+        // 允许Alt+C快捷键通过，用于返回编辑器
+        if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
+          return true
+        }
+        // 允许ESC键通过，用于返回编辑器
+        if (e.key === 'Escape') {
+          return true
+        }
+        e.preventDefault()
+        e.stopPropagation()
+        return false
+      }
+      // 将快捷键屏蔽处理器保存到全局window对象上，方便其他组件访问
+      window.preventDefaultShortcutsHandler = this.preventDefaultShortcuts
+      window.addEventListener('keydown', this.preventDefaultShortcuts, true)
+
+      this.$bus.$emit('openAbout')
     },
 
     // 处理页面切换

@@ -7,8 +7,9 @@
         <span>标签分类</span>
       </div>
       <div class="header-actions">
-        <el-button type="text" icon="el-icon-refresh" size="mini" @click="refreshTags" title="刷新"
-          class="refresh-button"></el-button>
+        <el-button type="text" :icon="isRefreshing ? 'el-icon-loading' : 'el-icon-refresh'" 
+          size="mini" @click="refreshTags" :title="isRefreshing ? '正在刷新...' : '刷新'" 
+          :disabled="isRefreshing" class="refresh-button"></el-button>
       </div>
     </div>
 
@@ -250,7 +251,10 @@ export default {
       deleteTagDialogVisible: false,
       deleteTagName: '',
       deleteTagMindmapCount: 0,
-      pendingDeleteTagId: null
+      pendingDeleteTagId: null,
+      
+      // 刷新状态
+      isRefreshing: false
     }
   },
   computed: {
@@ -652,9 +656,132 @@ export default {
     },
 
     // 刷新标签
-    refreshTags() {
+    async refreshTags() {
+      if (this.isRefreshing) return
+      
+      this.isRefreshing = true
+      
+      try {
+        // 获取当前用户信息
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+        if (!currentUser) {
+          this.$message({
+            type: 'error',
+            message: '请先登录',
+            duration: 3000,
+            showClose: true
+          })
+          return
+        }
+        
+        // 1. 从数据库获取思维导图元数据
+        const mindMapsData = await this.$store.dispatch('getUserMindMaps', currentUser.id)
+        
+        // 2. 从数据库获取用户标签数据
+        const { tagApi } = await import('@/api/supabase-api')
+        const userTagsData = await tagApi.getUserTagsFromDatabase(currentUser.id)
+        
+        // 3. 从数据库获取思维导图与标签的关联数据
+        const tagRelationsData = await tagApi.getMindMapTagRelations(currentUser.id)
+        
+        // 4. 批量获取思维导图内容数据（异步执行，不阻塞界面）
+        this.refreshMindMapContents(mindMapsData, currentUser.id)
+        
+        // 5. 更新vue store缓存
+        this.$store.commit('setLocalMindMaps', mindMapsData)
+        
+        // 6. 更新localStorage缓存
+        this.updateLocalStorageCache(userTagsData, tagRelationsData, mindMapsData)
+        
+        // 7. 强制触发界面重新渲染
+        this.forceRefreshInterface()
+        
+        // 显示成功提示
+        this.$message({
+          type: 'success',
+          message: `思维导图和标签数据加载完成！获取了 ${mindMapsData.length} 个思维导图，${userTagsData.length} 个标签`,
+          duration: 4000,
+          showClose: true
+        })
+        
+      } catch (error) {
+        console.error('刷新数据失败:', error)
+        this.$message({
+          type: 'error', 
+          message: '刷新失败: ' + error.message,
+          duration: 5000,
+          showClose: true
+        })
+      } finally {
+        this.isRefreshing = false
+      }
+    },
+    
+    // 更新localStorage缓存
+    updateLocalStorageCache(userTagsData, tagRelationsData, mindMapsData) {
+      // 更新标签缓存
+      const TagCacheManager = require('@/utils/tagCacheManager').default
+      
+      // 将标签数组转换为以ID为键的对象
+      const userTagsObject = {}
+      userTagsData.forEach(tag => {
+        userTagsObject[tag.id] = {
+          name: tag.name,
+          is_public: tag.is_public,
+          created_at: tag.created_at,
+          owner_id: tag.owner_id,
+          color: tag.color || '#cccccc'
+        }
+      })
+      
+      // 将关联数据转换为以思维导图ID为键，标签ID数组为值的对象
+      const mindMapTagMappings = {}
+      tagRelationsData.forEach(relation => {
+        if (!mindMapTagMappings[relation.mindmap_id]) {
+          mindMapTagMappings[relation.mindmap_id] = []
+        }
+        mindMapTagMappings[relation.mindmap_id].push(relation.tag_id)
+      })
+      
+      // 更新标签缓存
+      TagCacheManager.setUserTags(userTagsObject)
+      TagCacheManager.setMindMapTagIds(mindMapTagMappings)
+      
+      // 更新思维导图元数据到store（已经在上面做了）
+    },
+    
+    // 异步刷新思维导图内容数据
+    async refreshMindMapContents(mindMapsData, userId) {
+      const { mindMapCacheManager } = require('@/utils/mindmap-cache-manager')
+      
+      // 批量获取思维导图内容，但不阻塞主界面
+      const contentPromises = mindMapsData.map(async (mindMap) => {
+        try {
+          const { mindMapApi } = await import('@/api/supabase-api')
+          const content = await mindMapApi.getMindMapById(mindMap.id, userId)
+          if (content) {
+            mindMapCacheManager.set(mindMap.id, content)
+          }
+        } catch (error) {
+          console.warn(`获取思维导图内容失败 (ID: ${mindMap.id}):`, error.message)
+        }
+      })
+      
+      // 等待所有内容获取完成
+      await Promise.allSettled(contentPromises)
+      console.log('思维导图内容缓存更新完成')
+    },
+    
+    // 强制触发界面重新渲染
+    forceRefreshInterface() {
+      // 触发父组件刷新
       this.$emit('refresh-tags')
-      this.$message.success('已刷新标签数据')
+      
+      // 强制更新当前组件
+      this.$forceUpdate()
+      
+      // 触发全局事件，让其他相关组件也刷新
+      this.$root.$emit('global-data-refreshed')
     },
 
     // 🔥 强制刷新方法，供父组件调用

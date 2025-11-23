@@ -1559,6 +1559,41 @@ export const tagApi = {
       usageCount: stats.length,
       usedByMindMaps: stats.map(item => item.mind_maps)
     }
+  },
+
+  // 从数据库获取用户标签数据
+  async getUserTagsFromDatabase(userId) {
+    const { data: tags, error } = await supabase
+      .from('tags')
+      .select('id, name, is_public, created_at, owner_id, color')
+      .or(`owner_id.eq.${userId},is_public.eq.true`)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(error.message || '获取用户标签失败')
+    }
+
+    return tags || []
+  },
+
+  // 获取思维导图与标签的关联数据
+  async getMindMapTagRelations(userId) {
+    const { data: relations, error } = await supabase
+      .from('mindmap_tags')
+      .select(`
+        mindmap_id,
+        tag_id,
+        mind_maps!inner (
+          user_id
+        )
+      `)
+      .eq('mind_maps.user_id', userId)
+
+    if (error) {
+      throw new Error(error.message || '获取标签关联数据失败')
+    }
+
+    return relations || []
   }
 }
 

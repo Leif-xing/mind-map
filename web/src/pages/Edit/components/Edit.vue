@@ -1,76 +1,52 @@
 <template>
-  <div
-    class="editContainer"
-    @dragenter.stop.prevent="onDragenter"
-    @dragleave.stop.prevent
-    @dragover.stop.prevent
-    @drop.stop.prevent
-  >
+  <div class="editContainer" @dragenter.stop.prevent="onDragenter" @dragleave.stop.prevent @dragover.stop.prevent
+    @drop.stop.prevent>
     <!-- 左侧边栏触发器 -->
     <LeftSidebarTrigger />
-    
+
     <!-- 编辑器页面 -->
     <div v-show="currentPage === 'editor'" class="editor-page">
-    <div
-      class="mindMapContainer"
-      id="mindMapContainer"
-      ref="mindMapContainer"
-    ></div>
-    <!-- <Count :mindMap="mindMap" v-if="!isZenMode"></Count> -->
-    <Navigator v-if="mindMap" :mindMap="mindMap"></Navigator>
-    <NavigatorToolbar :mindMap="mindMap" v-if="!isZenMode"></NavigatorToolbar>
-    <OutlineSidebar :mindMap="mindMap"></OutlineSidebar>
-    <Style v-if="mindMap && !isZenMode" :mindMap="mindMap"></Style>
-    <BaseStyle
-      :data="mindMapData"
-      :configData="mindMapConfig"
-      :mindMap="mindMap"
-    ></BaseStyle>
-    <AssociativeLineStyle
-      v-if="mindMap"
-      :mindMap="mindMap"
-    ></AssociativeLineStyle>
-    <Theme v-if="mindMap" :data="mindMapData" :mindMap="mindMap"></Theme>
-    <Structure :mindMap="mindMap"></Structure>
-    <ShortcutKey></ShortcutKey>
-    <Contextmenu v-if="mindMap" :mindMap="mindMap"></Contextmenu>
-    <RichTextToolbar v-if="mindMap" :mindMap="mindMap"></RichTextToolbar>
-    <NodeNoteContentShow
-      v-if="mindMap"
-      :mindMap="mindMap"
-    ></NodeNoteContentShow>
-    <NodeImgPreview v-if="mindMap" :mindMap="mindMap"></NodeImgPreview>
-    <SidebarTrigger v-if="!isZenMode"></SidebarTrigger>
-    <Search v-if="mindMap" :mindMap="mindMap"></Search>
-    <NodeIconSidebar v-if="mindMap" :mindMap="mindMap"></NodeIconSidebar>
-    <NodeIconToolbar v-if="mindMap" :mindMap="mindMap"></NodeIconToolbar>
-    <OutlineEdit v-if="mindMap" :mindMap="mindMap"></OutlineEdit>
-    <Scrollbar v-if="isShowScrollbar && mindMap" :mindMap="mindMap"></Scrollbar>
-    <FormulaSidebar v-if="mindMap" :mindMap="mindMap"></FormulaSidebar>
-    <NodeOuterFrame v-if="mindMap" :mindMap="mindMap"></NodeOuterFrame>
-    <NodeTagStyle v-if="mindMap" :mindMap="mindMap"></NodeTagStyle>
-    <Setting :configData="mindMapConfig" :mindMap="mindMap"></Setting>
-    <NodeImgPlacementToolbar
-      v-if="mindMap"
-      :mindMap="mindMap"
-    ></NodeImgPlacementToolbar>
-    <NodeNoteSidebar v-if="mindMap" :mindMap="mindMap"></NodeNoteSidebar>
-    <AiCreate v-if="mindMap && enableAi" :mindMap="mindMap"></AiCreate>
-    <UnifiedAiManager v-if="mindMap" :mindMap="mindMap"></UnifiedAiManager>
-    <AiChat v-if="enableAi"></AiChat>
-    <div
-      class="dragMask"
-      v-if="showDragMask"
-      @dragleave.stop.prevent="onDragleave"
-      @dragover.stop.prevent
-      @drop.stop.prevent="onDrop"
-    >
-      <div class="dragTip">{{ $t('edit.dragTip') }}</div>
+      <div class="mindMapContainer" id="mindMapContainer" ref="mindMapContainer"></div>
+      <!-- <Count :mindMap="mindMap" v-if="!isZenMode"></Count> -->
+      <Navigator v-if="mindMap" :mindMap="mindMap"></Navigator>
+      <NavigatorToolbar :mindMap="mindMap" v-if="!isZenMode"></NavigatorToolbar>
+      <OutlineSidebar :mindMap="mindMap"></OutlineSidebar>
+      <Style v-if="mindMap && !isZenMode" :mindMap="mindMap"></Style>
+      <BaseStyle :data="mindMapData" :configData="mindMapConfig" :mindMap="mindMap"></BaseStyle>
+      <AssociativeLineStyle v-if="mindMap" :mindMap="mindMap"></AssociativeLineStyle>
+      <Theme v-if="mindMap" :data="mindMapData" :mindMap="mindMap"></Theme>
+      <Structure :mindMap="mindMap"></Structure>
+      <ShortcutKey></ShortcutKey>
+      <Contextmenu v-if="mindMap" :mindMap="mindMap"></Contextmenu>
+      <RichTextToolbar v-if="mindMap" :mindMap="mindMap"></RichTextToolbar>
+      <NodeNoteContentShow v-if="mindMap" :mindMap="mindMap"></NodeNoteContentShow>
+      <NodeImgPreview v-if="mindMap" :mindMap="mindMap"></NodeImgPreview>
+      <SidebarTrigger v-if="!isZenMode"></SidebarTrigger>
+      <Search v-if="mindMap" :mindMap="mindMap"></Search>
+      <NodeIconSidebar v-if="mindMap" :mindMap="mindMap"></NodeIconSidebar>
+      <NodeIconToolbar v-if="mindMap" :mindMap="mindMap"></NodeIconToolbar>
+      <OutlineEdit v-if="mindMap" :mindMap="mindMap"></OutlineEdit>
+      <Scrollbar v-if="isShowScrollbar && mindMap" :mindMap="mindMap"></Scrollbar>
+      <FormulaSidebar v-if="mindMap" :mindMap="mindMap"></FormulaSidebar>
+      <NodeOuterFrame v-if="mindMap" :mindMap="mindMap"></NodeOuterFrame>
+      <NodeTagStyle v-if="mindMap" :mindMap="mindMap"></NodeTagStyle>
+      <Setting :configData="mindMapConfig" :mindMap="mindMap"></Setting>
+      <NodeImgPlacementToolbar v-if="mindMap" :mindMap="mindMap"></NodeImgPlacementToolbar>
+      <NodeNoteSidebar v-if="mindMap" :mindMap="mindMap"></NodeNoteSidebar>
+      <AiCreate v-if="mindMap && enableAi" :mindMap="mindMap"></AiCreate>
+      <UnifiedAiManager v-if="mindMap" :mindMap="mindMap"></UnifiedAiManager>
+      <AiChat v-if="enableAi"></AiChat>
+      <div class="dragMask" v-if="showDragMask" @dragleave.stop.prevent="onDragleave" @dragover.stop.prevent
+        @drop.stop.prevent="onDrop">
+        <div class="dragTip">{{ $t('edit.dragTip') }}</div>
+      </div>
     </div>
-    </div>
-    
+
     <!-- 思维导图管理页面 -->
     <TagMindmapPage v-show="currentPage === 'mindmap-manager'" />
+
+    <!-- 关于页面 -->
+    <AboutPage v-show="currentPage === 'about'" />
   </div>
 </template>
 
@@ -135,6 +111,7 @@ import NodeImgPlacementToolbar from './NodeImgPlacementToolbar.vue'
 import NodeNoteSidebar from './NodeNoteSidebar.vue'
 import LeftSidebarTrigger from './LeftSidebarTrigger.vue'
 import TagMindmapPage from './TagMindmapPage.vue'
+import AboutPage from './AboutPage.vue'
 import AiCreate from './AiCreate.vue'
 import UnifiedAiManager from './UnifiedAiManager.vue'
 import AiChat from './AiChat.vue'
@@ -200,6 +177,7 @@ export default {
     NodeNoteSidebar,
     LeftSidebarTrigger,
     TagMindmapPage,
+    AboutPage,
     AiCreate,
     UnifiedAiManager,
     AiChat
@@ -214,7 +192,7 @@ export default {
       storeConfigTimer: null,
       showDragMask: false,
       lastSavedData: null, // 保存最后保存的数据，用于检测是否有修改
-      currentPage: 'editor' // 'editor' | 'mindmap-manager'
+      currentPage: 'editor' // 'editor' | 'mindmap-manager' | 'about'
     }
   },
   computed: {
@@ -268,6 +246,7 @@ export default {
     this.$bus.$on('triggerShiftWForRootNode', this.handleTriggerShiftWForRootNode)
     this.$bus.$on('loadMindMap', this.handleLoadMindMap)
     this.$bus.$on('openMindmapManager', this.handleOpenMindmapManager)
+    this.$bus.$on('openAbout', this.handleOpenAbout)
     this.$bus.$on('backToEditor', this.handleBackToEditor)
     this.$bus.$on('pageChanged', this.handlePageChanged)
     // this.webTip() // 已注释：移除网页版更新提示
@@ -290,13 +269,14 @@ export default {
     this.$bus.$off('triggerShiftWForRootNode', this.handleTriggerShiftWForRootNode)
     this.$bus.$off('loadMindMap', this.handleLoadMindMap)
     this.$bus.$off('openMindmapManager', this.handleOpenMindmapManager)
+    this.$bus.$off('openAbout', this.handleOpenAbout)
     this.$bus.$off('backToEditor', this.handleBackToEditor)
     this.$bus.$off('pageChanged', this.handlePageChanged)
     this.$bus.$off('execCommand', this.handleExecCommand)
-    
+
     // 清理事件总线监听器
     this.cleanupShortcutEventListeners()
-    
+
     this.mindMap.destroy()
   },
   methods: {
@@ -433,7 +413,7 @@ export default {
               confirmButtonText: this.$t('edit.yes'),
               cancelButtonText: this.$t('edit.no'),
               type: 'warning'
-              }
+            }
           )
         },
         errorHandler: (code, err) => {
@@ -494,49 +474,49 @@ export default {
       })
 
       this.loadPlugins()
-      
+
       // 初始化统一快捷键管理系统
       this.initializeShortcutSystem()
-      
+
       // 注册组件级快捷键事件监听
       this.setupShortcutEventListeners()
-      
+
       // 设置编号更新监听器
       this.setupNumberingUpdateListener()
-      
-      // 转发事件
-      ;[
-        'node_active',
-        'data_change',
-        'view_data_change',
-        'back_forward',
-        'node_contextmenu',
-        'node_click',
-        'draw_click',
-        'expand_btn_click',
-        'svg_mousedown',
-        'mouseup',
-        'mode_change',
-        'node_tree_render_end',
-        'rich_text_selection_change',
-        'transforming-dom-to-images',
-        'generalization_node_contextmenu',
-        'painter_start',
-        'painter_end',
-        'scrollbar_change',
-        'scale',
-        'translate',
-        'node_attachmentClick',
-        'node_attachmentContextmenu',
-        'demonstrate_jump',
-        'exit_demonstrate',
-        'node_note_dblclick',
-        'node_mousedown'
-      ].forEach(event => {
-        this.mindMap.on(event, (...args) => {
-          this.$bus.$emit(event, ...args)
+
+        // 转发事件
+        ;[
+          'node_active',
+          'data_change',
+          'view_data_change',
+          'back_forward',
+          'node_contextmenu',
+          'node_click',
+          'draw_click',
+          'expand_btn_click',
+          'svg_mousedown',
+          'mouseup',
+          'mode_change',
+          'node_tree_render_end',
+          'rich_text_selection_change',
+          'transforming-dom-to-images',
+          'generalization_node_contextmenu',
+          'painter_start',
+          'painter_end',
+          'scrollbar_change',
+          'scale',
+          'translate',
+          'node_attachmentClick',
+          'node_attachmentContextmenu',
+          'demonstrate_jump',
+          'exit_demonstrate',
+          'node_note_dblclick',
+          'node_mousedown'
+        ].forEach(event => {
+          this.mindMap.on(event, (...args) => {
+            this.$bus.$emit(event, ...args)
+          })
         })
-      })
       this.bindSaveEvent()
       // 如果应用被接管，那么抛出事件传递思维导图实例
       if (window.takeOverApp) {
@@ -544,7 +524,7 @@ export default {
       }
       // 发布思维导图实例，以便其他组件可以访问
       this.$bus.$emit('mind_map_inited', this.mindMap)
-      
+
       // 注册全局编号方法
       window.mindMapInstance = {
         toggleNumbering: () => {
@@ -606,11 +586,11 @@ export default {
 
     // 动态设置思维导图数据
     setData(data) {
-      
+
       if (!this.mindMap) {
         return;
       }
-      
+
       try {
         // 简单直接的数据设置
         if (data.root) {
@@ -618,21 +598,21 @@ export default {
         } else {
           this.mindMap.setData(data);
         }
-        
+
         // 重置视图
         if (this.mindMap.view) {
           this.mindMap.view.reset();
         }
-        
+
         // 强制重新渲染
         if (this.mindMap.renderer) {
           this.mindMap.renderer.reRender && this.mindMap.renderer.reRender();
         }
-        
+
       } catch (error) {
       }
     },
-    
+
     // 强制重新渲染思维导图
     forceReRender() {
       if (this.mindMap) {
@@ -651,38 +631,38 @@ export default {
         }
       }
     },
-    
+
     // 处理加载思维导图数据
     handleLoadMindMapData(mindMapDataObj) {
-      
+
       if (!this.mindMap) {
         return;
       }
-      
+
       try {
         // 提取数据内容
         const data = mindMapDataObj.content || mindMapDataObj;
-        
+
         if (!data) {
           return;
         }
-        
+
         this.setData(data);
-        
+
         // 发送加载完成事件
         this.$bus.$emit('mindMapLoaded');
-        
+
       } catch (error) {
       }
     },
-    
+
     // 更新最后保存的数据
     updateLastSavedData() {
       if (this.mindMap) {
         this.lastSavedData = JSON.stringify(this.mindMap.getData(true));
       }
     },
-    
+
     // 检测思维导图是否被修改
     isMindMapModified() {
       if (!this.mindMap || !this.lastSavedData) {
@@ -850,12 +830,12 @@ export default {
       if (num <= 0) return ''
       let result = ''
       num-- // 从0开始计算
-      
+
       while (num >= 0) {
         result = String.fromCharCode(65 + (num % 26)) + result
         num = Math.floor(num / 26) - 1
       }
-      
+
       return result
     },
 
@@ -863,7 +843,7 @@ export default {
     handleToggleNumbering() {
       // 直接从思维导图实例获取活动节点
       const activeNodes = this.mindMap.renderer.activeNodeList
-      
+
       if (!activeNodes || activeNodes.length === 0) {
         this.$message.warning('请先选择节点')
         return
@@ -871,7 +851,7 @@ export default {
 
       // 检查是否选中了根节点
       const hasRootNode = activeNodes.some(node => node.isRoot)
-      
+
       if (hasRootNode && activeNodes.length === 1) {
         // 如果只选中了根节点，为所有层级的节点编号
         this.numberingAllNodesFromRoot(activeNodes[0])
@@ -882,7 +862,7 @@ export default {
             this.numberingSingleNodeFromShortcut(node)
           }
         })
-        
+
         // 如果包含根节点，给出提示
         if (hasRootNode) {
           this.$message.info('已为选中的非根节点添加编号，根节点已跳过')
@@ -905,11 +885,11 @@ export default {
     // 递归为所有层级的节点编号
     numberingAllNodesRecursive(node, parentLevel) {
       const children = node.children || []
-      
+
       children.forEach((child, index) => {
         const currentLevel = parentLevel + 1
         this.toggleNodeNumberingFromShortcut(child, currentLevel, index)
-        
+
         // 递归处理子节点
         if (child.children && child.children.length > 0) {
           this.numberingAllNodesRecursive(child, currentLevel)
@@ -922,7 +902,7 @@ export default {
       const level = this.getNodeLevel(node)
       const siblings = this.getSiblingNodes(node)
       const index = siblings.indexOf(node)
-      
+
       this.toggleNodeNumberingFromShortcut(node, level, index)
     },
 
@@ -930,10 +910,10 @@ export default {
     toggleNodeNumberingFromShortcut(node, level, index) {
       // 获取节点当前的图标列表
       const iconList = [...(node.getData('icon') || [])]
-      
+
       // 查找是否已有编号图标（任何number-开头的图标）
       const numberIconIndex = iconList.findIndex(item => item.startsWith('number-'))
-      
+
       if (numberIconIndex !== -1) {
         // 移除现有编号图标
         iconList.splice(numberIconIndex, 1)
@@ -944,10 +924,10 @@ export default {
           iconList.push(numberingIcon)
         }
       }
-      
+
       // 使用统一的排序函数确保checkbox始终在最左边
       const sortedIconList = sortIconList(iconList)
-      
+
       // 更新节点图标
       node.setIcon(sortedIconList)
     },
@@ -957,7 +937,7 @@ export default {
       // 根据层级确定编号类型和文本
       let numberType = ''
       let numberText = ''
-      
+
       switch (level) {
         case 1:
           // 一级：中文数字
@@ -984,7 +964,7 @@ export default {
           const cycleLevel = ((level - 1) % 4) + 1
           return this.generateNumberingIconFromShortcut(cycleLevel, index)
       }
-      
+
       // 返回图标标识：type_text格式
       return `${numberType}_${numberText}`
     },
@@ -993,7 +973,7 @@ export default {
     toChineseNumberFromShortcut(num) {
       const chineseDigits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
       const chineseUnits = ['', '十', '百', '千']
-      
+
       if (num === 0) return '零'
       if (num <= 10) return chineseDigits[num] || '十'
       if (num < 20) return '十' + (num === 10 ? '' : chineseDigits[num - 10])
@@ -1002,7 +982,7 @@ export default {
         const ones = num % 10
         return chineseDigits[tens] + '十' + (ones === 0 ? '' : chineseDigits[ones])
       }
-      
+
       // 处理更大的数字
       return num.toString()
     },
@@ -1015,29 +995,29 @@ export default {
         if (commandName === 'REMOVE_NODE' || commandName === 'REMOVE_CURRENT_NODE' || commandName === 'CUT_NODE') {
           this.triggerNumberingUpdate()
         }
-        
+
         // 节点位置变换相关命令
         if (commandName === 'MOVE_NODE_TO' || commandName === 'UP_NODE' || commandName === 'DOWN_NODE' || commandName === 'INSERT_NODE') {
           this.triggerNumberingUpdate()
         }
       }
-      
+
       // 监听删除节点的快捷键和按钮
       this.$bus.$on('execCommand', this.handleExecCommand)
-      
+
       // 监听拖动结束事件
       this.mindMap.on('node_dragend', () => {
         this.triggerNumberingUpdate()
       })
-      
+
       // 同时监听思维导图实例的命令执行
       this.mindMap.on('afterExecCommand', (commandName, ...args) => {
-        
+
         // 删除节点相关命令
         if (commandName === 'REMOVE_NODE' || commandName === 'REMOVE_CURRENT_NODE' || commandName === 'CUT_NODE') {
           this.triggerNumberingUpdate()
         }
-        
+
         // 节点位置变换相关命令
         if (commandName === 'MOVE_NODE_TO' || commandName === 'UP_NODE' || commandName === 'DOWN_NODE' || commandName === 'INSERT_NODE') {
           this.triggerNumberingUpdate()
@@ -1057,7 +1037,7 @@ export default {
 
     // 更新同级节点编号
     updateSiblingNumbering() {
-      
+
       // 递归检查所有节点，更新有编号的同级节点
       this.updateNodeGroupsRecursive(this.mindMap.renderer.root, 0)
     },
@@ -1065,22 +1045,22 @@ export default {
     // 递归更新节点组编号
     updateNodeGroupsRecursive(node, parentLevel) {
       const children = node.children || []
-      
+
       if (children.length > 0) {
         const currentLevel = parentLevel + 1
-        
+
         // 检查当前层级是否有编号节点
         const numberedChildren = children.filter(child => {
           const iconList = child.getData('icon') || []
           return iconList.some(item => item.startsWith('number-'))
         })
-        
+
         // 如果有编号节点，重新排序
         if (numberedChildren.length > 0) {
           numberedChildren.forEach((child, index) => {
             const iconList = [...(child.getData('icon') || [])]
             const numberIconIndex = iconList.findIndex(item => item.startsWith('number-'))
-            
+
             if (numberIconIndex !== -1) {
               // 生成新的编号图标
               const newNumberingIcon = this.generateNumberingIconFromShortcut(currentLevel, index)
@@ -1093,7 +1073,7 @@ export default {
             }
           })
         }
-        
+
         // 递归处理子节点
         children.forEach(child => {
           if (child.children && child.children.length > 0) {
@@ -1109,8 +1089,8 @@ export default {
       const numberingConfig = this.generateNumberingConfig(level, index)
       const currentText = node.data.text || ''
       const numberedText = this.addNumberingPrefix(currentText, numberingConfig)
-      
-      node.setData({ 
+
+      node.setData({
         text: numberedText,
         numbering: numberingConfig
       })
@@ -1120,12 +1100,12 @@ export default {
     removeNodeNumbering(node) {
       const currentText = node.data.text || ''
       const newText = this.removeNumberingPrefix(currentText)
-      
+
       // 从节点数据中移除编号配置
       const newData = { ...node.data }
       delete newData.numbering
       newData.text = newText
-      
+
       node.setData(newData)
     },
 
@@ -1152,7 +1132,7 @@ export default {
       const values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
       const numerals = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I']
       let result = ''
-      
+
       for (let i = 0; i < values.length; i++) {
         while (num >= values[i]) {
           result += numerals[i]
@@ -1200,7 +1180,7 @@ export default {
     handleToggleTodoCheckbox() {
       // 直接从思维导图实例获取活动节点
       const activeNodes = this.mindMap.renderer.activeNodeList
-      
+
       if (!activeNodes || activeNodes.length === 0) {
         this.$message.warning('请先选择节点')
         return
@@ -1208,14 +1188,14 @@ export default {
 
       // 检查是否选中了根节点
       const hasRootNode = activeNodes.some(node => node.isRoot)
-      
+
       if (hasRootNode && activeNodes.length === 1) {
         // 如果只选中了根节点，检查所有子节点（不包括根节点本身）是否都已添加复选框
         const selectedNode = activeNodes[0]
         if (selectedNode.children && selectedNode.children.length > 0) {
           // 检查所有直接子节点及其后代是否有复选框
           const allChildrenHaveCheckbox = this.checkAllDescendantsOfChildrenHaveCheckbox(selectedNode, ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']);
-          
+
           // 对所有子节点执行添加/移除操作
           selectedNode.children.forEach(child => {
             this.toggleCheckboxForAllDescendants(child, false, !allChildrenHaveCheckbox)
@@ -1228,7 +1208,7 @@ export default {
             this.toggleCheckboxForSingleNode(node)
           }
         })
-        
+
         // 如果包含根节点，给出提示
         if (hasRootNode) {
           this.$message.info('已为选中的非根节点切换待办状态，根节点已跳过')
@@ -1240,7 +1220,7 @@ export default {
     handleToggleTodoStatus() {
       // 直接从思维导图实例获取活动节点
       const activeNodes = this.mindMap.renderer.activeNodeList
-      
+
       if (!activeNodes || activeNodes.length === 0) {
         this.$message.warning('请先选择节点')
         return
@@ -1248,7 +1228,7 @@ export default {
 
       // 检查是否选中了根节点
       const hasRootNode = activeNodes.some(node => node.isRoot)
-      
+
       if (hasRootNode && activeNodes.length === 1) {
         // 如果只选中了根节点，则不执行任何操作
         this.$message.info('根节点不支持状态切换功能')
@@ -1262,7 +1242,7 @@ export default {
             hasValidNode = true
           }
         })
-        
+
         // 如果包含根节点，给出提示
         if (hasRootNode) {
           this.$message.info('已为选中的非根节点切换状态，根节点已跳过')
@@ -1271,16 +1251,16 @@ export default {
         }
       }
     },
-    
+
     // 为单个节点切换复选框图标
     toggleCheckboxForSingleNode(node) {
       // 获取当前节点的图标列表
       const iconList = [...(node.getData('icon') || [])]
-      
+
       // 查找是否存在复选框图标
       const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
       const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
-      
+
       if (existingCheckboxIndex !== -1) {
         // 如果存在复选框图标，则移除它
         iconList.splice(existingCheckboxIndex, 1)
@@ -1288,33 +1268,33 @@ export default {
         // 如果不存在，则添加未选中状态的复选框图标
         iconList.push('checkbox_unchecked')
       }
-      
+
       // 使用统一的排序函数确保checkbox始终在最左边
       const sortedIconList = sortIconList(iconList)
-      
+
       // 更新节点图标
       node.setIcon(sortedIconList)
     },
-    
+
     // 为单个节点切换复选框状态
     toggleStatusForSingleNode(node) {
       // 获取当前节点的图标列表
       const iconList = [...(node.getData('icon') || [])]
-      
+
       // 查找是否存在复选框图标
       const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
       const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
-      
+
       if (existingCheckboxIndex === -1) {
         // 如果没有复选框图标，不执行任何操作或显示提示
         this.$message.info('请先为节点添加复选框')
         return
       }
-      
+
       // 当前状态
       const currentStatus = iconList[existingCheckboxIndex]
       let nextStatus = 'checkbox_unchecked' // 默认为未选中
-      
+
       // 按照顺序循环: 未选中(空) -> 选中(对号) -> 失败(叉号) -> 未选中(空) ...
       if (currentStatus === 'checkbox_unchecked') {
         nextStatus = 'checkbox_success'
@@ -1323,26 +1303,26 @@ export default {
       } else if (currentStatus === 'checkbox_failed') {
         nextStatus = 'checkbox_unchecked'
       }
-      
+
       // 更新图标列表中的复选框状态
       iconList[existingCheckboxIndex] = nextStatus
-      
+
       // 使用统一的排序函数确保checkbox始终在最左边
       const sortedIconList = sortIconList(iconList)
-      
+
       // 更新节点图标
       node.setIcon(sortedIconList)
     },
-    
+
     // 递归为所有后代节点添加复选框 (用于根节点，只添加)
     addCheckboxForAllDescendants(node) {
       // 获取当前节点的图标列表
       const iconList = [...(node.getData('icon') || [])]
-      
+
       // 查找是否存在复选框图标
       const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
       const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
-      
+
       // 如果不存在复选框，则添加未选中状态的复选框
       if (existingCheckboxIndex === -1) {
         iconList.push('checkbox_unchecked')
@@ -1350,7 +1330,7 @@ export default {
         const sortedIconList = sortIconList(iconList)
         node.setIcon(sortedIconList)
       }
-      
+
       // 递归处理所有子节点
       if (node.children) {
         node.children.forEach(child => {
@@ -1358,16 +1338,16 @@ export default {
         })
       }
     },
-    
+
     // 递归为所有后代节点切换复选框 (用于子节点)
     toggleCheckboxForAllDescendants(node, isRoot, shouldAdd) {
       // 获取当前节点的图标列表
       const iconList = [...(node.getData('icon') || [])]
-      
+
       // 查找是否存在复选框图标
       const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
       const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
-      
+
       // 根据 shouldAdd 参数决定是添加还是移除
       if (shouldAdd) {
         // 如果不存在复选框，则添加未选中状态的复选框
@@ -1386,7 +1366,7 @@ export default {
           node.setIcon(sortedIconList)
         }
       }
-      
+
       // 递归处理所有子节点
       if (node.children) {
         node.children.forEach(child => {
@@ -1394,30 +1374,30 @@ export default {
         })
       }
     },
-    
+
     // 检查所有子节点的后代是否都包含复选框图标（不包括指定节点本身）
     checkAllDescendantsOfChildrenHaveCheckbox(node, checkboxIcons) {
       // 检查所有子节点及其后代是否有复选框
       if (!node.children || node.children.length === 0) {
         return true; // 如果没有子节点，认为所有子节点都有复选框（以便添加功能）
       }
-      
+
       for (let child of node.children) {
         if (!this.checkAllDescendantsHaveCheckbox(child, checkboxIcons)) {
           return false; // 只要有一个子节点（及其后代）没有复选框，就返回false
         }
       }
-      
+
       return true; // 所有子节点及其后代都有复选框
     },
-    
+
     // 检查一个节点及其所有后代是否都包含复选框图标（对整个树进行检查）
     checkAllDescendantsHaveCheckbox(node, checkboxIcons) {
       // 检查当前节点是否包含复选框
       const iconList = [...(node.getData('icon') || [])]
       const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
       const hasCheckbox = existingCheckboxIndex !== -1;
-      
+
       // 检查所有子节点
       if (node.children) {
         for (let child of node.children) {
@@ -1426,24 +1406,24 @@ export default {
           }
         }
       }
-      
+
       return hasCheckbox; // 只有当前节点有复选框且所有子节点都有复选框时才返回true
     },
-    
+
     // 递归为所有后代节点切换复选框状态 (用于子节点)
     toggleStatusForAllDescendants(node) {
       // 获取当前节点的图标列表
       const iconList = [...(node.getData('icon') || [])]
-      
+
       // 查找是否存在复选框图标
       const checkboxIcons = ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']
       const existingCheckboxIndex = iconList.findIndex(item => checkboxIcons.includes(item))
-      
+
       if (existingCheckboxIndex !== -1) {
         // 当前状态
         const currentStatus = iconList[existingCheckboxIndex]
         let nextStatus = 'checkbox_unchecked' // 默认为未选中
-        
+
         // 按照顺序循环: 未选中(空) -> 选中(对号) -> 失败(叉号) -> 未选中(空) ...
         if (currentStatus === 'checkbox_unchecked') {
           nextStatus = 'checkbox_success'
@@ -1452,17 +1432,17 @@ export default {
         } else if (currentStatus === 'checkbox_failed') {
           nextStatus = 'checkbox_unchecked'
         }
-        
+
         // 更新图标状态
         iconList[existingCheckboxIndex] = nextStatus
-        
+
         // 使用统一的排序函数确保checkbox始终在最左边
         const sortedIconList = sortIconList(iconList)
-        
+
         // 更新节点图标
         node.setIcon(sortedIconList)
       }
-      
+
       // 递归处理所有子节点
       if (node.children) {
         node.children.forEach(child => {
@@ -1470,12 +1450,12 @@ export default {
         })
       }
     },
-    
+
     // 处理根节点的Shift+W操作事件
     handleTriggerShiftWForRootNode() {
       // 直接从思维导图实例获取活动节点
       const activeNodes = this.mindMap.renderer.activeNodeList
-      
+
       if (!activeNodes || activeNodes.length === 0) {
         this.$message.warning('请先选择节点')
         return
@@ -1483,14 +1463,14 @@ export default {
 
       // 检查是否选中了根节点
       const hasRootNode = activeNodes.some(node => node.isRoot)
-      
+
       if (hasRootNode && activeNodes.length === 1) {
         // 如果只选中了根节点，处理根节点逻辑
         const selectedNode = activeNodes[0]
         if (selectedNode.isRoot && selectedNode.children && selectedNode.children.length > 0) {
           // 检查所有子节点（不包括根节点本身）是否都已添加复选框
           const allChildrenHaveCheckbox = this.checkAllDescendantsOfChildrenHaveCheckbox(selectedNode, ['checkbox_unchecked', 'checkbox_success', 'checkbox_failed']);
-          
+
           // 对所有子节点执行添加/移除操作
           selectedNode.children.forEach(child => {
             this.toggleCheckboxForAllDescendants(child, false, !allChildrenHaveCheckbox)
@@ -1503,7 +1483,7 @@ export default {
             this.toggleCheckboxForSingleNode(node)
           }
         })
-        
+
         // 如果包含根节点，给出提示
         if (hasRootNode) {
           this.$message.info('已为选中的非根节点切换待办状态，根节点已跳过')
@@ -1521,14 +1501,14 @@ export default {
 
         // 从缓存中获取思维导图内容
         const cachedContent = await this.$store.dispatch('getMindMapContent', mindMapId)
-        
+
         if (cachedContent) {
           // 设置当前思维导图ID
           this.$store.commit('setCurrentMindMapId', mindMapId)
-          
+
           // 加载思维导图数据
           this.setData(cachedContent)
-          
+
           // 提示用户
           const mindMap = this.$store.state.localMindMaps.find(m => m.id === mindMapId)
           if (mindMap) {
@@ -1546,8 +1526,16 @@ export default {
     // 处理打开思维导图管理页面
     handleOpenMindmapManager() {
       this.currentPage = 'mindmap-manager'
-      
+
       // 确保在导图管理页面时工具栏保持隐藏
+      this.$bus.$emit('ensureToolbarHiddenInMindmapManager')
+    },
+
+    // 处理打开关于页面
+    handleOpenAbout() {
+      this.currentPage = 'about'
+
+      // 确保在关于页面时工具栏保持隐藏
       this.$bus.$emit('ensureToolbarHiddenInMindmapManager')
     },
 
