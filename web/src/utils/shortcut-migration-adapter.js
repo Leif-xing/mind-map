@@ -23,16 +23,16 @@ export class ShortcutMigrationAdapter {
     try {
       // 第一阶段：迁移系统级快捷键
       await this.migrateSystemShortcuts()
-      
+
       // 第二阶段：迁移应用级快捷键
       await this.migrateApplicationShortcuts()
-      
+
       // 第三阶段：迁移浏览器级快捷键
       await this.migrateBrowserShortcuts()
-      
+
       // 第四阶段：设置上下文相关快捷键
       await this.setupContextShortcuts()
-      
+
       return true
     } catch (error) {
       return false
@@ -44,7 +44,7 @@ export class ShortcutMigrationAdapter {
    */
   async migrateSystemShortcuts() {
     const systemShortcuts = SHORTCUT_CONFIG.system
-    
+
     for (const [shortcut, config] of Object.entries(systemShortcuts)) {
       try {
         // 绑定正确的 this 上下文
@@ -74,7 +74,7 @@ export class ShortcutMigrationAdapter {
    */
   async migrateApplicationShortcuts() {
     const appShortcuts = SHORTCUT_CONFIG.application
-    
+
     for (const [shortcut, config] of Object.entries(appShortcuts)) {
       try {
         // 创建动作函数，这些需要与Vue组件集成
@@ -106,14 +106,18 @@ export class ShortcutMigrationAdapter {
           case 'toggleTodoCheckbox':
             action = () => {
               if (window.Vue && window.Vue.prototype.$eventBus) {
-                window.Vue.prototype.$eventBus.$emit('shortcut:toggleTodoCheckbox')
+                window.Vue.prototype.$eventBus.$emit(
+                  'shortcut:toggleTodoCheckbox'
+                )
               }
             }
             break
           case 'toggleTodoStatus':
             action = () => {
               if (window.Vue && window.Vue.prototype.$eventBus) {
-                window.Vue.prototype.$eventBus.$emit('shortcut:toggleTodoStatus')
+                window.Vue.prototype.$eventBus.$emit(
+                  'shortcut:toggleTodoStatus'
+                )
               }
             }
             break
@@ -143,18 +147,21 @@ export class ShortcutMigrationAdapter {
    */
   async migrateBrowserShortcuts() {
     const browserShortcuts = SHORTCUT_CONFIG.browser
-    
+
     for (const [shortcut, config] of Object.entries(browserShortcuts)) {
       try {
         // 为浏览器级快捷键创建事件监听器
-        const action = (event) => {
+        const action = event => {
           if (config.preventDefault) {
             event.preventDefault()
           }
 
           // 触发相应的 Vue 事件
           if (window.Vue && window.Vue.prototype.$eventBus) {
-            window.Vue.prototype.$eventBus.$emit(`shortcut:${config.action}`, event)
+            window.Vue.prototype.$eventBus.$emit(
+              `shortcut:${config.action}`,
+              event
+            )
           }
         }
 
@@ -180,7 +187,7 @@ export class ShortcutMigrationAdapter {
    */
   async setupContextShortcuts() {
     const contextShortcuts = SHORTCUT_CONFIG.contexts
-    
+
     for (const [context, shortcuts] of Object.entries(contextShortcuts)) {
       for (const [shortcut, config] of Object.entries(shortcuts)) {
         try {
@@ -266,7 +273,7 @@ export class ShortcutMigrationAdapter {
    */
   migrateKeyboardNavigationShortcuts() {
     const navigationShortcuts = SHORTCUT_CONFIG.navigation
-    
+
     for (const [shortcut, config] of Object.entries(navigationShortcuts)) {
       try {
         let action

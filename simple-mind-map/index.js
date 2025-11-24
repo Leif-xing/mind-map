@@ -643,7 +643,7 @@ class MindMap {
       this.watermark.isInExport = false
     }
     // 添加必要的样式
-    [this.joinCss(), ...cssTextList].forEach(s => {
+    ;[this.joinCss(), ...cssTextList].forEach(s => {
       clone.add(SVG(`<style>${s}</style>`))
     })
     // 附加内容

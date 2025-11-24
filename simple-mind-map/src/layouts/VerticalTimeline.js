@@ -94,8 +94,8 @@ class VerticalTimeline extends Base {
         let len = cur.data.expand === false ? 0 : cur._node.children.length
         cur._node.childrenAreaHeight = len
           ? cur._node.children.reduce((h, item) => {
-              return h + item.height
-            }, 0) +
+            return h + item.height
+          }, 0) +
             (len + 1) * this.getMarginY(layerIndex + 1)
           : 0
       },

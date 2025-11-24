@@ -15,37 +15,45 @@ export const SYSTEM_SHORTCUTS = {
     priority: 10
   },
   'Ctrl+Y': {
-    action: 'redo', 
+    action: 'redo',
     layer: LAYERS.SYSTEM,
     description: '重做操作',
     priority: 10
   },
   'Ctrl+A': {
-    action: function() { this.mindMap.renderer.selectAll() },
+    action: function () {
+      this.mindMap.renderer.selectAll()
+    },
     layer: LAYERS.SYSTEM,
     description: '全选节点',
     priority: 10
   },
   'Ctrl+C': {
-    action: function() { this.mindMap.renderer.copy() },
+    action: function () {
+      this.mindMap.renderer.copy()
+    },
     layer: LAYERS.SYSTEM,
     description: '复制节点',
     priority: 10
   },
   'Ctrl+X': {
-    action: function() { this.mindMap.renderer.cut() },
+    action: function () {
+      this.mindMap.renderer.cut()
+    },
     layer: LAYERS.SYSTEM,
-    description: '剪切节点', 
+    description: '剪切节点',
     priority: 10
   },
   'Ctrl+V': {
-    action: function() { this.mindMap.renderer.paste() },
+    action: function () {
+      this.mindMap.renderer.paste()
+    },
     layer: LAYERS.SYSTEM,
     description: '粘贴节点',
     priority: 10
   },
   'Del|Backspace': {
-    action: function() { 
+    action: function () {
       // 检查RichText是否正在处理，如果是则不删除节点
       if (this.mindMap.richText && this.mindMap.richText.showTextEdit) {
         return
@@ -60,22 +68,26 @@ export const SYSTEM_SHORTCUTS = {
     description: '删除节点',
     priority: 10
   },
-  'Tab': {
-    action: function() { this.mindMap.execCommand('INSERT_CHILD_NODE') },
+  Tab: {
+    action: function () {
+      this.mindMap.execCommand('INSERT_CHILD_NODE')
+    },
     layer: LAYERS.SYSTEM,
     context: CONTEXTS.NORMAL,
     description: '插入子节点',
     priority: 10
   },
   'Shift+Tab': {
-    action: function() { this.mindMap.execCommand('INSERT_PARENT_NODE') },
+    action: function () {
+      this.mindMap.execCommand('INSERT_PARENT_NODE')
+    },
     layer: LAYERS.SYSTEM,
     context: CONTEXTS.NORMAL,
     description: '插入父节点',
     priority: 10
   },
-  'Enter': {
-    action: function() { 
+  Enter: {
+    action: function () {
       // 检查RichText是否正在处理Enter键
       if (this.mindMap._isProcessingRichTextEnter) {
         return
@@ -88,7 +100,9 @@ export const SYSTEM_SHORTCUTS = {
     priority: 9
   },
   'Shift+Backspace': {
-    action: function() { this.mindMap.execCommand('REMOVE_CURRENT_NODE') },
+    action: function () {
+      this.mindMap.execCommand('REMOVE_CURRENT_NODE')
+    },
     layer: LAYERS.SYSTEM,
     description: '仅删除当前节点',
     priority: 10
@@ -98,25 +112,33 @@ export const SYSTEM_SHORTCUTS = {
 // 视图操作快捷键
 export const VIEW_SHORTCUTS = {
   'Ctrl+=': {
-    action: function() { this.mindMap.view.enlarge() },
+    action: function () {
+      this.mindMap.view.enlarge()
+    },
     layer: LAYERS.SYSTEM,
     description: '放大视图',
     priority: 10
   },
   'Ctrl+-': {
-    action: function() { this.mindMap.view.narrow() },
-    layer: LAYERS.SYSTEM, 
+    action: function () {
+      this.mindMap.view.narrow()
+    },
+    layer: LAYERS.SYSTEM,
     description: '缩小视图',
     priority: 10
   },
   'Ctrl+i': {
-    action: function() { this.mindMap.view.fit() },
+    action: function () {
+      this.mindMap.view.fit()
+    },
     layer: LAYERS.SYSTEM,
     description: '适应画布',
     priority: 10
   },
   'Ctrl+Enter': {
-    action: function() { this.mindMap.view.reset() },
+    action: function () {
+      this.mindMap.view.reset()
+    },
     layer: LAYERS.SYSTEM,
     description: '重置视图',
     priority: 10
@@ -126,27 +148,35 @@ export const VIEW_SHORTCUTS = {
 // 高级编辑操作
 export const ADVANCED_SHORTCUTS = {
   'Ctrl+G': {
-    action: function() { this.mindMap.execCommand('ADD_GENERALIZATION') },
+    action: function () {
+      this.mindMap.execCommand('ADD_GENERALIZATION')
+    },
     layer: LAYERS.SYSTEM,
     description: '添加概要',
     priority: 10
   },
   'Ctrl+L': {
-    action: function() { this.mindMap.execCommand('RESET_LAYOUT') },
+    action: function () {
+      this.mindMap.execCommand('RESET_LAYOUT')
+    },
     layer: LAYERS.SYSTEM,
     description: '一键整理',
     priority: 10
   },
   'Ctrl+↑': {
-    action: function() { this.mindMap.execCommand('UP_NODE') },
+    action: function () {
+      this.mindMap.execCommand('UP_NODE')
+    },
     layer: LAYERS.SYSTEM,
     description: '上移节点',
     priority: 10
   },
   'Ctrl+↓': {
-    action: function() { this.mindMap.execCommand('DOWN_NODE') },
+    action: function () {
+      this.mindMap.execCommand('DOWN_NODE')
+    },
     layer: LAYERS.SYSTEM,
-    description: '下移节点', 
+    description: '下移节点',
     priority: 10
   }
 }
@@ -200,7 +230,7 @@ export const BROWSER_SHORTCUTS = {
   },
   'Ctrl+L': {
     action: 'openHistory',
-    layer: LAYERS.APPLICATION, 
+    layer: LAYERS.APPLICATION,
     description: '打开历史记录',
     priority: 8,
     preventDefault: true
@@ -245,19 +275,19 @@ export const BROWSER_SHORTCUTS = {
 // 上下文相关快捷键配置
 export const CONTEXT_SHORTCUTS = {
   [CONTEXTS.TEXT_EDITING]: {
-    'Enter': {
+    Enter: {
       action: 'confirmTextEdit',
       layer: LAYERS.CONTEXT,
       description: '确认文本编辑',
       priority: 9
     },
-    'Escape': {
+    Escape: {
       action: 'cancelTextEdit',
       layer: LAYERS.CONTEXT,
       description: '取消文本编辑',
       priority: 9
     },
-    'Tab': {
+    Tab: {
       action: 'textTab',
       layer: LAYERS.CONTEXT,
       description: '文本缩进',
@@ -265,13 +295,13 @@ export const CONTEXT_SHORTCUTS = {
     }
   },
   [CONTEXTS.SEARCH_MODE]: {
-    'Escape': {
+    Escape: {
       action: 'closeSearch',
       layer: LAYERS.CONTEXT,
       description: '关闭搜索',
       priority: 9
     },
-    'Enter': {
+    Enter: {
       action: 'searchNext',
       layer: LAYERS.CONTEXT,
       description: '下一个搜索结果',
@@ -285,13 +315,13 @@ export const CONTEXT_SHORTCUTS = {
     }
   },
   [CONTEXTS.DIALOG_OPEN]: {
-    'Escape': {
+    Escape: {
       action: 'closeDialog',
       layer: LAYERS.CONTEXT,
       description: '关闭对话框',
       priority: 9
     },
-    'Enter': {
+    Enter: {
       action: 'confirmDialog',
       layer: LAYERS.CONTEXT,
       description: '确认对话框',
@@ -338,28 +368,28 @@ export const COMPONENT_SHORTCUTS = {
 
 // 键盘导航相关快捷键（当插件启用时）
 export const NAVIGATION_SHORTCUTS = {
-  'Left': {
+  Left: {
     action: 'navLeft',
     layer: LAYERS.CONTEXT,
     description: '向左导航',
     priority: 6,
     plugin: 'KeyboardNavigation'
   },
-  'Right': {
+  Right: {
     action: 'navRight',
     layer: LAYERS.CONTEXT,
     description: '向右导航',
     priority: 6,
     plugin: 'KeyboardNavigation'
   },
-  'Up': {
+  Up: {
     action: 'navUp',
     layer: LAYERS.CONTEXT,
     description: '向上导航',
     priority: 6,
     plugin: 'KeyboardNavigation'
   },
-  'Down': {
+  Down: {
     action: 'navDown',
     layer: LAYERS.CONTEXT,
     description: '向下导航',

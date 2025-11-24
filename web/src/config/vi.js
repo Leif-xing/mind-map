@@ -712,11 +712,7 @@ export const layoutGroupList = [
   },
   {
     name: 'Dòng thời gian',
-    list: [
-      'timeline',
-      'timeline2',
-      'verticalTimeline'
-    ]
+    list: ['timeline', 'timeline2', 'verticalTimeline']
   },
   {
     name: 'Bản đồ Fishbone',

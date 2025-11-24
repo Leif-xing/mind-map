@@ -41,7 +41,7 @@
             <!-- 实现虚线 -->
             <el-select
               size="mini"
-              style="width: 80px;margin-left: 4px;"
+              style="width: 80px; margin-left: 4px"
               v-model="styleConfig.strokeDasharray"
               placeholder=""
               @change="
@@ -67,8 +67,8 @@
                       styleConfig.strokeDasharray === item.value
                         ? '#409eff'
                         : isDark
-                        ? '#fff'
-                        : '#000'
+                          ? '#fff'
+                          : '#000'
                     "
                     :stroke-dasharray="item.value"
                   ></line>
@@ -114,8 +114,7 @@
                 :key="item"
                 :label="item"
                 :value="item"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -140,7 +139,7 @@
           </div>
         </div>
       </div>
-      <div class="panelHeader" style="margin-top: 12px;">
+      <div class="panelHeader" style="margin-top: 12px">
         <span class="name">{{ $t('nodeOuterFrame.outerFrameText') }}</span>
         <span class="deleteBtn" @click="deleteOuterFrameText">
           {{ $t('nodeOuterFrame.deleteOuterFrameText') }}
@@ -167,8 +166,7 @@
                 :label="item.name"
                 :value="item.value"
                 :style="{ fontFamily: item.value }"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -245,8 +243,7 @@
                 :key="item"
                 :label="item"
                 :value="item"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
           <div class="rowItem">
@@ -268,8 +265,7 @@
                 :label="item"
                 :value="item"
                 :style="{ fontSize: item + 'px' }"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -310,8 +306,7 @@
                 :key="item"
                 :label="item"
                 :value="item"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -327,15 +322,15 @@
                 }
               "
             >
-              <el-radio-button label="left">{{
-                $t('nodeOuterFrame.left')
-              }}</el-radio-button>
-              <el-radio-button label="center">{{
-                $t('nodeOuterFrame.center')
-              }}</el-radio-button>
-              <el-radio-button label="right">{{
-                $t('nodeOuterFrame.right')
-              }}</el-radio-button>
+              <el-radio-button label="left">
+                {{ $t('nodeOuterFrame.left') }}
+              </el-radio-button>
+              <el-radio-button label="center">
+                {{ $t('nodeOuterFrame.center') }}
+              </el-radio-button>
+              <el-radio-button label="right">
+                {{ $t('nodeOuterFrame.right') }}
+              </el-radio-button>
             </el-radio-group>
           </div>
         </div>
@@ -373,303 +368,307 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import Color from './Color.vue'
-import { mapState, mapMutations } from 'vuex'
-import {
-  lineWidthList,
-  borderDasharrayList,
-  fontFamilyList,
-  fontSizeList,
-  borderRadiusList,
-  lineHeightList
-} from '@/config'
-import OuterFrame from 'simple-mind-map/src/plugins/OuterFrame'
+  import Sidebar from './Sidebar.vue'
+  import Color from './Color.vue'
+  import { mapState, mapMutations } from 'vuex'
+  import {
+    lineWidthList,
+    borderDasharrayList,
+    fontFamilyList,
+    fontSizeList,
+    borderRadiusList,
+    lineHeightList
+  } from '@/config'
+  import OuterFrame from 'simple-mind-map/src/plugins/OuterFrame'
 
-export default {
-  components: {
-    Sidebar,
-    Color
-  },
-  props: {
-    mindMap: {
-      type: Object
-    }
-  },
-  data() {
-    return {
-      lineWidthList,
-      lineHeightList,
-      fontSizeList,
-      borderRadiusList,
-      styleConfig: {
-        ...OuterFrame.defaultStyle
-      },
-      paddingStyle: {
-        paddingX: 0,
-        paddingY: 0
+  export default {
+    components: {
+      Sidebar,
+      Color
+    },
+    props: {
+      mindMap: {
+        type: Object
       }
-    }
-  },
-  computed: {
-    ...mapState({
-      activeSidebar: state => state.activeSidebar,
-      isDark: state => state.localConfig.isDark,
-      borderDasharrayList() {
-        return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
-      }
-    }),
-
-    fontFamilyList() {
-      return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
-    }
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'nodeOuterFrameStyle') {
-        this.$refs.sidebar.show = true
-      } else {
-        this.$refs.sidebar.show = false
-      }
-    }
-  },
-  created() {
-    this.mindMap.on('outer_frame_active', this.onOuterFrameActive)
-    this.mindMap.on('outer_frame_delete', this.hide)
-    this.mindMap.on('outer_frame_deactivate', this.hide)
-  },
-  beforeDestroy() {
-    this.mindMap.off('outer_frame_active', this.onOuterFrameActive)
-    this.mindMap.off('outer_frame_delete', this.hide)
-    this.mindMap.off('outer_frame_deactivate', this.hide)
-  },
-  methods: {
-    ...mapMutations(['setActiveSidebar']),
-
-    onOuterFrameActive(el, parentNode, range) {
-      // 取范围内第一个节点的外框样式
-      const firstNode = parentNode.children[range[0]]
-      const firstNodeOuterFrame = firstNode.getData('outerFrame')
-      Object.keys(this.styleConfig).forEach(key => {
-        if (typeof firstNodeOuterFrame[key] !== 'undefined') {
-          this.styleConfig[key] = firstNodeOuterFrame[key]
-        } else {
-          this.styleConfig[key] = OuterFrame.defaultStyle[key]
+    },
+    data() {
+      return {
+        lineWidthList,
+        lineHeightList,
+        fontSizeList,
+        borderRadiusList,
+        styleConfig: {
+          ...OuterFrame.defaultStyle
+        },
+        paddingStyle: {
+          paddingX: 0,
+          paddingY: 0
         }
-      })
-      const [pl, pt] = this.styleConfig.textFillPadding
-      this.paddingStyle.paddingX = pl
-      this.paddingStyle.paddingY = pt
-      this.setActiveSidebar('nodeOuterFrameStyle')
-    },
-
-    updateOuterFrame(key, val) {
-      this.styleConfig[key] = val
-      this.mindMap.outerFrame.updateActiveOuterFrame({
-        [key]: val
-      })
-    },
-
-    // 切换加粗样式
-    toggleFontWeight() {
-      const newValue =
-        this.styleConfig.fontWeight === 'bold' ? 'normal' : 'bold'
-      this.updateOuterFrame('fontWeight', newValue)
-    },
-
-    // 切换字体样式
-    toggleFontStyle() {
-      const newValue =
-        this.styleConfig.fontStyle === 'italic' ? 'normal' : 'italic'
-      this.updateOuterFrame('fontStyle', newValue)
-    },
-
-    updatePadding(dir, value) {
-      const [pl, pt] = this.styleConfig.textFillPadding
-      if (dir === 'x') {
-        this.updateOuterFrame('textFillPadding', [value, pt, value, pt])
-      } else if (dir === 'y') {
-        this.updateOuterFrame('textFillPadding', [pl, value, pl, value])
       }
     },
+    computed: {
+      ...mapState({
+        activeSidebar: state => state.activeSidebar,
+        isDark: state => state.localConfig.isDark,
+        borderDasharrayList() {
+          return (
+            borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
+          )
+        }
+      }),
 
-    deleteOuterFrame() {
-      this.mindMap.outerFrame.removeActiveOuterFrame()
-    },
-
-    deleteOuterFrameText() {
-      this.mindMap.outerFrame.removeActiveOuterFrameText()
-    },
-
-    hide() {
-      if (this.activeSidebar !== 'nodeOuterFrameStyle') {
-        return
+      fontFamilyList() {
+        return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
       }
-      this.setActiveSidebar(null)
+    },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'nodeOuterFrameStyle') {
+          this.$refs.sidebar.show = true
+        } else {
+          this.$refs.sidebar.show = false
+        }
+      }
+    },
+    created() {
+      this.mindMap.on('outer_frame_active', this.onOuterFrameActive)
+      this.mindMap.on('outer_frame_delete', this.hide)
+      this.mindMap.on('outer_frame_deactivate', this.hide)
+    },
+    beforeDestroy() {
+      this.mindMap.off('outer_frame_active', this.onOuterFrameActive)
+      this.mindMap.off('outer_frame_delete', this.hide)
+      this.mindMap.off('outer_frame_deactivate', this.hide)
+    },
+    methods: {
+      ...mapMutations(['setActiveSidebar']),
+
+      onOuterFrameActive(el, parentNode, range) {
+        // 取范围内第一个节点的外框样式
+        const firstNode = parentNode.children[range[0]]
+        const firstNodeOuterFrame = firstNode.getData('outerFrame')
+        Object.keys(this.styleConfig).forEach(key => {
+          if (typeof firstNodeOuterFrame[key] !== 'undefined') {
+            this.styleConfig[key] = firstNodeOuterFrame[key]
+          } else {
+            this.styleConfig[key] = OuterFrame.defaultStyle[key]
+          }
+        })
+        const [pl, pt] = this.styleConfig.textFillPadding
+        this.paddingStyle.paddingX = pl
+        this.paddingStyle.paddingY = pt
+        this.setActiveSidebar('nodeOuterFrameStyle')
+      },
+
+      updateOuterFrame(key, val) {
+        this.styleConfig[key] = val
+        this.mindMap.outerFrame.updateActiveOuterFrame({
+          [key]: val
+        })
+      },
+
+      // 切换加粗样式
+      toggleFontWeight() {
+        const newValue =
+          this.styleConfig.fontWeight === 'bold' ? 'normal' : 'bold'
+        this.updateOuterFrame('fontWeight', newValue)
+      },
+
+      // 切换字体样式
+      toggleFontStyle() {
+        const newValue =
+          this.styleConfig.fontStyle === 'italic' ? 'normal' : 'italic'
+        this.updateOuterFrame('fontStyle', newValue)
+      },
+
+      updatePadding(dir, value) {
+        const [pl, pt] = this.styleConfig.textFillPadding
+        if (dir === 'x') {
+          this.updateOuterFrame('textFillPadding', [value, pt, value, pt])
+        } else if (dir === 'y') {
+          this.updateOuterFrame('textFillPadding', [pl, value, pl, value])
+        }
+      },
+
+      deleteOuterFrame() {
+        this.mindMap.outerFrame.removeActiveOuterFrame()
+      },
+
+      deleteOuterFrameText() {
+        this.mindMap.outerFrame.removeActiveOuterFrameText()
+      },
+
+      hide() {
+        if (this.activeSidebar !== 'nodeOuterFrameStyle') {
+          return
+        }
+        this.setActiveSidebar(null)
+      }
     }
   }
-}
 </script>
 
 <style lang="less">
-.el-select-dropdown__item.selected {
-  .borderLine {
-    background-color: #409eff;
+  .el-select-dropdown__item.selected {
+    .borderLine {
+      background-color: #409eff;
+    }
   }
-}
 </style>
 <style lang="less" scoped>
-.sidebarContent {
-  padding: 20px;
+  .sidebarContent {
+    padding: 20px;
 
-  &.isDark {
+    &.isDark {
+      .panelHeader {
+        .name {
+          color: #fff;
+        }
+      }
+
+      .panelBody {
+        .row {
+          .rowItem {
+            .name {
+              color: hsla(0, 0%, 100%, 0.6);
+            }
+          }
+
+          .styleBtn {
+            background-color: #363b3f;
+            color: hsla(0, 0%, 100%, 0.6);
+            border-color: hsla(0, 0%, 100%, 0.1);
+          }
+        }
+      }
+    }
+
+    .btn {
+      width: 24px;
+      height: 24px;
+      background-color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
     .panelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+
       .name {
-        color: #fff;
+        font-size: 16px;
+        font-family:
+          PingFangSC-Medium,
+          PingFang SC;
+        font-weight: 500;
+        color: rgba(26, 26, 26, 0.9);
+      }
+
+      .deleteBtn {
+        display: flex;
+        align-items: center;
+        color: #909090;
+        font-size: 14px;
+        cursor: pointer;
+        user-select: none;
+
+        .iconfont {
+          margin-left: 2px;
+          font-size: 14px;
+        }
       }
     }
 
     .panelBody {
       .row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+
+        &:last-of-type {
+          margin-bottom: 0px;
+        }
+
+        .btnGroup {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+        }
+
         .rowItem {
+          display: flex;
+          align-items: center;
+
           .name {
-            color: hsla(0, 0%, 100%, 0.6);
+            font-size: 12px;
+            margin-right: 10px;
+            white-space: nowrap;
+          }
+
+          .block {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            cursor: pointer;
           }
         }
 
         .styleBtn {
-          background-color: #363b3f;
-          color: hsla(0, 0%, 100%, 0.6);
-          border-color: hsla(0, 0%, 100%, 0.1);
-        }
-      }
-    }
-  }
-
-  .btn {
-    width: 24px;
-    height: 24px;
-    background-color: #fff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-  }
-
-  .panelHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-
-    .name {
-      font-size: 16px;
-      font-family: PingFangSC-Medium, PingFang SC;
-      font-weight: 500;
-      color: rgba(26, 26, 26, 0.9);
-    }
-
-    .deleteBtn {
-      display: flex;
-      align-items: center;
-      color: #909090;
-      font-size: 14px;
-      cursor: pointer;
-      user-select: none;
-
-      .iconfont {
-        margin-left: 2px;
-        font-size: 14px;
-      }
-    }
-  }
-
-  .panelBody {
-    .row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-
-      &:last-of-type {
-        margin-bottom: 0px;
-      }
-
-      .btnGroup {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-      }
-
-      .rowItem {
-        display: flex;
-        align-items: center;
-
-        .name {
-          font-size: 12px;
-          margin-right: 10px;
-          white-space: nowrap;
-        }
-
-        .block {
-          display: inline-block;
-          width: 20px;
-          height: 20px;
-          border: 1px solid #dcdfe6;
-          border-radius: 4px;
+          position: relative;
+          width: 50px;
+          height: 30px;
+          background: #fff;
+          border: 1px solid #eee;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-weight: bold;
           cursor: pointer;
-        }
-      }
+          border-radius: 4px;
 
-      .styleBtn {
-        position: relative;
-        width: 50px;
-        height: 30px;
-        background: #fff;
-        border: 1px solid #eee;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
-        cursor: pointer;
-        border-radius: 4px;
+          &.actived {
+            background-color: #eee;
+          }
 
-        &.actived {
-          background-color: #eee;
-        }
+          &.disabled {
+            background-color: #f5f7fa !important;
+            border-color: #e4e7ed !important;
+            color: #c0c4cc !important;
+            cursor: not-allowed !important;
+          }
 
-        &.disabled {
-          background-color: #f5f7fa !important;
-          border-color: #e4e7ed !important;
-          color: #c0c4cc !important;
-          cursor: not-allowed !important;
-        }
+          &.i {
+            font-style: italic;
+          }
 
-        &.i {
-          font-style: italic;
-        }
-
-        .colorShow {
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 2px;
+          .colorShow {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+          }
         }
       }
     }
   }
-}
 
-.borderLine {
-  display: inline-block;
-  width: 100%;
-  background-color: #000;
+  .borderLine {
+    display: inline-block;
+    width: 100%;
+    background-color: #000;
 
-  &.isDark {
-    background-color: #fff;
+    &.isDark {
+      background-color: #fff;
+    }
   }
-}
 </style>

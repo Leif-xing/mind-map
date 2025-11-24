@@ -5,6 +5,7 @@
 ### 选项A：通过Git仓库自动部署
 
 1. **推送代码到Git仓库**
+
    ```bash
    git add .
    git commit -m "Add Cloudflare deployment files"
@@ -19,6 +20,7 @@
    - 选择这个仓库
 
 3. **配置构建设置**
+
    ```
    Build command: cd web && npm install && npm run build && cd .. && node build-for-cloudflare.js
    Build output directory: cloudflare-build
@@ -51,11 +53,13 @@
 如果你想要更多的控制权，可以使用Cloudflare Workers：
 
 1. **安装Wrangler CLI**
+
    ```bash
    npm install -g wrangler
    ```
 
 2. **登录Cloudflare**
+
    ```bash
    wrangler login
    ```
@@ -70,15 +74,18 @@
 ## 优化建议
 
 ### 1. 性能优化
+
 - 已配置的 `_headers` 文件包含了缓存策略
 - 静态资源将被缓存1年
 - 启用了安全头部
 
 ### 2. SEO优化
+
 - 考虑添加meta标签到index.html
 - 配置sitemap.xml
 
 ### 3. 监控
+
 - 使用Cloudflare Analytics监控访问情况
 - 设置Web Vitals监控
 
@@ -92,25 +99,29 @@
 
 2. **静态资源404**
    - 检查路径配置是否正确
-   - 确认_redirects文件配置
+   - 确认\_redirects文件配置
 
 3. **SPA路由问题**
-   - _redirects文件已配置SPA fallback
+   - \_redirects文件已配置SPA fallback
    - 确保上传了该文件
 
 ## 更新部署
 
 ### 自动部署
+
 如果使用Git连接，每次推送代码都会自动触发部署。
 
 ### 手动部署
+
 重新运行构建脚本并上传：
+
 ```bash
 node build-for-cloudflare.js
 # 然后在Cloudflare Dashboard中重新上传文件
 ```
 
 ## 成本
+
 - Cloudflare Pages免费套餐包括：
   - 无限静态请求
   - 无限带宽

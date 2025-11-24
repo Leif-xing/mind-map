@@ -978,8 +978,8 @@ class MindMapNode {
   getIndexInBrothers() {
     return this.parent && this.parent.children
       ? this.parent.children.findIndex(item => {
-          return item.uid === this.uid
-        })
+        return item.uid === this.uid
+      })
       : -1
   }
 

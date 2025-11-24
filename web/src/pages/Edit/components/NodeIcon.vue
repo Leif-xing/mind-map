@@ -24,131 +24,131 @@
 </template>
 
 <script>
-import { nodeIconList } from 'simple-mind-map/src/svg/icons'
-import icon from '@/config/icon'
-import { sortIconList } from '@/utils/index.js'
+  import { nodeIconList } from 'simple-mind-map/src/svg/icons'
+  import icon from '@/config/icon'
+  import { sortIconList } from '@/utils/index.js'
 
-// 节点图标内容设置
-export default {
-  data() {
-    return {
-      nodeIconList: [...nodeIconList, ...icon],
-      dialogVisible: false,
-      iconList: [],
-      activeNodes: []
-    }
-  },
-  created() {
-    this.$bus.$on('node_active', this.handleNodeActive)
-    this.$bus.$on('showNodeIcon', this.handleShowNodeIcon)
-  },
-  beforeDestroy() {
-    this.$bus.$off('node_active', this.handleNodeActive)
-    this.$bus.$off('showNodeIcon', this.handleShowNodeIcon)
-  },
-  methods: {
-    handleNodeActive(...args) {
-      this.activeNodes = [...args[1]]
-      if (this.activeNodes.length > 0) {
-        let firstNode = this.activeNodes[0]
-        this.iconList = firstNode.getData('icon') || []
-      } else {
-        this.iconList = []
+  // 节点图标内容设置
+  export default {
+    data() {
+      return {
+        nodeIconList: [...nodeIconList, ...icon],
+        dialogVisible: false,
+        iconList: [],
+        activeNodes: []
       }
     },
-
-    handleShowNodeIcon() {
-      this.dialogVisible = true
+    created() {
+      this.$bus.$on('node_active', this.handleNodeActive)
+      this.$bus.$on('showNodeIcon', this.handleShowNodeIcon)
     },
-
-    getHtml(icon) {
-      return /^<svg/.test(icon) ? icon : `<img src="${icon}" />`
+    beforeDestroy() {
+      this.$bus.$off('node_active', this.handleNodeActive)
+      this.$bus.$off('showNodeIcon', this.handleShowNodeIcon)
     },
-
-    setIcon(type, name) {
-      let key = type + '_' + name
-      let index = this.iconList.findIndex(item => {
-        return item === key
-      })
-      // 删除icon
-      if (index !== -1) {
-        this.iconList.splice(index, 1)
-      } else {
-        let typeIndex = this.iconList.findIndex(item => {
-          return item.split('_')[0] === type
-        })
-        // 替换icon
-        if (typeIndex !== -1) {
-          this.iconList.splice(typeIndex, 1, key)
+    methods: {
+      handleNodeActive(...args) {
+        this.activeNodes = [...args[1]]
+        if (this.activeNodes.length > 0) {
+          let firstNode = this.activeNodes[0]
+          this.iconList = firstNode.getData('icon') || []
         } else {
-          // 增加icon
-          this.iconList.push(key)
+          this.iconList = []
         }
+      },
+
+      handleShowNodeIcon() {
+        this.dialogVisible = true
+      },
+
+      getHtml(icon) {
+        return /^<svg/.test(icon) ? icon : `<img src="${icon}" />`
+      },
+
+      setIcon(type, name) {
+        let key = type + '_' + name
+        let index = this.iconList.findIndex(item => {
+          return item === key
+        })
+        // 删除icon
+        if (index !== -1) {
+          this.iconList.splice(index, 1)
+        } else {
+          let typeIndex = this.iconList.findIndex(item => {
+            return item.split('_')[0] === type
+          })
+          // 替换icon
+          if (typeIndex !== -1) {
+            this.iconList.splice(typeIndex, 1, key)
+          } else {
+            // 增加icon
+            this.iconList.push(key)
+          }
+        }
+        this.activeNodes.forEach(node => {
+          // 使用统一的排序函数确保checkbox始终在最左边
+          const sortedIconList = sortIconList([...this.iconList])
+          node.setIcon(sortedIconList)
+        })
       }
-      this.activeNodes.forEach(node => {
-        // 使用统一的排序函数确保checkbox始终在最左边
-        const sortedIconList = sortIconList([...this.iconList])
-        node.setIcon(sortedIconList)
-      })
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.nodeIconDialog {
-  /deep/ .el-dialog__body {
-    padding: 0 20px;
-  }
-
-  .deleteBtn {
-    margin-bottom: 20px;
-  }
-
-  .item {
-    margin-bottom: 20px;
-    font-weight: bold;
-
-    .title {
-      margin-bottom: 10px;
+  .nodeIconDialog {
+    /deep/ .el-dialog__body {
+      padding: 0 20px;
     }
 
-    .list {
-      display: flex;
-      flex-wrap: wrap;
+    .deleteBtn {
+      margin-bottom: 20px;
+    }
 
-      .icon {
-        width: 24px;
-        height: 24px;
-        margin-right: 10px;
+    .item {
+      margin-bottom: 20px;
+      font-weight: bold;
+
+      .title {
         margin-bottom: 10px;
-        cursor: pointer;
-        position: relative;
+      }
 
-        /deep/ img {
-          width: 100%;
-          height: 100%;
-        }
+      .list {
+        display: flex;
+        flex-wrap: wrap;
 
-        /deep/ svg {
-          width: 100%;
-          height: 100%;
-        }
+        .icon {
+          width: 24px;
+          height: 24px;
+          margin-right: 10px;
+          margin-bottom: 10px;
+          cursor: pointer;
+          position: relative;
 
-        &.selected {
-          &::after {
-            content: '';
-            position: absolute;
-            left: -4px;
-            top: -4px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 2px solid #409eff;
+          /deep/ img {
+            width: 100%;
+            height: 100%;
+          }
+
+          /deep/ svg {
+            width: 100%;
+            height: 100%;
+          }
+
+          &.selected {
+            &::after {
+              content: '';
+              position: absolute;
+              left: -4px;
+              top: -4px;
+              width: 28px;
+              height: 28px;
+              border-radius: 50%;
+              border: 2px solid #409eff;
+            }
           }
         }
       }
     }
   }
-}
 </style>

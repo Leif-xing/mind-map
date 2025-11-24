@@ -5,23 +5,23 @@
 
 // 预定义上下文状态
 export const CONTEXTS = {
-  NORMAL: 'normal',           // 正常编辑状态
-  TEXT_EDITING: 'textEdit',   // 文本编辑状态  
+  NORMAL: 'normal', // 正常编辑状态
+  TEXT_EDITING: 'textEdit', // 文本编辑状态
   NODE_SELECTED: 'nodeSelect', // 节点选中状态
   MULTI_SELECTED: 'multiSelect', // 多选状态
-  READONLY: 'readonly',       // 只读状态
-  DIALOG_OPEN: 'dialogOpen',  // 对话框打开状态
-  SEARCH_MODE: 'searchMode',  // 搜索模式
+  READONLY: 'readonly', // 只读状态
+  DIALOG_OPEN: 'dialogOpen', // 对话框打开状态
+  SEARCH_MODE: 'searchMode', // 搜索模式
   MINDMAP_MANAGER: 'mindmapManager' // 导图管理页面状态
 }
 
 // 快捷键层级定义
 export const LAYERS = {
-  SYSTEM: 'system',           // 系统核心层 (优先级: 10)
+  SYSTEM: 'system', // 系统核心层 (优先级: 10)
   APPLICATION: 'application', // 应用功能层 (优先级: 8)
-  CONTEXT: 'context',         // 上下文功能层 (优先级: 6)
-  COMPONENT: 'component',     // 组件私有层 (优先级: 4)
-  TEMPORARY: 'temporary'      // 临时功能层 (优先级: 2)
+  CONTEXT: 'context', // 上下文功能层 (优先级: 6)
+  COMPONENT: 'component', // 组件私有层 (优先级: 4)
+  TEMPORARY: 'temporary' // 临时功能层 (优先级: 2)
 }
 
 // 层级优先级映射
@@ -40,7 +40,7 @@ class LayerManager {
   constructor() {
     this.layers = new Map()
     this.shortcuts = new Map()
-    
+
     // 初始化各层级
     Object.values(LAYERS).forEach(layer => {
       this.layers.set(layer, new Map())
@@ -51,22 +51,27 @@ class LayerManager {
    * 添加快捷键到指定层级
    */
   add(layer, shortcut, action, options = {}) {
-    const { context = CONTEXTS.NORMAL, priority, description = '', component = null } = options
-    
+    const {
+      context = CONTEXTS.NORMAL,
+      priority,
+      description = '',
+      component = null
+    } = options
+
     if (!this.layers.has(layer)) {
       throw new Error(`Invalid layer: ${layer}`)
     }
 
     const layerMap = this.layers.get(layer)
     const key = `${shortcut}:${context}`
-    
+
     // 检查冲突（静默处理）
     // if (layerMap.has(key)) {
     //   console.warn(`Shortcut conflict detected: ${shortcut} in ${layer}:${context}`)
     // }
 
     const finalPriority = priority || LAYER_PRIORITIES[layer]
-    
+
     const shortcutConfig = {
       shortcut,
       action,
@@ -79,13 +84,13 @@ class LayerManager {
     }
 
     layerMap.set(key, shortcutConfig)
-    
+
     // 建立快捷键到配置的映射
     if (!this.shortcuts.has(shortcut)) {
       this.shortcuts.set(shortcut, [])
     }
     this.shortcuts.get(shortcut).push(shortcutConfig)
-    
+
     return key
   }
 
@@ -98,11 +103,13 @@ class LayerManager {
 
     const key = `${shortcut}:${context}`
     const result = layerMap.delete(key)
-    
+
     // 从快捷键映射中移除
     if (this.shortcuts.has(shortcut)) {
       const configs = this.shortcuts.get(shortcut)
-      const index = configs.findIndex(c => c.layer === layer && c.context === context)
+      const index = configs.findIndex(
+        c => c.layer === layer && c.context === context
+      )
       if (index > -1) {
         configs.splice(index, 1)
         if (configs.length === 0) {
@@ -110,7 +117,7 @@ class LayerManager {
         }
       }
     }
-    
+
     return result
   }
 
@@ -119,7 +126,7 @@ class LayerManager {
    */
   cleanupComponent(componentName) {
     let cleanedCount = 0
-    
+
     this.layers.forEach((layerMap, layer) => {
       const toDelete = []
       layerMap.forEach((config, key) => {
@@ -127,14 +134,14 @@ class LayerManager {
           toDelete.push(key)
         }
       })
-      
+
       toDelete.forEach(key => {
         const config = layerMap.get(key)
         this.remove(layer, config.shortcut, config.context)
         cleanedCount++
       })
     })
-    
+
     return cleanedCount
   }
 
@@ -143,12 +150,13 @@ class LayerManager {
    */
   getActiveConfig(shortcut, currentContext = CONTEXTS.NORMAL) {
     const configs = this.shortcuts.get(shortcut) || []
-    
+
     // 过滤适用的配置（匹配上下文或全局）
-    const applicableConfigs = configs.filter(config => 
-      config.context === currentContext || config.context === CONTEXTS.NORMAL
+    const applicableConfigs = configs.filter(
+      config =>
+        config.context === currentContext || config.context === CONTEXTS.NORMAL
     )
-    
+
     // 按优先级排序，返回最高优先级的配置
     return applicableConfigs.sort((a, b) => b.priority - a.priority)[0] || null
   }
@@ -180,22 +188,22 @@ class ContextManager {
    */
   switch(newContext, options = {}) {
     const { push = false, disable = [], enable = [] } = options
-    
+
     const oldContext = this.currentContext
-    
+
     if (push) {
       this.contextStack.push(newContext)
     } else {
       this.contextStack[this.contextStack.length - 1] = newContext
     }
-    
+
     this.currentContext = newContext
-    
+
     // 通知监听器
     this.listeners.forEach(listener => {
       listener(newContext, oldContext, { disable, enable })
     })
-    
+
     return oldContext
   }
 
@@ -248,27 +256,27 @@ class ConflictResolver {
    */
   detectConflict(shortcut, layer, context, layerManager) {
     const existingConfigs = layerManager.shortcuts.get(shortcut) || []
-    
+
     const conflicts = existingConfigs.filter(config => {
       // 同层同上下文冲突
       if (config.layer === layer && config.context === context) {
         return true
       }
-      
+
       // 跨层优先级冲突检查
       const currentPriority = LAYER_PRIORITIES[layer]
       if (Math.abs(config.priority - currentPriority) < 2) {
         return true
       }
-      
+
       return false
     })
-    
+
     if (conflicts.length > 0) {
       this.conflicts.set(shortcut, conflicts)
       return conflicts
     }
-    
+
     return null
   }
 
@@ -278,15 +286,21 @@ class ConflictResolver {
   getSuggestions(shortcut, layer, context) {
     // 生成替代快捷键建议
     const suggestions = []
-    
+
     // 尝试添加修饰符
-    const modifiers = ['Shift+', 'Alt+', 'Ctrl+Shift+', 'Ctrl+Alt+', 'Shift+Alt+']
+    const modifiers = [
+      'Shift+',
+      'Alt+',
+      'Ctrl+Shift+',
+      'Ctrl+Alt+',
+      'Shift+Alt+'
+    ]
     modifiers.forEach(modifier => {
       if (!shortcut.includes(modifier.slice(0, -1))) {
         suggestions.push(modifier + shortcut)
       }
     })
-    
+
     return suggestions.slice(0, 3) // 返回前3个建议
   }
 
@@ -328,7 +342,7 @@ class UsageAnalytics {
         lastUsed: this.lastUsed.get(shortcut)
       })
     })
-    
+
     return stats.sort((a, b) => b.count - a.count)
   }
 
@@ -350,11 +364,15 @@ export class UnifiedShortcutManager {
     this.contexts = new ContextManager()
     this.conflicts = new ConflictResolver()
     this.analytics = new UsageAnalytics()
-    
+
     // 绑定原始KeyCommand的事件处理
-    this.originalAddShortcut = this.mindMap.keyCommand.addShortcut.bind(this.mindMap.keyCommand)
-    this.originalRemoveShortcut = this.mindMap.keyCommand.removeShortcut.bind(this.mindMap.keyCommand)
-    
+    this.originalAddShortcut = this.mindMap.keyCommand.addShortcut.bind(
+      this.mindMap.keyCommand
+    )
+    this.originalRemoveShortcut = this.mindMap.keyCommand.removeShortcut.bind(
+      this.mindMap.keyCommand
+    )
+
     // 监听上下文变化
     this.contexts.addListener(this.onContextChange.bind(this))
   }
@@ -363,10 +381,10 @@ export class UnifiedShortcutManager {
    * 统一注册快捷键接口
    */
   register(config) {
-    const { 
-      shortcut, 
-      action, 
-      layer = LAYERS.APPLICATION, 
+    const {
+      shortcut,
+      action,
+      layer = LAYERS.APPLICATION,
       context = CONTEXTS.NORMAL,
       priority,
       description = '',
@@ -374,7 +392,12 @@ export class UnifiedShortcutManager {
     } = config
 
     // 冲突检测（静默处理）
-    const conflicts = this.conflicts.detectConflict(shortcut, layer, context, this.layers)
+    const conflicts = this.conflicts.detectConflict(
+      shortcut,
+      layer,
+      context,
+      this.layers
+    )
 
     // 添加到层级管理
     const key = this.layers.add(layer, shortcut, action, {
@@ -386,7 +409,7 @@ export class UnifiedShortcutManager {
 
     // 注册到原始KeyCommand (仅当前上下文需要)
     if (context === this.contexts.getCurrent() || context === CONTEXTS.NORMAL) {
-      this.originalAddShortcut(shortcut, (e) => {
+      this.originalAddShortcut(shortcut, e => {
         this.executeShortcut(shortcut, e)
       })
     }
@@ -440,7 +463,7 @@ export class UnifiedShortcutManager {
   executeShortcut(shortcut, event) {
     const currentContext = this.contexts.getCurrent()
     const config = this.layers.getActiveConfig(shortcut, currentContext)
-    
+
     if (!config) {
       return false
     }
@@ -456,7 +479,7 @@ export class UnifiedShortcutManager {
         // 支持字符串形式的动作名称
         this.executeNamedAction(config.action, event)
       }
-      
+
       return true
     } catch (error) {
       // 静默处理错误
@@ -491,7 +514,7 @@ export class UnifiedShortcutManager {
    */
   onContextChange(newContext, oldContext, options) {
     // 重新注册当前上下文相关的快捷键
-    this.refreshShortcuts();
+    this.refreshShortcuts()
   }
 
   /**
@@ -499,16 +522,16 @@ export class UnifiedShortcutManager {
    */
   refreshShortcuts() {
     const currentContext = this.contexts.getCurrent()
-    
+
     // 清除所有原始注册
     // 注意：这里需要小心处理，避免影响系统原有的快捷键
-    
+
     // 重新注册当前上下文相关的快捷键
     this.layers.shortcuts.forEach((configs, shortcut) => {
       const activeConfig = this.layers.getActiveConfig(shortcut, currentContext)
       if (activeConfig) {
         this.originalRemoveShortcut(shortcut)
-        this.originalAddShortcut(shortcut, (e) => {
+        this.originalAddShortcut(shortcut, e => {
           this.executeShortcut(shortcut, e)
         })
       }
@@ -533,9 +556,11 @@ export class UnifiedShortcutManager {
   getHints(context = null) {
     const targetContext = context || this.contexts.getCurrent()
     const hints = []
-    
+
     this.layers.shortcuts.forEach((configs, shortcut) => {
-      const config = configs.find(c => c.context === targetContext || c.context === CONTEXTS.NORMAL)
+      const config = configs.find(
+        c => c.context === targetContext || c.context === CONTEXTS.NORMAL
+      )
       if (config) {
         hints.push({
           shortcut,
@@ -544,7 +569,7 @@ export class UnifiedShortcutManager {
         })
       }
     })
-    
+
     return hints.sort((a, b) => a.shortcut.localeCompare(b.shortcut))
   }
 

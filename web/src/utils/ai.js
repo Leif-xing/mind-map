@@ -12,15 +12,18 @@ class Ai {
     console.log('初始化AI提供商:', providerType, options)
     // 记录提供商类型供路由使用
     this.providerType = providerType
-    
+
     // 检查是否是预定义类型，否则使用通用AI提供商接口
     if (providerType === 'huoshan') {
       // 火山方舟接口
       this.baseData = {
-        api: options.api || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+        api:
+          options.api ||
+          'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
         method: options.method || 'POST',
         headers: {
-          Authorization: 'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY')
+          Authorization:
+            'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY')
         },
         data: {
           model: options.model,
@@ -33,7 +36,8 @@ class Ai {
         api: options.api || 'https://api.navy/v1/chat/completions',
         method: options.method || 'POST',
         headers: {
-          'Authorization': 'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY'),
+          Authorization:
+            'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY'),
           'Content-Type': 'application/json'
         },
         data: {
@@ -46,10 +50,14 @@ class Ai {
       // 在安全的系统中，前端可能没有实际的API密钥
       // 因此使用占位符密钥，实际密钥将在代理服务中处理
       this.baseData = {
-        api: options.api || options.apiEndpoint || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+        api:
+          options.api ||
+          options.apiEndpoint ||
+          'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
         method: options.method || 'POST',
         headers: {
-          'Authorization': 'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY'),
+          Authorization:
+            'Bearer ' + (options.key || options.apiKey || 'PLACEHOLDER_KEY'),
           'Content-Type': 'application/json'
         },
         data: {
@@ -58,7 +66,7 @@ class Ai {
         }
       }
     }
-    
+
     console.log('AI初始化完成:', this.baseData)
   }
 
@@ -108,7 +116,9 @@ class Ai {
             if (item.choices) {
               this.content += item.choices
                 .map(item2 => {
-                  return item2.delta && item2.delta.content ? item2.delta.content : ''
+                  return item2.delta && item2.delta.content
+                    ? item2.delta.content
+                    : ''
                 })
                 .join('')
             }
@@ -135,26 +145,27 @@ class Ai {
 
   async postMsg(data) {
     this.controller = new AbortController()
-    
+
     // 检测是否为部署环境
-    const isDeployed = window.location.hostname !== 'localhost' && 
-                      window.location.hostname !== '127.0.0.1'
-    
+    const isDeployed =
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1'
+
     console.log('AI请求环境检测:', {
       hostname: window.location.hostname,
       isDeployed: isDeployed,
       baseData: this.baseData
     })
-    
+
     let res
     if (isDeployed) {
       // 部署环境：尝试直接调用AI API，如果失败则使用代理
       console.log('部署环境 - 尝试直接调用AI API...')
-      
+
       // 确保使用HTTPS避免Mixed Content错误
       const secureApi = this.baseData.api.replace(/^http:\/\//, 'https://')
       console.log('使用安全API地址:', secureApi)
-      
+
       try {
         res = await fetch(secureApi, {
           signal: this.controller.signal,
@@ -169,13 +180,13 @@ class Ai {
           })
         })
         console.log('直接AI API响应状态:', res.status)
-        
+
         if (!res.ok) {
           throw new Error(`直接API调用失败: ${res.status}`)
         }
       } catch (directError) {
         console.warn('直接API调用失败，尝试使用代理:', directError.message)
-        
+
         // 使用Vercel代理
         try {
           res = await fetch('/api/ai-proxy', {
@@ -194,7 +205,7 @@ class Ai {
             })
           })
           console.log('代理API响应状态:', res.status)
-          
+
           if (!res.ok) {
             const errorText = await res.text()
             // console.error('代理API错误详情:', errorText)
@@ -202,7 +213,9 @@ class Ai {
           }
         } catch (proxyError) {
           console.error('代理API也失败:', proxyError)
-          throw new Error(`AI请求失败: ${directError.message} | 代理失败: ${proxyError.message}`)
+          throw new Error(
+            `AI请求失败: ${directError.message} | 代理失败: ${proxyError.message}`
+          )
         }
       }
     } else {
@@ -261,12 +274,12 @@ class Ai {
         }
       }
     }
-    
+
     if (res.status && res.status !== 200) {
       // console.error('请求失败，状态码:', res.status)
       throw new Error(`请求失败，状态码: ${res.status}`)
     }
-    
+
     console.log('开始读取流式响应...')
     return res.body.getReader()
   }

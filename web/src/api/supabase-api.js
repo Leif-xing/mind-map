@@ -5,8 +5,6 @@ import { compressMindMap, decompressMindMap } from '@/utils/mindmap-compression'
 export const userApi = {
   // 注册用户
   async register(username, password, email = null) {
-
-    
     // 首先检查用户名是否已存在
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
@@ -14,7 +12,8 @@ export const userApi = {
       .eq('username', username)
       .single()
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 表示未找到数据
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 表示未找到数据
       throw new Error('检查用户名时出错')
     }
 
@@ -25,12 +24,14 @@ export const userApi = {
     // 创建新用户（mind_map_permission 默认为 0）
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert([{
-        username,
-        email,
-        password_hash: await hashPassword(password), // 实际应用中应在后端处理
-        mind_map_permission: 0  // 新用户默认权限为0，需管理员设置
-      }])
+      .insert([
+        {
+          username,
+          email,
+          password_hash: await hashPassword(password), // 实际应用中应在后端处理
+          mind_map_permission: 0 // 新用户默认权限为0，需管理员设置
+        }
+      ])
       .select()
       .single()
 
@@ -55,7 +56,7 @@ export const userApi = {
 
     // 在实际应用中，密码验证应在后端完成
     // 这里简化处理，假设密码验证通过
-    
+
     // 转换字段名为前端使用的格式，确保与本地存储一致
     const transformedUser = {
       id: user.id,
@@ -64,7 +65,7 @@ export const userApi = {
       isAdmin: user.is_admin,
       mindMapPermission: user.mind_map_permission,
       createdAt: user.created_at
-    };
+    }
 
     return transformedUser
   },
@@ -157,7 +158,6 @@ export const userApi = {
   // 更新用户权限
   // 更新用户导图权限
   async updateMindMapPermission(userId, permission) {
-    
     const { error } = await supabase
       .from('users')
       .update({ mind_map_permission: permission })
@@ -188,14 +188,16 @@ export const mindMapApi = {
   async saveMindMap(userId, title, content) {
     // 压缩思维导图数据
     const compressedContent = compressMindMap(content)
-    
+
     const { data: mindMap, error } = await supabase
       .from('mind_maps')
-      .insert([{
-        user_id: userId,
-        title,
-        content: compressedContent  // 存储压缩后的内容
-      }])
+      .insert([
+        {
+          user_id: userId,
+          title,
+          content: compressedContent // 存储压缩后的内容
+        }
+      ])
       .select()
       .single()
 
@@ -210,12 +212,12 @@ export const mindMapApi = {
   async updateMindMap(mindMapId, title, content) {
     // 压缩思维导图数据
     const compressedContent = compressMindMap(content)
-    
+
     const { data: updatedMindMap, error } = await supabase
       .from('mind_maps')
       .update({
         title,
-        content: compressedContent,  // 存储压缩后的内容
+        content: compressedContent, // 存储压缩后的内容
         updated_at: new Date().toISOString()
       })
       .eq('id', mindMapId)
@@ -234,7 +236,7 @@ export const mindMapApi = {
     // 只获取元数据，不获取内容（内容在单独获取时才解压缩）
     const { data: mindMaps, error } = await supabase
       .from('mind_maps')
-      .select('id, user_id, title, created_at, updated_at, is_public')  // 不包含content字段
+      .select('id, user_id, title, created_at, updated_at, is_public') // 不包含content字段
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
 
@@ -273,27 +275,26 @@ export const mindMapApi = {
   // 批量获取思维导图
   async getMindMapsByIds(mindMapIds, userId) {
     if (!mindMapIds || mindMapIds.length === 0) {
-      return [];
+      return []
     }
-
 
     // 验证ID格式
     for (let i = 0; i < Math.min(5, mindMapIds.length); i++) {
-      const id = mindMapIds[i];
+      const id = mindMapIds[i]
     }
 
     // 按批次处理，避免超出数据库查询限制
-    const batchSize = 100; // Supabase IN查询建议的限制
-    const allResults = [];
+    const batchSize = 100 // Supabase IN查询建议的限制
+    const allResults = []
 
     for (let i = 0; i < mindMapIds.length; i += batchSize) {
-      const batchIds = mindMapIds.slice(i, i + batchSize);
-      
+      const batchIds = mindMapIds.slice(i, i + batchSize)
+
       // 额外验证批次ID
-      
+
       // 输出模拟的 SQL 查询语句
-      const quotedIds = batchIds.map(id => `'${id}'`).join(', ');
-      
+      const quotedIds = batchIds.map(id => `'${id}'`).join(', ')
+
       const { data: mindMaps, error } = await supabase
         .from('mind_maps')
         .select('*')
@@ -301,9 +302,10 @@ export const mindMapApi = {
         .eq('user_id', userId)
 
       if (error) {
-        throw new Error(`批量获取思维导图失败: ${error.message || error.code || '未知错误'}`);
+        throw new Error(
+          `批量获取思维导图失败: ${error.message || error.code || '未知错误'}`
+        )
       }
-
 
       // 解压缩每个思维导图的内容
       for (const mindMap of mindMaps) {
@@ -312,16 +314,15 @@ export const mindMapApi = {
             mindMap.content = decompressMindMap(mindMap.content)
           } catch (decompressError) {
             // 跳过解压失败的项，继续处理其他项
-            continue;
+            continue
           }
         }
       }
 
-      allResults.push(...mindMaps);
+      allResults.push(...mindMaps)
     }
 
-    
-    return allResults;
+    return allResults
   },
 
   // 删除思维导图
@@ -338,18 +339,18 @@ export const mindMapApi = {
 
     return true
   },
-  
+
   // 更新思维导图标题
   async updateMindMapTitle(mindMapId, userId, title) {
     const { data: updatedMindMap, error } = await supabase
       .from('mind_maps')
-      .update({ 
+      .update({
         title,
         updated_at: new Date().toISOString()
       })
       .eq('id', mindMapId)
       .eq('user_id', userId)
-      .select('id, user_id, title, created_at, updated_at, is_public')  // 只返回元数据，不返回内容
+      .select('id, user_id, title, created_at, updated_at, is_public') // 只返回元数据，不返回内容
       .single()
 
     if (error) {
@@ -365,13 +366,18 @@ export const aiConfigApi = {
   // 管理员创建AI提供商配置
   async createAiProviderConfig(configData) {
     // 检查必填字段
-    if (!configData.providerName || !configData.apiEndpoint || !configData.modelName || !configData.apiKey) {
+    if (
+      !configData.providerName ||
+      !configData.apiEndpoint ||
+      !configData.modelName ||
+      !configData.apiKey
+    ) {
       throw new Error('缺少必要字段')
     }
-    
+
     // 加密API密钥
     const encryptedApiKey = await encryptApiKey(configData.apiKey)
-    
+
     // 检查是否已存在相同API密钥和模型名称的配置
     const { data: existingConfig, error: existingError } = await supabase
       .from('ai_provider_configs')
@@ -379,31 +385,36 @@ export const aiConfigApi = {
       .eq('api_key_encrypted', encryptedApiKey)
       .eq('model_name', configData.modelName)
       .single()
-    
+
     if (existingConfig) {
-      throw new Error(`已存在相同的API密钥和模型名称配置: ${existingConfig.provider_name}`)
+      throw new Error(
+        `已存在相同的API密钥和模型名称配置: ${existingConfig.provider_name}`
+      )
     }
-    
+
     const { data: aiConfig, error } = await supabase
       .from('ai_provider_configs')
-      .insert([{
-        provider_name: configData.providerName,
-        api_endpoint: configData.apiEndpoint,
-        model_name: configData.modelName,
-        api_key_encrypted: encryptedApiKey, // 加密存储
-        is_active: configData.isActive !== undefined ? configData.isActive : true,
-        created_by: configData.createdBy
-      }])
+      .insert([
+        {
+          provider_name: configData.providerName,
+          api_endpoint: configData.apiEndpoint,
+          model_name: configData.modelName,
+          api_key_encrypted: encryptedApiKey, // 加密存储
+          is_active:
+            configData.isActive !== undefined ? configData.isActive : true,
+          created_by: configData.createdBy
+        }
+      ])
       .select()
       .single()
 
     if (error) {
       throw new Error(error.message || '创建AI配置失败')
     }
-    
+
     return transformAiConfigForFrontend(aiConfig)
   },
-  
+
   // 管理员更新AI提供商配置
   async updateAiProviderConfig(configId, configData) {
     // 获取现有配置以确保所有必需字段都存在
@@ -421,9 +432,12 @@ export const aiConfigApi = {
       provider_name: configData.providerName,
       api_endpoint: configData.apiEndpoint,
       model_name: configData.modelName,
-      is_active: configData.isActive !== undefined ? configData.isActive : existingConfig.is_active
+      is_active:
+        configData.isActive !== undefined
+          ? configData.isActive
+          : existingConfig.is_active
     }
-    
+
     // 如果提供了新API密钥，则使用新密钥，否则保留现有密钥以满足数据库约束
     if (configData.apiKey) {
       updateData.api_key_encrypted = await encryptApiKey(configData.apiKey)
@@ -431,7 +445,7 @@ export const aiConfigApi = {
       // 保留现有的加密密钥，以避免违反数据库的非空约束
       updateData.api_key_encrypted = existingConfig.api_key_encrypted
     }
-    
+
     const { data: aiConfig, error } = await supabase
       .from('ai_provider_configs')
       .update(updateData)
@@ -442,10 +456,10 @@ export const aiConfigApi = {
     if (error) {
       throw new Error(error.message || '更新AI配置失败')
     }
-    
+
     return transformAiConfigForFrontend(aiConfig)
   },
-  
+
   // 管理员删除AI提供商配置
   async deleteAiProviderConfig(configId) {
     const { error } = await supabase
@@ -456,25 +470,25 @@ export const aiConfigApi = {
     if (error) {
       throw new Error(error.message || '删除AI配置失败')
     }
-    
+
     return true
   },
-  
+
   // 获取所有AI提供商配置（仅管理员）
   async getAllAiProviderConfigs() {
     const { data, error } = await supabase
       .from('ai_provider_configs')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (error) {
       throw new Error(error.message || '获取AI配置失败')
     }
-    
+
     // 转换数据格式以适配前端使用
     return data.map(config => transformAiConfigForFrontend(config))
   },
-  
+
   // 获取用户可用的AI配置（普通用户只能看到基本信息）
   async getUserAvailableAiConfigs(userId) {
     // 首先验证用户权限
@@ -483,61 +497,62 @@ export const aiConfigApi = {
       .select('is_admin, mind_map_permission')
       .eq('id', userId)
       .single()
-    
+
     if (userError) {
       throw new Error('验证用户权限失败')
     }
-    
+
     if (!user) {
       throw new Error('用户不存在')
     }
-    
+
     // 检查AI使用权限：只要有思维导图权限，就具有AI权限
     if (!user.is_admin && user.mind_map_permission !== 1) {
       throw new Error('无AI使用权限')
     }
-    
+
     let query = supabase
       .from('ai_provider_configs')
-      .select('id, provider_name, api_endpoint, model_name, is_active, created_at, updated_at')
-      .eq('is_active', true)  // 只返回激活的配置
-    
+      .select(
+        'id, provider_name, api_endpoint, model_name, is_active, created_at, updated_at'
+      )
+      .eq('is_active', true) // 只返回激活的配置
+
     if (!user.is_admin) {
       // 普通用户只能看到激活的配置
       query = query.eq('is_active', true)
     }
-    
+
     const { data, error } = await query
-    
+
     if (error) {
       throw new Error(error.message || '获取AI配置失败')
     }
-    
+
     return data
   },
-  
+
   // 更新用户密码
   async updatePassword(userId, newPassword) {
     // 注意：在实际应用中，密码更新应该使用专门的密码重置流程
     // 这里只是一个示例实现
-    const hashedPassword = btoa(newPassword); // 简单的Base64编码，实际应用中应使用更强的哈希算法
-    
+    const hashedPassword = btoa(newPassword) // 简单的Base64编码，实际应用中应使用更强的哈希算法
+
     const { error } = await supabase
       .from('users')
-      .update({ 
+      .update({
         password: hashedPassword,
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString()
       })
       .eq('id', userId)
-    
-    if (error) {
-      throw new Error(error.message || '更新密码失败');
-    }
-    
 
-    return { success: true };
+    if (error) {
+      throw new Error(error.message || '更新密码失败')
+    }
+
+    return { success: true }
   },
-  
+
   // 用户选择AI配置
   async selectAiConfig(userId, configId) {
     // 首先验证用户权限
@@ -546,16 +561,16 @@ export const aiConfigApi = {
       .select('is_admin, mind_map_permission')
       .eq('id', userId)
       .single()
-    
+
     if (userError || !user) {
       throw new Error('验证用户权限失败')
     }
-    
+
     // 检查AI使用权限：只要有思维导图权限，就具有AI权限
     if (!user.is_admin && user.mind_map_permission !== 1) {
       throw new Error('无AI使用权限')
     }
-    
+
     // 验证配置是否存在且激活
     const { data: config, error: configError } = await supabase
       .from('ai_provider_configs')
@@ -563,24 +578,24 @@ export const aiConfigApi = {
       .eq('id', configId)
       .eq('is_active', true)
       .single()
-    
+
     if (configError || !config) {
       throw new Error('指定的AI配置不存在或不可用')
     }
-    
+
     // 更新用户当前选择的AI配置
     const { error } = await supabase
       .from('users')
       .update({ current_ai_config_id: configId })
       .eq('id', userId)
-    
+
     if (error) {
       throw new Error(error.message || '更新AI配置选择失败')
     }
-    
+
     return true
   },
-  
+
   // 获取用户当前选择的AI配置信息（不包含密钥）
   async getUserCurrentAiConfig(userId) {
     const { data: userInfo, error: userError } = await supabase
@@ -588,88 +603,92 @@ export const aiConfigApi = {
       .select('current_ai_config_id, is_admin, mind_map_permission')
       .eq('id', userId)
       .single()
-    
+
     if (userError || !userInfo) {
       throw new Error('获取用户信息失败')
     }
-    
+
     // 检查AI使用权限：只要有思维导图权限，就具有AI权限
     if (!userInfo.is_admin && userInfo.mind_map_permission !== 1) {
       throw new Error('无AI使用权限')
     }
-    
+
     if (!userInfo.current_ai_config_id) {
       return null
     }
-    
+
     const { data: config, error: configError } = await supabase
       .from('ai_provider_configs')
       .select('id, provider_name, api_endpoint, model_name')
       .eq('id', userInfo.current_ai_config_id)
       .eq('is_active', true)
       .single()
-    
+
     if (configError || !config) {
       return null
     }
-    
+
     return config
   },
-  
+
   // 根据API接口获取AI提供商配置
   async getAiProviderConfigsByEndpoint(apiEndpoint) {
     // 首先验证管理员权限
     // 注意：此方法仅在管理员上下文中使用，需确保调用方已验证权限
-    
+
     // 确保API端点是有效的URL格式
     if (!apiEndpoint || typeof apiEndpoint !== 'string') {
       throw new Error('API端点必须是有效的字符串')
     }
-    
+
     // 检查API端点是否是完整URL
-    let validatedEndpoint = apiEndpoint.trim();
-    if (!validatedEndpoint.startsWith('http://') && !validatedEndpoint.startsWith('https://')) {
+    let validatedEndpoint = apiEndpoint.trim()
+    if (
+      !validatedEndpoint.startsWith('http://') &&
+      !validatedEndpoint.startsWith('https://')
+    ) {
       throw new Error('API端点必须是完整URL（以http://或https://开头）')
     }
-    
+
     try {
       const { data: configs, error } = await supabase
         .from('ai_provider_configs')
         .select('*')
-        .eq('api_endpoint', validatedEndpoint)  // 根据API接口匹配
-      
+        .eq('api_endpoint', validatedEndpoint) // 根据API接口匹配
+
       if (error) {
         throw new Error(error.message || '获取AI配置失败')
       }
-      
+
       // 转换数据格式以适配前端使用
-      return configs.map(config => transformAiConfigForFrontend(config));
+      return configs.map(config => transformAiConfigForFrontend(config))
     } catch (error) {
-      throw error;
+      throw error
     }
   },
 
   // 通过后端代理调用AI服务（基于数据库配置）
   async callAiService(userId, aiPayload) {
-    
     // 验证必要参数
     if (!userId) {
       throw new Error('用户ID不能为空')
     }
-    
+
     if (!aiPayload) {
       throw new Error('AI请求数据不能为空')
     }
-    
+
     // 获取用户当前选择的AI配置ID（从localStorage）
     let currentConfigId = null
     try {
-      const localConfig = JSON.parse(localStorage.getItem('SIMPLE_MIND_MAP_LOCAL_CONFIG') || '{}')
+      const localConfig = JSON.parse(
+        localStorage.getItem('SIMPLE_MIND_MAP_LOCAL_CONFIG') || '{}'
+      )
       currentConfigId = localConfig.aiSystem?.currentProvider || null
     } catch (e) {
       console.warn('无法从localStorage获取AI配置ID:', e)
     }
-    
+
     // 调用后端AI代理服务
     const proxyResponse = await fetch('/api/ai-proxy', {
       method: 'POST',
@@ -683,7 +702,7 @@ export const aiConfigApi = {
         aiPayload: aiPayload
       })
     })
-    
+
     if (!proxyResponse.ok) {
       const errorText = await proxyResponse.text().catch(() => '')
       let errorData = {}
@@ -692,7 +711,7 @@ export const aiConfigApi = {
       } catch (e) {
         errorData = { error: errorText || '未知错误' }
       }
-      
+
       // 根据状态码提供更具体的错误信息
       if (proxyResponse.status === 401) {
         throw new Error(errorData.error || '认证失败，请重新登录')
@@ -705,10 +724,13 @@ export const aiConfigApi = {
       } else if (proxyResponse.status === 504) {
         throw new Error(errorData.error || 'AI服务请求超时')
       } else {
-        throw new Error(errorData.error || `AI服务调用失败: ${proxyResponse.status} ${proxyResponse.statusText}`)
+        throw new Error(
+          errorData.error ||
+            `AI服务调用失败: ${proxyResponse.status} ${proxyResponse.statusText}`
+        )
       }
     }
-    
+
     const result = await proxyResponse.json()
     return result
   }
@@ -736,7 +758,7 @@ function transformAiConfigForFrontend(config) {
     modelName: config.model_name,
     isActive: config.is_active,
     createdAt: config.created_at,
-    updatedAt: config.updated_at,
+    updatedAt: config.updated_at
     // 不包含api_key_encrypted字段
   }
 }
@@ -747,7 +769,7 @@ const tagStorageManager = {
   getTagsKey(userId) {
     return `user_tags_${userId}`
   },
-  
+
   getMindMapTagsKey(userId) {
     return `user_mindmap_tags_${userId}`
   },
@@ -825,12 +847,14 @@ export const tagApi = {
       // 首先尝试Supabase
       const { data: tag, error } = await supabase
         .from('tags')
-        .insert([{
-          name: name.trim(),
-          color: color,
-          is_public: false,
-          owner_id: userId
-        }])
+        .insert([
+          {
+            name: name.trim(),
+            color: color,
+            is_public: false,
+            owner_id: userId
+          }
+        ])
         .select()
         .single()
 
@@ -846,7 +870,7 @@ export const tagApi = {
 
     // 本地存储备用方案
     const userTags = tagStorageManager.getUserTags(userId)
-    
+
     // 检查是否有重复标签名称
     if (userTags.some(tag => tag.name === name.trim())) {
       throw new Error('您已经创建了同名的标签')
@@ -862,7 +886,7 @@ export const tagApi = {
     }
 
     userTags.push(newTag)
-    
+
     if (!tagStorageManager.saveUserTags(userId, userTags)) {
       throw new Error('保存标签到本地存储失败')
     }
@@ -901,7 +925,9 @@ export const tagApi = {
     }
 
     if (usageCount && usageCount.length > 0) {
-      throw new Error('该标签正在被使用，无法删除。请先从相关思维导图中移除该标签')
+      throw new Error(
+        '该标签正在被使用，无法删除。请先从相关思维导图中移除该标签'
+      )
     }
 
     // 删除标签（RLS策略确保只能删除自己的标签）
@@ -926,7 +952,7 @@ export const tagApi = {
     }
 
     const updateData = {}
-    
+
     // 验证和处理更新字段
     if (updates.name !== undefined) {
       if (!updates.name || updates.name.length > 50) {
@@ -976,7 +1002,8 @@ export const tagApi = {
       // 首先尝试Supabase
       const { data: tags, error } = await supabase
         .from('tags')
-        .select(`
+        .select(
+          `
           id,
           name,
           color,
@@ -984,7 +1011,8 @@ export const tagApi = {
           owner_id,
           created_at,
           mindmap_tags(count)
-        `)
+        `
+        )
         .or(`owner_id.eq.${userId},is_public.eq.true`)
         .order('is_public', { ascending: true }) // 私有标签在前
         .order('created_at', { ascending: false })
@@ -1008,7 +1036,9 @@ export const tagApi = {
 
     // 计算每个标签的使用次数
     const tagsWithUsage = userTags.map(tag => {
-      const usageCount = mindMapTagRelations.filter(relation => relation.tag_id === tag.id).length
+      const usageCount = mindMapTagRelations.filter(
+        relation => relation.tag_id === tag.id
+      ).length
       return {
         ...tag,
         usageCount: usageCount,
@@ -1017,7 +1047,9 @@ export const tagApi = {
     })
 
     // 按创建时间倒序排列
-    tagsWithUsage.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    tagsWithUsage.sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    )
 
     return tagsWithUsage
   },
@@ -1032,10 +1064,12 @@ export const tagApi = {
       // 直接尝试插入，利用数据库约束来处理重复和权限验证
       const { data: relation, error } = await supabase
         .from('mindmap_tags')
-        .insert([{
-          mindmap_id: mindMapId,
-          tag_id: tagId
-        }])
+        .insert([
+          {
+            mindmap_id: mindMapId,
+            tag_id: tagId
+          }
+        ])
         .select()
         .single()
 
@@ -1044,12 +1078,14 @@ export const tagApi = {
       }
 
       // 处理特定错误
-      if (error.code === '23505') { // 唯一约束冲突
+      if (error.code === '23505') {
+        // 唯一约束冲突
         throw new Error('该思维导图已经添加了此标签')
-      } else if (error.code === '23503') { // 外键约束冲突
+      } else if (error.code === '23503') {
+        // 外键约束冲突
         throw new Error('思维导图或标签不存在')
       }
-      
+
       throw new Error(error.message || '添加标签失败')
     } catch (error) {
       // 如果Supabase失败，使用本地存储备用方案
@@ -1070,8 +1106,8 @@ export const tagApi = {
     }
 
     // 检查是否已经关联
-    const existingRelation = mindMapTagRelations.find(r => 
-      r.mindmap_id === mindMapId && r.tag_id === tagId
+    const existingRelation = mindMapTagRelations.find(
+      r => r.mindmap_id === mindMapId && r.tag_id === tagId
     )
     if (existingRelation) {
       throw new Error('该思维导图已经添加了此标签')
@@ -1086,7 +1122,7 @@ export const tagApi = {
     }
 
     mindMapTagRelations.push(newRelation)
-    
+
     if (!tagStorageManager.saveMindMapTags(userId, mindMapTagRelations)) {
       throw new Error('保存标签关联到本地存储失败')
     }
@@ -1135,10 +1171,12 @@ export const tagApi = {
           // 添加标签关联
           const { data: relation, error } = await supabase
             .from('mindmap_tags')
-            .insert([{
-              mindmap_id: mindMapId,
-              tag_id: tagId
-            }])
+            .insert([
+              {
+                mindmap_id: mindMapId,
+                tag_id: tagId
+              }
+            ])
             .select()
             .single()
 
@@ -1169,8 +1207,8 @@ export const tagApi = {
     }
 
     // 检查是否已经关联
-    const existingRelation = mindMapTagRelations.find(r => 
-      r.mindmap_id === mindMapId && r.tag_id === tagId
+    const existingRelation = mindMapTagRelations.find(
+      r => r.mindmap_id === mindMapId && r.tag_id === tagId
     )
     if (existingRelation) {
       throw new Error('该思维导图已经添加了此标签')
@@ -1185,7 +1223,7 @@ export const tagApi = {
     }
 
     mindMapTagRelations.push(newRelation)
-    
+
     if (!tagStorageManager.saveMindMapTags(userId, mindMapTagRelations)) {
       throw new Error('保存标签关联到本地存储失败')
     }
@@ -1222,22 +1260,22 @@ export const tagApi = {
   // 本地存储备用方案
   async removeTagFromMindMapLocal(userId, mindMapId, tagId) {
     const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
-    
+
     // 找到并移除关联
-    const relationIndex = mindMapTagRelations.findIndex(r => 
-      r.mindmap_id === mindMapId && r.tag_id === tagId
+    const relationIndex = mindMapTagRelations.findIndex(
+      r => r.mindmap_id === mindMapId && r.tag_id === tagId
     )
-    
+
     if (relationIndex === -1) {
       throw new Error('标签关联不存在')
     }
-    
+
     mindMapTagRelations.splice(relationIndex, 1)
-    
+
     if (!tagStorageManager.saveMindMapTags(userId, mindMapTagRelations)) {
       throw new Error('移除标签关联失败')
     }
-    
+
     return true
   },
 
@@ -1292,7 +1330,8 @@ export const tagApi = {
       if (!mindMapError && mindMap) {
         const { data: tags, error } = await supabase
           .from('mindmap_tags')
-          .select(`
+          .select(
+            `
             tag_id,
             tags (
               id,
@@ -1301,7 +1340,8 @@ export const tagApi = {
               is_public,
               owner_id
             )
-          `)
+          `
+          )
           .eq('mindmap_id', mindMapId)
 
         if (!error) {
@@ -1322,21 +1362,23 @@ export const tagApi = {
     const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
 
     // 获取当前思维导图的标签关联
-    const mindMapRelations = mindMapTagRelations.filter(relation => 
-      relation.mindmap_id === mindMapId
+    const mindMapRelations = mindMapTagRelations.filter(
+      relation => relation.mindmap_id === mindMapId
     )
 
     // 根据关联获取标签详情
-    const tags = mindMapRelations.map(relation => {
-      const tag = userTags.find(t => t.id === relation.tag_id)
-      if (tag) {
-        return {
-          ...tag,
-          isOwned: tag.owner_id === userId
+    const tags = mindMapRelations
+      .map(relation => {
+        const tag = userTags.find(t => t.id === relation.tag_id)
+        if (tag) {
+          return {
+            ...tag,
+            isOwned: tag.owner_id === userId
+          }
         }
-      }
-      return null
-    }).filter(Boolean)
+        return null
+      })
+      .filter(Boolean)
 
     return tags
   },
@@ -1353,7 +1395,8 @@ export const tagApi = {
 
     let query = supabase
       .from('mind_maps')
-      .select(`
+      .select(
+        `
         id,
         title,
         created_at,
@@ -1367,7 +1410,8 @@ export const tagApi = {
             color
           )
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
 
     if (matchAll) {
@@ -1379,7 +1423,9 @@ export const tagApi = {
       query = query.in('mindmap_tags.tag_id', tagIds)
     }
 
-    const { data: mindMaps, error } = await query.order('updated_at', { ascending: false })
+    const { data: mindMaps, error } = await query.order('updated_at', {
+      ascending: false
+    })
 
     if (error) {
       throw new Error(error.message || '根据标签筛选思维导图失败')
@@ -1398,7 +1444,12 @@ export const tagApi = {
 
   // 批量为思维导图添加标签
   async addTagsToMindMap(userId, mindMapId, tagIds) {
-    if (!userId || !mindMapId || !Array.isArray(tagIds) || tagIds.length === 0) {
+    if (
+      !userId ||
+      !mindMapId ||
+      !Array.isArray(tagIds) ||
+      tagIds.length === 0
+    ) {
       throw new Error('参数不正确')
     }
 
@@ -1482,12 +1533,14 @@ export const tagApi = {
       // 首先尝试从Supabase获取
       const { data, error } = await supabase
         .from('mind_maps')
-        .select(`
+        .select(
+          `
           id,
           mindmap_tags (
             tag_id
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
 
       if (!error) {
@@ -1499,7 +1552,10 @@ export const tagApi = {
         return mindmapTagIds
       }
 
-      console.warn('Supabase获取思维导图标签关联失败，使用本地存储:', error.message)
+      console.warn(
+        'Supabase获取思维导图标签关联失败，使用本地存储:',
+        error.message
+      )
     } catch (error) {
       console.warn('Supabase连接失败，使用本地存储:', error.message)
     }
@@ -1507,7 +1563,7 @@ export const tagApi = {
     // 本地存储备用方案
     const mindMapTagRelations = tagStorageManager.getMindMapTags(userId)
     const mindmapTagIds = {}
-    
+
     mindMapTagRelations.forEach(relation => {
       if (!mindmapTagIds[relation.mindmap_id]) {
         mindmapTagIds[relation.mindmap_id] = []
@@ -1539,14 +1595,16 @@ export const tagApi = {
     // 获取使用统计
     const { data: stats, error } = await supabase
       .from('mindmap_tags')
-      .select(`
+      .select(
+        `
         mindmap_id,
         mind_maps (
           id,
           title,
           updated_at
         )
-      `)
+      `
+      )
       .eq('tag_id', tagId)
       .eq('mind_maps.user_id', userId)
 
@@ -1580,13 +1638,15 @@ export const tagApi = {
   async getMindMapTagRelations(userId) {
     const { data: relations, error } = await supabase
       .from('mindmap_tags')
-      .select(`
+      .select(
+        `
         mindmap_id,
         tag_id,
         mind_maps!inner (
           user_id
         )
-      `)
+      `
+      )
       .eq('mind_maps.user_id', userId)
 
     if (error) {

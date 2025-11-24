@@ -3,24 +3,30 @@ import Vuex from 'vuex'
 import { storeLocalConfig, getUserData, storeUserData } from '@/api'
 import { userApi, mindMapApi, aiConfigApi } from '@/api/supabase-api'
 import { compressMindMap, decompressMindMap } from '@/utils/mindmap-compression'
-import { setMindMapCache, getMindMapCache, removeMindMapCache } from '@/utils/mindmap-cache-manager'
+import {
+  setMindMapCache,
+  getMindMapCache,
+  removeMindMapCache
+} from '@/utils/mindmap-cache-manager'
 
 Vue.use(Vuex)
 
 // 初始化用户数据
-const initialUserData = getUserData();
-const initialUsers = initialUserData ? initialUserData.users : [
-  // 预设一个管理员账号
-  {
-    id: 1,
-    username: 'admin',
-    password: 'admin123',
-    isAdmin: true,
-    mindMapPermission: 1, // 导图权限，默认为1（可用）
-    createdAt: new Date().toISOString()
-  }
-];
-const initialUserIdCounter = initialUserData ? initialUserData.userIdCounter : 1;
+const initialUserData = getUserData()
+const initialUsers = initialUserData
+  ? initialUserData.users
+  : [
+      // 预设一个管理员账号
+      {
+        id: 1,
+        username: 'admin',
+        password: 'admin123',
+        isAdmin: true,
+        mindMapPermission: 1, // 导图权限，默认为1（可用）
+        createdAt: new Date().toISOString()
+      }
+    ]
+const initialUserIdCounter = initialUserData ? initialUserData.userIdCounter : 1
 
 const store = new Vuex.Store({
   state: {
@@ -105,7 +111,7 @@ const store = new Vuex.Store({
       if (data.aiSystem) {
         state.aiSystem = { ...state.aiSystem, ...data.aiSystem }
       }
-      
+
       // 向后兼容：迁移旧的aiConfig到新格式
       if (data.aiConfig && !data.aiSystem) {
         state.aiSystem.providers.huoshan.config = {
@@ -114,14 +120,14 @@ const store = new Vuex.Store({
         }
         state.aiSystem.currentProvider = 'huoshan'
       }
-      
+
       // 处理其他配置
       Object.keys(data).forEach(key => {
         if (key !== 'aiSystem' && key !== 'aiConfig') {
           state.localConfig[key] = data[key]
         }
       })
-      
+
       storeLocalConfig({
         ...state.localConfig,
         aiSystem: state.aiSystem
@@ -157,14 +163,14 @@ const store = new Vuex.Store({
     setIsDragOutlineTreeNode(state, data) {
       state.isDragOutlineTreeNode = data
     },
-    
+
     setCurrentMindMapId(state, mindMapId) {
       state.currentMindMapId = mindMapId
     },
-    
+
     // 设置本地缓存的思维导图列表
     setLocalMindMaps(state, mindMaps) {
-      state.localMindMaps = mindMaps;
+      state.localMindMaps = mindMaps
     },
 
     // 扩展主题列表
@@ -176,20 +182,20 @@ const store = new Vuex.Store({
     setBgList(state, data) {
       state.bgList = data
     },
-    
+
     // 添加用户
     addUser(state, user) {
       // 为新用户分配递增ID
-      state.userIdCounter += 1;
+      state.userIdCounter += 1
       const newUser = {
         ...user,
         id: state.userIdCounter
-      };
-      state.users.push(newUser);
+      }
+      state.users.push(newUser)
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
     },
-    
+
     // 更新用户管理员状态
     updateUserAdminStatus(state, { userId, isAdmin }) {
       const user = state.users.find(u => u.id === userId)
@@ -199,14 +205,14 @@ const store = new Vuex.Store({
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
     },
-    
+
     // 删除用户
     deleteUser(state, userId) {
       state.users = state.users.filter(u => u.id !== userId)
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
     },
-    
+
     // 更新用户密码
     updateUserPassword(state, { userId, newPassword }) {
       const user = state.users.find(u => u.id === userId)
@@ -216,7 +222,7 @@ const store = new Vuex.Store({
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
     },
-    
+
     // 更新用户导图权限
     updateUserMindMapPermission(state, { userId, mindMapPermission }) {
       const user = state.users.find(u => u.id === userId)
@@ -226,12 +232,12 @@ const store = new Vuex.Store({
       // 保存到localStorage
       storeUserData(state.users, state.userIdCounter)
     },
-    
+
     // 设置Supabase启用状态
     setSupabaseEnabled(state, enabled) {
       state.supabaseEnabled = enabled
     },
-    
+
     // 设置当前用户
     setCurrentUser(state, user) {
       state.currentUser = user
@@ -249,10 +255,10 @@ const store = new Vuex.Store({
         throw new Error('当前未启用Supabase，无法注册新用户')
       }
     },
-    
+
     // 用户登录（使用Supabase）
     async loginUser({ commit }, { username, password }) {
-      let user;
+      let user
       if (this.state.supabaseEnabled) {
         // 使用Supabase进行登录
         const supabaseUser = await userApi.login(username, password)
@@ -264,24 +270,24 @@ const store = new Vuex.Store({
           isAdmin: supabaseUser.isAdmin,
           mindMapPermission: supabaseUser.mindMapPermission,
           createdAt: supabaseUser.createdAt
-        };
+        }
       } else {
         // 使用本地存储（当前实现）
         const localUsers = this.state.users
-        user = localUsers.find(u => 
-          u.username === username && u.password === password
+        user = localUsers.find(
+          u => u.username === username && u.password === password
         )
         if (!user || user.mindMapPermission !== 1) {
           throw new Error('用户名或密码错误，或权限不足')
         }
       }
-      
+
       // 在store中设置当前用户
-      commit('setCurrentUser', user);
-      
-      return user;
+      commit('setCurrentUser', user)
+
+      return user
     },
-    
+
     // 获取用户思维导图列表
     async getUserMindMaps({ commit }, userId) {
       if (this.state.supabaseEnabled) {
@@ -291,13 +297,16 @@ const store = new Vuex.Store({
         return []
       }
     },
-    
+
     // 保存思维导图（根据是否传入ID来决定是创建还是更新），并同步到本地缓存
-    async saveMindMap({ commit, state }, { id, userId, title, content, isUpdate }) {
+    async saveMindMap(
+      { commit, state },
+      { id, userId, title, content, isUpdate }
+    ) {
       if (this.state.supabaseEnabled) {
-        let result;
+        let result
         if (id) {
-          result = await mindMapApi.updateMindMap(id, title, content);
+          result = await mindMapApi.updateMindMap(id, title, content)
           // 同步到本地缓存 - 更新现有记录
           const updatedMindMap = {
             id: result.id,
@@ -306,24 +315,23 @@ const store = new Vuex.Store({
             created_at: result.created_at,
             updated_at: result.updated_at,
             is_public: result.is_public
-          };
-          
+          }
+
           // 更新本地缓存列表中的对应记录
-          const updatedLocalList = state.localMindMaps.map(mindMap => 
+          const updatedLocalList = state.localMindMaps.map(mindMap =>
             mindMap.id === id ? updatedMindMap : mindMap
-          );
-          commit('setLocalMindMaps', updatedLocalList);
-          
+          )
+          commit('setLocalMindMaps', updatedLocalList)
+
           // 更新内容缓存
           try {
-            setMindMapCache(id, content);
+            setMindMapCache(id, content)
           } catch (error) {
-            console.error('更新思维导图内容缓存失败:', error);
+            console.error('更新思维导图内容缓存失败:', error)
           }
-          
         } else {
           // 如果没有传入ID，则创建新思维导图
-          result = await mindMapApi.saveMindMap(userId, title, content);
+          result = await mindMapApi.saveMindMap(userId, title, content)
           // 同步到本地缓存 - 添加新记录
           const newMindMap = {
             id: result.id,
@@ -332,25 +340,25 @@ const store = new Vuex.Store({
             created_at: result.created_at,
             updated_at: result.updated_at,
             is_public: result.is_public
-          };
-          
+          }
+
           // 将新记录添加到本地缓存列表的开头
-          const updatedLocalList = [newMindMap, ...state.localMindMaps];
-          commit('setLocalMindMaps', updatedLocalList);
-          
+          const updatedLocalList = [newMindMap, ...state.localMindMaps]
+          commit('setLocalMindMaps', updatedLocalList)
+
           // 更新内容缓存
           try {
-            setMindMapCache(result.id, content);
+            setMindMapCache(result.id, content)
           } catch (error) {
-            console.error('创建思维导图内容缓存失败:', error);
+            console.error('创建思维导图内容缓存失败:', error)
           }
         }
-        return result;
+        return result
       } else {
-        return null;
+        return null
       }
     },
-    
+
     // 更新思维导图标题
     async updateMindMapTitle({ commit }, { mindMapId, userId, title }) {
       if (this.state.supabaseEnabled) {
@@ -360,26 +368,30 @@ const store = new Vuex.Store({
         return null
       }
     },
-    
+
     // 删除思维导图
     async deleteMindMap({ commit, state }, { mindMapId, userId }) {
       if (this.state.supabaseEnabled) {
         const result = await mindMapApi.deleteMindMap(mindMapId, userId)
-        
+
         // 删除成功后，同步更新本地缓存
         if (result) {
           // 从本地思维导图列表中移除
-          const updatedLocalList = state.localMindMaps.filter(mindMap => mindMap.id !== mindMapId)
+          const updatedLocalList = state.localMindMaps.filter(
+            mindMap => mindMap.id !== mindMapId
+          )
           commit('setLocalMindMaps', updatedLocalList)
-          
+
           // 清理该思维导图的内容缓存
           try {
-            const { removeMindMapCache } = await import('@/utils/mindmap-cache-manager')
+            const { removeMindMapCache } = await import(
+              '@/utils/mindmap-cache-manager'
+            )
             removeMindMapCache(mindMapId)
           } catch (error) {
             console.warn('清理思维导图内容缓存失败:', error)
           }
-          
+
           // 清理该思维导图的标签关联缓存
           try {
             const TagCacheManager = await import('@/utils/tagCacheManager')
@@ -388,14 +400,14 @@ const store = new Vuex.Store({
             console.warn('清理思维导图标签关联缓存失败:', error)
           }
         }
-        
+
         return result
       } else {
         // 本地删除逻辑
         return null
       }
     },
-    
+
     // 获取特定思维导图的完整数据
     async getMindMapById({ commit }, { mindMapId, userId }) {
       if (this.state.supabaseEnabled) {
@@ -405,38 +417,38 @@ const store = new Vuex.Store({
         return null
       }
     },
-    
+
     // 切换Supabase启用状态
     toggleSupabase({ commit }, enabled) {
       commit('setSupabaseEnabled', enabled)
     },
-    
+
     // 用户登出
     logout({ commit }) {
-      commit('setCurrentUser', null);
+      commit('setCurrentUser', null)
     },
-    
+
     // 更新用户密码
     async updateUserPassword({ commit, state }, { userId, newPassword }) {
       if (state.supabaseEnabled) {
         // 使用 Supabase API 更新密码
         try {
-          await userApi.updatePassword(userId, newPassword);
+          await userApi.updatePassword(userId, newPassword)
         } catch (error) {
           // console.error('更新数据库密码失败:', error);
-          throw error;
+          throw error
         }
       } else {
         // 使用本地存储更新密码
-        commit('updateUserPassword', { userId, newPassword });
+        commit('updateUserPassword', { userId, newPassword })
       }
     },
-    
+
     // 获取用户可用的AI配置
     async fetchAvailableAiConfigs({ commit, state }, userId) {
       try {
         const configs = await aiConfigApi.getUserAvailableAiConfigs(userId)
-        
+
         // 更新state中的AI系统配置，但不包含敏感信息
         const updatedProviders = {}
         configs.forEach(config => {
@@ -445,12 +457,12 @@ const store = new Vuex.Store({
             api: config.api_endpoint || config.apiEndpoint,
             type: 'custom', // 默认类型，可以根据实际配置调整
             config: {
-              model: config.model_name || config.modelName,
+              model: config.model_name || config.modelName
               // 不包含API密钥等敏感信息
             }
           }
         })
-        
+
         const newAiSystem = {
           ...state.aiSystem,
           providers: {
@@ -458,7 +470,7 @@ const store = new Vuex.Store({
             ...updatedProviders
           }
         }
-        
+
         commit('setLocalConfig', { aiSystem: newAiSystem })
         return configs
       } catch (error) {
@@ -466,40 +478,41 @@ const store = new Vuex.Store({
         throw error
       }
     },
-    
+
     // 用户选择AI配置（优化版本：立即更新UI，异步更新数据库）
     async selectAiConfig({ commit, state }, { userId, configId }) {
       try {
         // 首先尝试从本地状态获取配置，避免重复数据库查询
-        const providers = state.aiSystem.providers || {};
-        const configInState = providers[configId];
-        
+        const providers = state.aiSystem.providers || {}
+        const configInState = providers[configId]
+
         if (configInState) {
           // 如果配置已经在本地状态中，立即更新当前配置，然后异步更新数据库
           const newAiSystem = {
             ...state.aiSystem,
             currentProvider: configId
-          };
-          commit('setLocalConfig', { aiSystem: newAiSystem });
-          
+          }
+          commit('setLocalConfig', { aiSystem: newAiSystem })
+
           // 异步更新数据库，不阻塞UI响应
-          aiConfigApi.selectAiConfig(userId, configId)
+          aiConfigApi
+            .selectAiConfig(userId, configId)
             .then(success => {
               if (success) {
               } else {
               }
             })
-            .catch(error => {
-            });
-          
-          return true;
+            .catch(error => {})
+
+          return true
         } else {
           // 如果配置不在本地状态中，按原方式处理
           const success = await aiConfigApi.selectAiConfig(userId, configId)
           if (success) {
             // 从后端获取所选配置的详细信息
-            const selectedConfig = await aiConfigApi.getUserCurrentAiConfig(userId)
-            
+            const selectedConfig =
+              await aiConfigApi.getUserCurrentAiConfig(userId)
+
             if (selectedConfig) {
               // 更新本地状态，包括当前配置ID和配置详情
               const newAiSystem = {
@@ -508,18 +521,22 @@ const store = new Vuex.Store({
                 providers: {
                   ...state.aiSystem.providers,
                   [configId]: {
-                    name: selectedConfig.provider_name || selectedConfig.providerName,
-                    api: selectedConfig.api_endpoint || selectedConfig.apiEndpoint,
+                    name:
+                      selectedConfig.provider_name ||
+                      selectedConfig.providerName,
+                    api:
+                      selectedConfig.api_endpoint || selectedConfig.apiEndpoint,
                     type: 'custom',
                     config: {
-                      model: selectedConfig.model_name || selectedConfig.modelName,
+                      model:
+                        selectedConfig.model_name || selectedConfig.modelName
                       // 注意：不包含API密钥等敏感信息
                     }
                   }
                 }
               }
               commit('setLocalConfig', { aiSystem: newAiSystem })
-              
+
               // 添加调试信息
             } else {
               // 如果获取不到配置详情，至少更新当前选择
@@ -529,7 +546,7 @@ const store = new Vuex.Store({
               }
               commit('setLocalConfig', { aiSystem: newAiSystem })
             }
-            
+
             return success
           }
         }
@@ -538,7 +555,7 @@ const store = new Vuex.Store({
         throw error
       }
     },
-    
+
     // 获取用户当前AI配置
     async fetchUserCurrentAiConfig({ commit, state }, userId) {
       try {
@@ -552,17 +569,17 @@ const store = new Vuex.Store({
               api: config.api_endpoint || config.apiEndpoint,
               type: 'custom',
               config: {
-                model: config.model_name || config.modelName,
+                model: config.model_name || config.modelName
               }
             }
           }
-          
+
           const newAiSystem = {
             ...state.aiSystem,
             currentProvider: config.id,
             providers: updatedProviders
           }
-          
+
           commit('setLocalConfig', { aiSystem: newAiSystem })
           return config
         }
@@ -572,13 +589,14 @@ const store = new Vuex.Store({
         throw error
       }
     },
-    
+
     // 通过代理调用AI服务
     async callAiThroughProxy({ state }, { userId, aiPayload }) {
       try {
         // 检测是否为部署环境（通过环境变量手动设置）
-        const IS_VERCEL_DEPLOYED = process.env.VUE_APP_IS_VERCEL_DEPLOYED !== 'false' // 默认true，只有明确设置为'false'才是本地
-        
+        const IS_VERCEL_DEPLOYED =
+          process.env.VUE_APP_IS_VERCEL_DEPLOYED !== 'false' // 默认true，只有明确设置为'false'才是本地
+
         if (IS_VERCEL_DEPLOYED) {
           // 🚀 部署环境：使用新方式（通过代理调用）
           return await aiConfigApi.callAiService(userId, aiPayload)
@@ -595,256 +613,278 @@ const store = new Vuex.Store({
     // 批量获取思维导图内容
     async getMindMapsByIds({ dispatch }, { mindMapIds, userId }) {
       if (!mindMapIds || mindMapIds.length === 0) {
-        return [];
+        return []
       }
-      
-      
+
       try {
-        const result = await mindMapApi.getMindMapsByIds(mindMapIds, userId);
-        return result;
+        const result = await mindMapApi.getMindMapsByIds(mindMapIds, userId)
+        return result
       } catch (error) {
-        
         console.error({
           message: error.message,
           stack: error.stack,
           name: error.name
-        });
-        throw error;
+        })
+        throw error
       }
     },
 
     // 通用的增量同步函数：检测并同步数据库与内容缓存的差异
     async syncMindMapCacheIncrementally({ dispatch }, userId) {
       try {
-        
         // 步骤1：获取数据库中的元数据
-        const databaseMindMaps = await dispatch('getUserMindMaps', userId);
-        
+        const databaseMindMaps = await dispatch('getUserMindMaps', userId)
+
         // 步骤2：检测差异
         // 获取内容缓存中的所有key
-        const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
+        const allCacheKeys = Object.keys(localStorage).filter(key =>
+          key.startsWith('mindmap_cache_')
+        )
         // 提取缓存中的思维导图ID
-        const cachedMindMapIds = allCacheKeys.map(key => key.replace('mindmap_cache_', ''));
-        
+        const cachedMindMapIds = allCacheKeys.map(key =>
+          key.replace('mindmap_cache_', '')
+        )
+
         // 找出内容缓存中缺失的思维导图ID，过滤掉无效ID
         const missingIds = databaseMindMaps
-          .filter(mindMap => mindMap && mindMap.id && !cachedMindMapIds.includes(mindMap.id))
-          .map(mindMap => mindMap.id);
-        
-        const needUpdateIds = [...missingIds];
-        
-        
+          .filter(
+            mindMap =>
+              mindMap && mindMap.id && !cachedMindMapIds.includes(mindMap.id)
+          )
+          .map(mindMap => mindMap.id)
+
+        const needUpdateIds = [...missingIds]
+
         if (needUpdateIds.length === 0) {
           // 仍然需要同步元数据到Vuex
-          this.commit('setLocalMindMaps', databaseMindMaps);
-          return 0; // 没有更新任何内容
+          this.commit('setLocalMindMaps', databaseMindMaps)
+          return 0 // 没有更新任何内容
         }
-        
+
         // 步骤3：批量获取需要更新的思维导图内容
         try {
           const fullMindMapDataList = await dispatch('getMindMapsByIds', {
             mindMapIds: needUpdateIds,
             userId: userId
-          });
-          
+          })
+
           // 步骤4：更新内容缓存
-          let totalUpdated = 0;
+          let totalUpdated = 0
           for (const fullMindMapData of fullMindMapDataList) {
             if (fullMindMapData && fullMindMapData.content) {
-              setMindMapCache(fullMindMapData.id, fullMindMapData.content);
-              totalUpdated++;
+              setMindMapCache(fullMindMapData.id, fullMindMapData.content)
+              totalUpdated++
             }
           }
-          
+
           // 同步元数据到Vuex
-          this.commit('setLocalMindMaps', databaseMindMaps);
-          
-          return totalUpdated;
+          this.commit('setLocalMindMaps', databaseMindMaps)
+
+          return totalUpdated
         } catch (error) {
-          throw error;
+          throw error
         }
       } catch (error) {
-        throw error; // 抛出错误以便调用者处理
+        throw error // 抛出错误以便调用者处理
       }
     },
-    
+
     // 判断当前思维导图是否需要保存
     async needsSave({ dispatch }, { currentMindMap }) {
       // 如果当前思维导图ID为空，则需要保存
       if (!currentMindMap || !currentMindMap.id) {
-        return true;
+        return true
       }
-      
+
       try {
         // 从内容缓存中根据ID获取对应的思维导图数据
-        const cachedMindMap = await dispatch('getMindMapContent', currentMindMap.id);
-        
+        const cachedMindMap = await dispatch(
+          'getMindMapContent',
+          currentMindMap.id
+        )
+
         // 如果缓存中没有找到对应数据，则需要保存
         if (!cachedMindMap) {
-          return true;
+          return true
         }
-        
+
         // 比较当前思维导图数据与缓存中的数据，只比较root部分
-        const currentRootStr = JSON.stringify(currentMindMap.data.root);
-        const cachedRootStr = JSON.stringify(cachedMindMap.root);
+        const currentRootStr = JSON.stringify(currentMindMap.data.root)
+        const cachedRootStr = JSON.stringify(cachedMindMap.root)
         // 如果数据不同，则需要保存
-        return currentRootStr !== cachedRootStr;
+        return currentRootStr !== cachedRootStr
       } catch (error) {
-        console.error('比较思维导图数据时出错:', error);
+        console.error('比较思维导图数据时出错:', error)
         // 出错时保守地返回需要保存
-        return true;
+        return true
       }
     },
-    
+
     // 判断当前思维导图是否需要保存（用于检查差异，带日志输出）
     async needsSaveForCheck({ dispatch }, { currentMindMap }) {
       // 递归比较节点的辅助函数
       const compareNodesForDiff = (oldNode, newNode, depth) => {
         // 检查节点是否存在
-        const oldExists = oldNode !== null && oldNode !== undefined;
-        const newExists = newNode !== null && newNode !== undefined;
+        const oldExists = oldNode !== null && oldNode !== undefined
+        const newExists = newNode !== null && newNode !== undefined
 
         if (!oldExists && newExists) {
           // 继续比较新节点的子节点
           if (newNode.children) {
             newNode.children.forEach((child, index) => {
-              compareNodesForDiff(null, child, depth + 1);
-            });
+              compareNodesForDiff(null, child, depth + 1)
+            })
           }
-          return;
+          return
         }
 
         if (oldExists && !newExists) {
-          return;
+          return
         }
 
         if (!oldExists && !newExists) {
           // 都不存在，无需比较
-          return;
+          return
         }
 
         // 比较节点数据
-        const oldNodeDataStr = JSON.stringify(oldNode.data || {});
-        const newNodeDataStr = JSON.stringify(newNode.data || {});
+        const oldNodeDataStr = JSON.stringify(oldNode.data || {})
+        const newNodeDataStr = JSON.stringify(newNode.data || {})
 
         if (oldNodeDataStr !== newNodeDataStr) {
-          console.log(`  `.repeat(depth) + `节点数据变化: "${oldNode.data?.text || '未知节点'}" -> "${newNode.data?.text || '未知节点'}"`);
-          console.log(`  `.repeat(depth + 1) + `旧数据:`, oldNode.data);
-          console.log(`  `.repeat(depth + 1) + `新数据:`, newNode.data);
+          console.log(
+            `  `.repeat(depth) +
+              `节点数据变化: "${oldNode.data?.text || '未知节点'}" -> "${newNode.data?.text || '未知节点'}"`
+          )
+          console.log(`  `.repeat(depth + 1) + `旧数据:`, oldNode.data)
+          console.log(`  `.repeat(depth + 1) + `新数据:`, newNode.data)
         }
 
         // 比较子节点数量
-        const oldChildren = oldNode.children || [];
-        const newChildren = newNode.children || [];
+        const oldChildren = oldNode.children || []
+        const newChildren = newNode.children || []
 
-        const maxChildren = Math.max(oldChildren.length, newChildren.length);
+        const maxChildren = Math.max(oldChildren.length, newChildren.length)
 
         // 比较每个子节点
         for (let i = 0; i < maxChildren; i++) {
           if (i >= oldChildren.length) {
             // 新增子节点
-            console.log(`  `.repeat(depth + 1) + `子节点新增 [${i}]: "${newChildren[i].data?.text || '未知节点'}"`);
+            console.log(
+              `  `.repeat(depth + 1) +
+                `子节点新增 [${i}]: "${newChildren[i].data?.text || '未知节点'}"`
+            )
           } else if (i >= newChildren.length) {
             // 删除子节点
-            console.log(`  `.repeat(depth + 1) + `子节点删除 [${i}]: "${oldChildren[i].data?.text || '未知节点'}"`);
+            console.log(
+              `  `.repeat(depth + 1) +
+                `子节点删除 [${i}]: "${oldChildren[i].data?.text || '未知节点'}"`
+            )
           } else {
             // 继续比较子节点
-            compareNodesForDiff(oldChildren[i], newChildren[i], depth + 1);
+            compareNodesForDiff(oldChildren[i], newChildren[i], depth + 1)
           }
         }
-      };
+      }
 
       // 如果当前思维导图ID为空，则需要保存
       if (!currentMindMap || !currentMindMap.id) {
-        return true;
+        return true
       }
-      
+
       try {
         // 从内容缓存中根据ID获取对应的思维导图数据
-        const cachedMindMap = await dispatch('getMindMapContent', currentMindMap.id);
-        
+        const cachedMindMap = await dispatch(
+          'getMindMapContent',
+          currentMindMap.id
+        )
+
         // 如果缓存中没有找到对应数据，则需要保存
         if (!cachedMindMap) {
-          return true;
+          return true
         }
-        
+
         // 比较当前思维导图数据与缓存中的数据，只比较root部分
-        const currentRootStr = JSON.stringify(currentMindMap.data.root);
-        const cachedRootStr = JSON.stringify(cachedMindMap.root);
-        
+        const currentRootStr = JSON.stringify(currentMindMap.data.root)
+        const cachedRootStr = JSON.stringify(cachedMindMap.root)
+
         // 如果数据不同，则需要保存，同时输出差异
         if (currentRootStr !== cachedRootStr) {
-          console.group('🔍 思维导图数据差异检测');
-          console.log('当前数据 (Current):', currentMindMap.data.root);
-          console.log('缓存数据 (Cached):', cachedMindMap.root);
-          
+          console.group('🔍 思维导图数据差异检测')
+          console.log('当前数据 (Current):', currentMindMap.data.root)
+          console.log('缓存数据 (Cached):', cachedMindMap.root)
+
           // 找出具体差异
-          const currentRoot = currentMindMap.data.root;
-          const cachedRoot = cachedMindMap.root;
-          
+          const currentRoot = currentMindMap.data.root
+          const cachedRoot = cachedMindMap.root
+
           // 比较基本属性
-          if (JSON.stringify(currentRoot.data) !== JSON.stringify(cachedRoot.data)) {
+          if (
+            JSON.stringify(currentRoot.data) !== JSON.stringify(cachedRoot.data)
+          ) {
             console.log('节点数据变化:', {
               old: cachedRoot.data,
               new: currentRoot.data
-            });
+            })
           }
-          
+
           // 比较子节点数量
-          const currentChildren = currentRoot.children || [];
-          const cachedChildren = cachedRoot.children || [];
-          
+          const currentChildren = currentRoot.children || []
+          const cachedChildren = cachedRoot.children || []
+
           if (currentChildren.length !== cachedChildren.length) {
             console.log('子节点数量变化:', {
               oldCount: cachedChildren.length,
               newCount: currentChildren.length
-            });
+            })
           }
-          
+
           // 递归比较子节点
-          compareNodesForDiff(cachedRoot, currentRoot, 0);
-          
-          console.groupEnd();
-          return true;
+          compareNodesForDiff(cachedRoot, currentRoot, 0)
+
+          console.groupEnd()
+          return true
         }
-        return false;
+        return false
       } catch (error) {
-        console.error('比较思维导图数据时出错:', error);
+        console.error('比较思维导图数据时出错:', error)
         // 出错时保守地返回需要保存
-        return true;
+        return true
       }
     },
-    
+
     // 从缓存中获取思维导图内容
-    async getMindMapContent({ }, mindMapId) {
+    async getMindMapContent({}, mindMapId) {
       if (!mindMapId) {
-        return null;
+        return null
       }
-      
+
       try {
         // 检查localStorage中所有以mindmap_cache_开头的键
-        const allCacheKeys = Object.keys(localStorage).filter(key => key.startsWith('mindmap_cache_'));
-        const cachedContent = getMindMapCache(mindMapId);
+        const allCacheKeys = Object.keys(localStorage).filter(key =>
+          key.startsWith('mindmap_cache_')
+        )
+        const cachedContent = getMindMapCache(mindMapId)
         if (!cachedContent) {
-          return null;
+          return null
         }
-        return cachedContent;
+        return cachedContent
       } catch (error) {
-        return null;
+        return null
       }
     }
   },
   getters: {
     // 获取用户可用的AI配置
-    availableAiConfigs: (state) => {
+    availableAiConfigs: state => {
       // 从AI系统中提取可用的配置信息，不包含敏感信息如API密钥
-      const currentProviderId = state.aiSystem.currentProvider;
-      const providers = state.aiSystem.providers || {};
-      
+      const currentProviderId = state.aiSystem.currentProvider
+      const providers = state.aiSystem.providers || {}
+
       // 只返回激活状态的配置（普通用户视角）
-      const availableConfigs = [];
+      const availableConfigs = []
       Object.keys(providers).forEach(key => {
-        const provider = providers[key];
+        const provider = providers[key]
         // 仅返回非内置配置（即从数据库获取的配置）
         if (key !== 'huoshan' && key !== 'navy') {
           availableConfigs.push({
@@ -855,11 +895,11 @@ const store = new Vuex.Store({
             is_active: true, // 从数据库加载的配置默认为激活状态
             created_at: provider.createdAt,
             updated_at: provider.updatedAt
-          });
+          })
         }
-      });
-      
-      return availableConfigs;
+      })
+
+      return availableConfigs
     }
   }
 })

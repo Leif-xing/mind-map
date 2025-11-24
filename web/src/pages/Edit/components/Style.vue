@@ -24,8 +24,7 @@
                 :label="item.name"
                 :value="item.value"
                 :style="{ fontFamily: item.value }"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
           <div class="rowItem">
@@ -43,8 +42,7 @@
                 :label="item"
                 :value="item"
                 :style="{ fontSize: item + 'px' }"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
           <div class="rowItem">
@@ -60,8 +58,7 @@
                 :key="item.value"
                 :label="item.name"
                 :value="item.value"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -120,18 +117,18 @@
               v-model="style.textDecoration"
               @change="update('textDecoration')"
             >
-              <el-radio-button label="none">{{
-                $t('style.none')
-              }}</el-radio-button>
-              <el-radio-button label="underline">{{
-                $t('style.underline')
-              }}</el-radio-button>
-              <el-radio-button label="line-through">{{
-                $t('style.lineThrough')
-              }}</el-radio-button>
-              <el-radio-button label="overline">{{
-                $t('style.overline')
-              }}</el-radio-button>
+              <el-radio-button label="none">
+                {{ $t('style.none') }}
+              </el-radio-button>
+              <el-radio-button label="underline">
+                {{ $t('style.underline') }}
+              </el-radio-button>
+              <el-radio-button label="line-through">
+                {{ $t('style.lineThrough') }}
+              </el-radio-button>
+              <el-radio-button label="overline">
+                {{ $t('style.overline') }}
+              </el-radio-button>
             </el-radio-group>
           </el-popover>
         </div>
@@ -178,8 +175,8 @@
                       style.borderDasharray === item.value
                         ? '#409eff'
                         : isDark
-                        ? '#fff'
-                        : '#000'
+                          ? '#fff'
+                          : '#000'
                     "
                     :stroke-dasharray="item.value"
                   ></line>
@@ -227,8 +224,7 @@
                 :key="item"
                 :label="item"
                 :value="item"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -245,9 +241,9 @@
             <el-popover ref="popover4" placement="bottom" trigger="hover">
               <Color :color="style.fillColor" @change="changeFillColor"></Color>
             </el-popover>
-            <span class="name" style="margin-left: 20px;">{{
-              $t('style.gradientStyle')
-            }}</span>
+            <span class="name" style="margin-left: 20px">
+              {{ $t('style.gradientStyle') }}
+            </span>
             <el-checkbox
               v-model="style.gradientStyle"
               @change="update('gradientStyle')"
@@ -294,8 +290,7 @@
                 :key="item.value"
                 :label="item.name"
                 :value="item.value"
-              >
-              </el-option>
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -316,7 +311,11 @@
                 :key="item.value"
                 :label="item.name"
                 :value="item.value"
-                style="display: flex; justify-content: center; align-items: center;"
+                style="
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                "
               >
                 <svg
                   :width="item.width || 60"
@@ -330,8 +329,8 @@
                       style.shape === item.value
                         ? '#409eff'
                         : isDark
-                        ? '#fff'
-                        : '#000'
+                          ? '#fff'
+                          : '#000'
                     "
                     stroke-width="2"
                   ></path>
@@ -380,8 +379,8 @@
                       style.lineDasharray === item.value
                         ? '#409eff'
                         : isDark
-                        ? '#fff'
-                        : '#000'
+                          ? '#fff'
+                          : '#000'
                     "
                     :stroke-dasharray="item.value"
                   ></line>
@@ -469,18 +468,18 @@
               size="mini"
               @change="update('imgPlacement')"
             >
-              <el-radio-button label="top">{{
-                $t('style.top')
-              }}</el-radio-button>
-              <el-radio-button label="bottom">{{
-                $t('style.bottom')
-              }}</el-radio-button>
-              <el-radio-button label="left">{{
-                $t('style.left')
-              }}</el-radio-button>
-              <el-radio-button label="right">{{
-                $t('style.right')
-              }}</el-radio-button>
+              <el-radio-button label="top">
+                {{ $t('style.top') }}
+              </el-radio-button>
+              <el-radio-button label="bottom">
+                {{ $t('style.bottom') }}
+              </el-radio-button>
+              <el-radio-button label="left">
+                {{ $t('style.left') }}
+              </el-radio-button>
+              <el-radio-button label="right">
+                {{ $t('style.right') }}
+              </el-radio-button>
             </el-radio-group>
           </div>
         </div>
@@ -494,12 +493,12 @@
               size="mini"
               @change="update('tagPlacement')"
             >
-              <el-radio-button label="right">{{
-                $t('style.right')
-              }}</el-radio-button>
-              <el-radio-button label="bottom">{{
-                $t('style.bottom')
-              }}</el-radio-button>
+              <el-radio-button label="right">
+                {{ $t('style.right') }}
+              </el-radio-button>
+              <el-radio-button label="bottom">
+                {{ $t('style.bottom') }}
+              </el-radio-button>
             </el-radio-group>
           </div>
         </div>
@@ -513,344 +512,372 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import Color from './Color.vue'
-import {
-  fontFamilyList,
-  fontSizeList,
-  borderWidthList,
-  borderDasharrayList,
-  borderRadiusList,
-  shapeList,
-  shapeListMap,
-  linearGradientDirList,
-  alignList
-} from '@/config'
-import { mapState } from 'vuex'
+  import Sidebar from './Sidebar.vue'
+  import Color from './Color.vue'
+  import {
+    fontFamilyList,
+    fontSizeList,
+    borderWidthList,
+    borderDasharrayList,
+    borderRadiusList,
+    shapeList,
+    shapeListMap,
+    linearGradientDirList,
+    alignList
+  } from '@/config'
+  import { mapState } from 'vuex'
 
-// 节点样式设置
-export default {
-  components: {
-    Sidebar,
-    Color
-  },
-  props: {
-    mindMap: {
-      type: Object
-    }
-  },
-  data() {
-    return {
-      fontSizeList,
-      borderWidthList,
-      borderRadiusList,
-      activeNodes: [],
-      style: {
-        shape: '',
-        paddingX: 0,
-        paddingY: 0,
-        color: '',
-        fontFamily: '',
-        fontSize: '',
-        textDecoration: '',
-        fontWeight: '',
-        fontStyle: '',
-        borderWidth: '',
-        borderColor: '',
-        fillColor: '',
-        borderDasharray: '',
-        borderRadius: '',
-        lineColor: '',
-        lineDasharray: '',
-        lineWidth: '',
-        lineMarkerDir: '',
-        gradientStyle: false,
-        startColor: '',
-        endColor: '',
-        linearGradientDir: '',
-        lineFlow: false,
-        lineFlowForward: true,
-        lineFlowDuration: 1,
-        textAlign: '',
-        imgPlacement: '',
-        tagPlacement: ''
+  // 节点样式设置
+  export default {
+    components: {
+      Sidebar,
+      Color
+    },
+    props: {
+      mindMap: {
+        type: Object
       }
-    }
-  },
-  computed: {
-    ...mapState({
-      isDark: state => state.localConfig.isDark,
-      activeSidebar: state => state.activeSidebar
-    }),
-    fontFamilyList() {
-      return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
     },
-    borderDasharrayList() {
-      return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
-    },
-    shapeList() {
-      return [
-        ...(shapeList[this.$i18n.locale] || shapeList.zh),
-        ...this.mindMap.extendShapeList
-          .filter(item => {
-            return !['fishHead'].includes(item.name)
-          })
-          .map(item => {
-            return {
-              width: '40px',
-              name: item.nameShow,
-              value: item.name
-            }
-          })
-      ]
-    },
-    shapeListMap() {
-      const map2 = {}
-      this.mindMap.extendShapeList.forEach(item => {
-        map2[item.name] = item.path
-      })
+    data() {
       return {
-        ...shapeListMap,
-        ...map2
+        fontSizeList,
+        borderWidthList,
+        borderRadiusList,
+        activeNodes: [],
+        style: {
+          shape: '',
+          paddingX: 0,
+          paddingY: 0,
+          color: '',
+          fontFamily: '',
+          fontSize: '',
+          textDecoration: '',
+          fontWeight: '',
+          fontStyle: '',
+          borderWidth: '',
+          borderColor: '',
+          fillColor: '',
+          borderDasharray: '',
+          borderRadius: '',
+          lineColor: '',
+          lineDasharray: '',
+          lineWidth: '',
+          lineMarkerDir: '',
+          gradientStyle: false,
+          startColor: '',
+          endColor: '',
+          linearGradientDir: '',
+          lineFlow: false,
+          lineFlowForward: true,
+          lineFlowDuration: 1,
+          textAlign: '',
+          imgPlacement: '',
+          tagPlacement: ''
+        }
       }
     },
-    linearGradientDirList() {
-      return (
-        linearGradientDirList[this.$i18n.locale] || linearGradientDirList.zh
-      )
-    },
-    alignList() {
-      return alignList[this.$i18n.locale] || alignList.zh
-    }
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'nodeStyle') {
-        this.$refs.sidebar.show = true
-      } else {
-        this.$refs.sidebar.show = false
-      }
-    }
-  },
-  created() {
-    this.$bus.$on('node_active', this.onNodeActive)
-  },
-  beforeDestroy() {
-    this.$bus.$off('node_active', this.onNodeActive)
-  },
-  methods: {
-    // 监听节点激活事件
-    onNodeActive(...args) {
-      this.$nextTick(() => {
-        this.activeNodes = [...args[1]]
-        this.initNodeStyle()
-      })
-    },
-
-    // 初始节点样式
-    initNodeStyle() {
-      if (this.activeNodes.length <= 0) {
-        return
-      }
-      Object.keys(this.style).forEach(item => {
-        this.style[item] = this.activeNodes[0].getStyle(item, false)
-      })
-      this.initLinearGradientDir()
-    },
-
-    // 初始化渐变方向样式
-    initLinearGradientDir() {
-      const startDir = this.activeNodes[0].getStyle('startDir', false)
-      const endDir = this.activeNodes[0].getStyle('endDir', false)
-      const target = this.linearGradientDirList.find(item => {
+    computed: {
+      ...mapState({
+        isDark: state => state.localConfig.isDark,
+        activeSidebar: state => state.activeSidebar
+      }),
+      fontFamilyList() {
+        return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
+      },
+      borderDasharrayList() {
+        return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
+      },
+      shapeList() {
+        return [
+          ...(shapeList[this.$i18n.locale] || shapeList.zh),
+          ...this.mindMap.extendShapeList
+            .filter(item => {
+              return !['fishHead'].includes(item.name)
+            })
+            .map(item => {
+              return {
+                width: '40px',
+                name: item.nameShow,
+                value: item.name
+              }
+            })
+        ]
+      },
+      shapeListMap() {
+        const map2 = {}
+        this.mindMap.extendShapeList.forEach(item => {
+          map2[item.name] = item.path
+        })
+        return {
+          ...shapeListMap,
+          ...map2
+        }
+      },
+      linearGradientDirList() {
         return (
-          item.start[0] === startDir[0] &&
-          item.start[1] === startDir[1] &&
-          item.end[0] === endDir[0] &&
-          item.end[1] === endDir[1]
+          linearGradientDirList[this.$i18n.locale] || linearGradientDirList.zh
         )
-      })
-      if (target) {
-        this.style.linearGradientDir = target.value
+      },
+      alignList() {
+        return alignList[this.$i18n.locale] || alignList.zh
       }
     },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'nodeStyle') {
+          this.$refs.sidebar.show = true
+        } else {
+          this.$refs.sidebar.show = false
+        }
+      }
+    },
+    created() {
+      this.$bus.$on('node_active', this.onNodeActive)
+    },
+    beforeDestroy() {
+      this.$bus.$off('node_active', this.onNodeActive)
+    },
+    methods: {
+      // 监听节点激活事件
+      onNodeActive(...args) {
+        this.$nextTick(() => {
+          this.activeNodes = [...args[1]]
+          this.initNodeStyle()
+        })
+      },
 
-    // 修改样式
-    update(prop) {
-      if (prop === 'linearGradientDir') {
+      // 初始节点样式
+      initNodeStyle() {
+        if (this.activeNodes.length <= 0) {
+          return
+        }
+        Object.keys(this.style).forEach(item => {
+          this.style[item] = this.activeNodes[0].getStyle(item, false)
+        })
+        this.initLinearGradientDir()
+      },
+
+      // 初始化渐变方向样式
+      initLinearGradientDir() {
+        const startDir = this.activeNodes[0].getStyle('startDir', false)
+        const endDir = this.activeNodes[0].getStyle('endDir', false)
         const target = this.linearGradientDirList.find(item => {
-          return item.value === this.style.linearGradientDir
+          return (
+            item.start[0] === startDir[0] &&
+            item.start[1] === startDir[1] &&
+            item.end[0] === endDir[0] &&
+            item.end[1] === endDir[1]
+          )
         })
-        this.activeNodes.forEach(node => {
-          node.setStyles({
-            startDir: [...target.start],
-            endDir: [...target.end]
+        if (target) {
+          this.style.linearGradientDir = target.value
+        }
+      },
+
+      // 修改样式
+      update(prop) {
+        if (prop === 'linearGradientDir') {
+          const target = this.linearGradientDirList.find(item => {
+            return item.value === this.style.linearGradientDir
           })
-        })
-      } else {
-        this.activeNodes.forEach(node => {
-          node.setStyle(prop, this.style[prop])
-        })
+          this.activeNodes.forEach(node => {
+            node.setStyles({
+              startDir: [...target.start],
+              endDir: [...target.end]
+            })
+          })
+        } else {
+          this.activeNodes.forEach(node => {
+            node.setStyle(prop, this.style[prop])
+          })
+        }
+      },
+
+      // 切换加粗样式
+      toggleFontWeight() {
+        if (this.style.fontWeight === 'bold') {
+          this.style.fontWeight = 'normal'
+        } else {
+          this.style.fontWeight = 'bold'
+        }
+        this.update('fontWeight')
+      },
+
+      // 切换字体样式
+      toggleFontStyle() {
+        if (this.style.fontStyle === 'italic') {
+          this.style.fontStyle = 'normal'
+        } else {
+          this.style.fontStyle = 'italic'
+        }
+        this.update('fontStyle')
+      },
+
+      // 修改字体颜色
+      changeFontColor(color) {
+        this.style.color = color
+        this.update('color')
+      },
+
+      // 修改边框颜色
+      changeBorderColor(color) {
+        this.style.borderColor = color
+        this.update('borderColor')
+      },
+
+      // 修改线条颜色
+      changeLineColor(color) {
+        this.style.lineColor = color
+        this.update('lineColor')
+      },
+
+      // 修改背景颜色
+      changeFillColor(color) {
+        this.style.fillColor = color
+        this.update('fillColor')
+      },
+
+      // 切换渐变开始颜色
+      changeStartColor(color) {
+        this.style.startColor = color
+        this.update('startColor')
+      },
+
+      // 切换渐变结束颜色
+      changeEndColor(color) {
+        this.style.endColor = color
+        this.update('endColor')
       }
-    },
-
-    // 切换加粗样式
-    toggleFontWeight() {
-      if (this.style.fontWeight === 'bold') {
-        this.style.fontWeight = 'normal'
-      } else {
-        this.style.fontWeight = 'bold'
-      }
-      this.update('fontWeight')
-    },
-
-    // 切换字体样式
-    toggleFontStyle() {
-      if (this.style.fontStyle === 'italic') {
-        this.style.fontStyle = 'normal'
-      } else {
-        this.style.fontStyle = 'italic'
-      }
-      this.update('fontStyle')
-    },
-
-    // 修改字体颜色
-    changeFontColor(color) {
-      this.style.color = color
-      this.update('color')
-    },
-
-    // 修改边框颜色
-    changeBorderColor(color) {
-      this.style.borderColor = color
-      this.update('borderColor')
-    },
-
-    // 修改线条颜色
-    changeLineColor(color) {
-      this.style.lineColor = color
-      this.update('lineColor')
-    },
-
-    // 修改背景颜色
-    changeFillColor(color) {
-      this.style.fillColor = color
-      this.update('fillColor')
-    },
-
-    // 切换渐变开始颜色
-    changeStartColor(color) {
-      this.style.startColor = color
-      this.update('startColor')
-    },
-
-    // 切换渐变结束颜色
-    changeEndColor(color) {
-      this.style.endColor = color
-      this.update('endColor')
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.styleBox {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  .styleBox {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 
-  &.isDark {
-    .sidebarContent {
-      .title {
-        color: #fff;
-      }
+    &.isDark {
+      .sidebarContent {
+        .title {
+          color: #fff;
+        }
 
-      .row {
-        .rowItem {
-          .name {
+        .row {
+          .rowItem {
+            .name {
+              color: hsla(0, 0%, 100%, 0.6);
+            }
+          }
+
+          .styleBtn {
+            background-color: #363b3f;
             color: hsla(0, 0%, 100%, 0.6);
+            border-color: hsla(0, 0%, 100%, 0.1);
           }
         }
-
-        .styleBtn {
-          background-color: #363b3f;
-          color: hsla(0, 0%, 100%, 0.6);
-          border-color: hsla(0, 0%, 100%, 0.1);
-        }
       }
     }
-  }
 
-  .tab {
-    flex-grow: 0;
-    flex-shrink: 0;
-    padding: 0 20px;
-  }
-}
-
-.tipBox {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: #666;
-
-  .tipIcon {
-    font-size: 100px;
-  }
-}
-
-.sidebarContent {
-  padding: 20px;
-  padding-top: 10px;
-
-  .title {
-    font-size: 16px;
-    font-family: PingFangSC-Medium, PingFang SC;
-    font-weight: 500;
-    color: rgba(26, 26, 26, 0.9);
-    margin-bottom: 10px;
-    margin-top: 35px;
-
-    &.noTop {
-      margin-top: 0;
+    .tab {
+      flex-grow: 0;
+      flex-shrink: 0;
+      padding: 0 20px;
     }
   }
 
-  .row {
+  .tipBox {
+    width: 100%;
+    height: 100%;
     display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #666;
 
-    &.noBottom {
-      margin-bottom: 0;
+    .tipIcon {
+      font-size: 100px;
+    }
+  }
+
+  .sidebarContent {
+    padding: 20px;
+    padding-top: 10px;
+
+    .title {
+      font-size: 16px;
+      font-family:
+        PingFangSC-Medium,
+        PingFang SC;
+      font-weight: 500;
+      color: rgba(26, 26, 26, 0.9);
+      margin-bottom: 10px;
+      margin-top: 35px;
+
+      &.noTop {
+        margin-top: 0;
+      }
     }
 
-    .btnGroup {
-      width: 100%;
+    .row {
       display: flex;
       justify-content: space-between;
-    }
+      margin-bottom: 10px;
 
-    .rowItem {
-      display: flex;
-      align-items: center;
-
-      .name {
-        font-size: 12px;
-        margin-right: 10px;
+      &.noBottom {
+        margin-bottom: 0;
       }
 
-      .block {
-        display: inline-block;
-        width: 30px;
+      .btnGroup {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .rowItem {
+        display: flex;
+        align-items: center;
+
+        .name {
+          font-size: 12px;
+          margin-right: 10px;
+        }
+
+        .block {
+          display: inline-block;
+          width: 30px;
+          height: 30px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          cursor: pointer;
+
+          &.disabled {
+            background-color: #f5f7fa !important;
+            border-color: #e4e7ed !important;
+            color: #c0c4cc !important;
+            cursor: not-allowed !important;
+          }
+        }
+      }
+
+      .styleBtn {
+        position: relative;
+        width: 50px;
         height: 30px;
-        border: 1px solid #dcdfe6;
-        border-radius: 4px;
+        background: #fff;
+        border: 1px solid #eee;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
         cursor: pointer;
+        border-radius: 4px;
+
+        &.actived {
+          background-color: #eee;
+        }
 
         &.disabled {
           background-color: #f5f7fa !important;
@@ -858,65 +885,39 @@ export default {
           color: #c0c4cc !important;
           cursor: not-allowed !important;
         }
-      }
-    }
 
-    .styleBtn {
-      position: relative;
-      width: 50px;
-      height: 30px;
-      background: #fff;
-      border: 1px solid #eee;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 4px;
+        &.i {
+          font-style: italic;
+        }
 
-      &.actived {
-        background-color: #eee;
-      }
+        &.u {
+        }
 
-      &.disabled {
-        background-color: #f5f7fa !important;
-        border-color: #e4e7ed !important;
-        color: #c0c4cc !important;
-        cursor: not-allowed !important;
-      }
-
-      &.i {
-        font-style: italic;
-      }
-
-      &.u {
-      }
-
-      .colorShow {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 2px;
+        .colorShow {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 2px;
+        }
       }
     }
   }
-}
 
-.borderLine {
-  display: inline-block;
-  width: 100%;
-  background-color: #000;
+  .borderLine {
+    display: inline-block;
+    width: 100%;
+    background-color: #000;
 
-  &.isDark {
-    background-color: #fff;
+    &.isDark {
+      background-color: #fff;
+    }
   }
-}
 </style>
 <style lang="less">
-.el-select-dropdown__item.selected {
-  .borderLine {
-    background-color: #409eff;
+  .el-select-dropdown__item.selected {
+    .borderLine {
+      background-color: #409eff;
+    }
   }
-}
 </style>

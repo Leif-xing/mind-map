@@ -193,8 +193,8 @@ function handleGeneralizationMouseenter() {
   const color = hoverRectColor || this.mindMap.opt.hoverRectColor
   const style = color
     ? {
-        stroke: color
-      }
+      stroke: color
+    }
     : null
   // 区间概要，框子节点
   if (

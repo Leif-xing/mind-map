@@ -11,29 +11,36 @@
 export function getCurrentMindMapIdFromVueInstance() {
   try {
     // 尝试从DOM中查找Vue实例
-    const vueInstances = document.querySelectorAll('[data-v-app], [id^="app"], [id*="vue"]');
+    const vueInstances = document.querySelectorAll(
+      '[data-v-app], [id^="app"], [id*="vue"]'
+    )
     if (vueInstances.length > 0) {
-      const rootVue = vueInstances[0].__vue__;
-      if (rootVue && rootVue.$store && rootVue.$store.state && rootVue.$store.state.currentMindMapId) {
-        return rootVue.$store.state.currentMindMapId;
+      const rootVue = vueInstances[0].__vue__
+      if (
+        rootVue &&
+        rootVue.$store &&
+        rootVue.$store.state &&
+        rootVue.$store.state.currentMindMapId
+      ) {
+        return rootVue.$store.state.currentMindMapId
       }
     }
 
     // 如果还是获取不到，尝试从window对象查找全局Vue实例
     if (window.app && window.app.$store && window.app.$store.state) {
-      return window.app.$store.state.currentMindMapId;
+      return window.app.$store.state.currentMindMapId
     }
 
     // 尝试从Vue的全局实例查找（Vue 2.x）
     if (window.Vue && window.Vue.prototype && window.Vue.prototype.$store) {
-      return window.Vue.prototype.$store.state.currentMindMapId;
+      return window.Vue.prototype.$store.state.currentMindMapId
     }
 
-    console.warn('无法通过Vue实例获取思维导图ID');
-    return null;
+    console.warn('无法通过Vue实例获取思维导图ID')
+    return null
   } catch (error) {
-    console.error('❌ 通过Vue实例获取思维导图ID时出错:', error);
-    return null;
+    console.error('❌ 通过Vue实例获取思维导图ID时出错:', error)
+    return null
   }
 }
 
@@ -44,28 +51,30 @@ export function getCurrentMindMapIdFromVueInstance() {
 export function getStoreFromVueInstance() {
   try {
     // 尝试从DOM中查找Vue实例
-    const vueInstances = document.querySelectorAll('[data-v-app], [id^="app"], [id*="vue"]');
+    const vueInstances = document.querySelectorAll(
+      '[data-v-app], [id^="app"], [id*="vue"]'
+    )
     if (vueInstances.length > 0) {
-      const rootVue = vueInstances[0].__vue__;
+      const rootVue = vueInstances[0].__vue__
       if (rootVue && rootVue.$store) {
-        return rootVue.$store;
+        return rootVue.$store
       }
     }
 
     // 如果还是获取不到，尝试从window对象查找全局Vue实例
     if (window.app && window.app.$store) {
-      return window.app.$store;
+      return window.app.$store
     }
 
     // 尝试从Vue的全局实例查找（Vue 2.x）
     if (window.Vue && window.Vue.prototype && window.Vue.prototype.$store) {
-      return window.Vue.prototype.$store;
+      return window.Vue.prototype.$store
     }
 
-    console.warn('无法通过Vue实例获取Vuex store');
-    return null;
+    console.warn('无法通过Vue实例获取Vuex store')
+    return null
   } catch (error) {
-    console.error('❌ 通过Vue实例获取Vuex store时出错:', error);
-    return null;
+    console.error('❌ 通过Vue实例获取Vuex store时出错:', error)
+    return null
   }
 }

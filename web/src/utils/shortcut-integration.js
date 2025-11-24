@@ -29,25 +29,27 @@ export class ShortcutIntegration {
     try {
       // 1. 安装Vue插件
       Vue.use(ShortcutPlugin)
-      
+
       // 2. 创建事件总线
       this.setupEventBus()
-      
+
       // 3. 初始化管理器
       const shortcutManager = Vue.prototype.$shortcuts.init(mindMapInstance)
-      
+
       // 4. 创建并执行迁移
-      this.adapter = new ShortcutMigrationAdapter(shortcutManager, mindMapInstance)
+      this.adapter = new ShortcutMigrationAdapter(
+        shortcutManager,
+        mindMapInstance
+      )
       await this.adapter.migrate()
-      
+
       // 5. 设置状态监听
       this.setupStateListeners(mindMapInstance, shortcutManager)
-      
+
       // 6. 设置Vue组件集成
       this.setupVueIntegration(shortcutManager)
-      
+
       this.initialized = true
-      
     } catch (error) {
       throw error
     }
@@ -62,7 +64,7 @@ export class ShortcutIntegration {
       Vue.prototype.$eventBus = new Vue()
     }
     this.eventBus = Vue.prototype.$eventBus
-    
+
     // 确保全局可访问
     window.$eventBus = Vue.prototype.$eventBus
   }
@@ -78,11 +80,11 @@ export class ShortcutIntegration {
         enable: ['Ctrl+Enter', 'Escape']
       })
     })
-    
+
     mindMap.on('afterTextEdit', () => {
       shortcutManager.switchContext(CONTEXTS.NORMAL)
     })
-    
+
     // 监听节点选择状态变化
     mindMap.on('node_active', (node, activeNodeList) => {
       if (activeNodeList && activeNodeList.length > 1) {
@@ -102,15 +104,39 @@ export class ShortcutIntegration {
     // 监听来自组件的快捷键事件
     this.eventBus.$on('shortcut:save', this.handleSave.bind(this))
     this.eventBus.$on('shortcut:search', this.handleSearch.bind(this))
-    this.eventBus.$on('shortcut:toggleNumbering', this.handleToggleNumbering.bind(this))
-    this.eventBus.$on('shortcut:toggleTodoCheckbox', this.handleToggleTodoCheckbox.bind(this))
-    this.eventBus.$on('shortcut:toggleTodoStatus', this.handleToggleTodoStatus.bind(this))
-    this.eventBus.$on('shortcut:openAiCreate', this.handleOpenAiCreate.bind(this))
+    this.eventBus.$on(
+      'shortcut:toggleNumbering',
+      this.handleToggleNumbering.bind(this)
+    )
+    this.eventBus.$on(
+      'shortcut:toggleTodoCheckbox',
+      this.handleToggleTodoCheckbox.bind(this)
+    )
+    this.eventBus.$on(
+      'shortcut:toggleTodoStatus',
+      this.handleToggleTodoStatus.bind(this)
+    )
+    this.eventBus.$on(
+      'shortcut:openAiCreate',
+      this.handleOpenAiCreate.bind(this)
+    )
     this.eventBus.$on('shortcut:openHistory', this.handleOpenHistory.bind(this))
-    this.eventBus.$on('shortcut:toggleToolbar', this.handleToggleToolbar.bind(this))
-    this.eventBus.$on('shortcut:toggleLeftSidebar', this.handleToggleLeftSidebar.bind(this))
-    this.eventBus.$on('shortcut:openTagManager', this.handleOpenTagManager.bind(this))
-    this.eventBus.$on('shortcut:openNoteDialog', this.handleOpenNoteDialog.bind(this))
+    this.eventBus.$on(
+      'shortcut:toggleToolbar',
+      this.handleToggleToolbar.bind(this)
+    )
+    this.eventBus.$on(
+      'shortcut:toggleLeftSidebar',
+      this.handleToggleLeftSidebar.bind(this)
+    )
+    this.eventBus.$on(
+      'shortcut:openTagManager',
+      this.handleOpenTagManager.bind(this)
+    )
+    this.eventBus.$on(
+      'shortcut:openNoteDialog',
+      this.handleOpenNoteDialog.bind(this)
+    )
     this.eventBus.$on('shortcut:closeSearch', this.handleCloseSearch.bind(this))
     this.eventBus.$on('shortcut:searchNext', this.handleSearchNext.bind(this))
     this.eventBus.$on('shortcut:closeDialog', this.handleCloseDialog.bind(this))
@@ -201,7 +227,10 @@ export class ShortcutIntegration {
       // ... 移除其他监听器
     }
 
-    if (Vue.prototype.$shortcuts && typeof Vue.prototype.$shortcuts.destroy === 'function') {
+    if (
+      Vue.prototype.$shortcuts &&
+      typeof Vue.prototype.$shortcuts.destroy === 'function'
+    ) {
       Vue.prototype.$shortcuts.destroy()
     }
 

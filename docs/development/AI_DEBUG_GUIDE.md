@@ -31,16 +31,20 @@
 ## 🚨 可能的问题原因
 
 ### 原因1：CORS跨域问题
+
 **现象**: 控制台显示类似错误
+
 ```
-Access to fetch at 'https://ark.cn-beijing.volces.com/api/v3/chat/completions' 
+Access to fetch at 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 from origin 'https://your-project.vercel.app' has been blocked by CORS policy
 ```
 
 **解决方案**: 需要使用代理服务器
 
 ### 原因2：API配置错误
+
 **现象**: 401/403错误
+
 ```
 HTTP 401 Unauthorized
 HTTP 403 Forbidden
@@ -49,22 +53,27 @@ HTTP 403 Forbidden
 **解决方案**: 检查API密钥和接口地址
 
 ### 原因3：流式响应处理问题
+
 **现象**: 请求成功但卡住不动
 **解决方案**: 可能需要特殊处理流式数据
 
 ### 原因4：环境检测问题
+
 **现象**: 仍然尝试访问localhost
 **解决方案**: 检查环境检测逻辑
 
 ## 🛠️ 紧急修复方案
 
 ### 方案A：创建Vercel API代理
+
 创建API路由文件来处理CORS问题。
 
 ### 方案B：添加错误处理和日志
+
 增加详细的错误信息输出。
 
 ### 方案C：使用不同的AI服务
+
 切换到支持CORS的AI服务。
 
 ## 📞 请提供以下信息

@@ -8,7 +8,11 @@
         </el-button>
         <el-button size="mini" @click="showAiSelectionDialog">
           <span class="el-icon-edit"></span>
-          {{ isCurrentUserAdmin ? $t('ai.manageAIConfiguration') : $t('ai.selectAIConfiguration') }}
+          {{
+            isCurrentUserAdmin
+              ? $t('ai.manageAIConfiguration')
+              : $t('ai.selectAIConfiguration')
+          }}
         </el-button>
       </div>
       <AiSelectionDialog v-model="aiSelectionDialogVisible"></AiSelectionDialog>
@@ -59,294 +63,301 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import { mapState } from 'vuex'
-import { createUid } from 'simple-mind-map/src/utils'
-import MarkdownIt from 'markdown-it'
-import AiSelectionDialog from './AiSelectionDialog.vue'
+  import Sidebar from './Sidebar.vue'
+  import { mapState } from 'vuex'
+  import { createUid } from 'simple-mind-map/src/utils'
+  import MarkdownIt from 'markdown-it'
+  import AiSelectionDialog from './AiSelectionDialog.vue'
 
-let md = null
+  let md = null
 
-export default {
-  components: {
-    Sidebar,
-    AiSelectionDialog
-  },
-  data() {
-    return {
-      text: '',
-      chatList: [],
-      isCreating: false,
-      aiSelectionDialogVisible: false
-    }
-  },
-  computed: {
-    ...mapState({
-      isDark: state => state.localConfig.isDark,
-      activeSidebar: state => state.activeSidebar,
-      currentUser: state => state.currentUser
-    }),
-    isCurrentUserAdmin() {
-      return this.currentUser && this.currentUser.isAdmin;
-    }
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'ai') {
-        this.$refs.sidebar.show = true
-      } else {
-        this.$refs.sidebar.show = false
+  export default {
+    components: {
+      Sidebar,
+      AiSelectionDialog
+    },
+    data() {
+      return {
+        text: '',
+        chatList: [],
+        isCreating: false,
+        aiSelectionDialogVisible: false
       }
-    }
-  },
-  created() {},
-  beforeDestroy() {},
-  methods: {
-    onKeydown(e) {
-      if (e.keyCode === 13) {
-        if (!e.shiftKey) {
-          e.preventDefault()
-          this.send()
+    },
+    computed: {
+      ...mapState({
+        isDark: state => state.localConfig.isDark,
+        activeSidebar: state => state.activeSidebar,
+        currentUser: state => state.currentUser
+      }),
+      isCurrentUserAdmin() {
+        return this.currentUser && this.currentUser.isAdmin
+      }
+    },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'ai') {
+          this.$refs.sidebar.show = true
         } else {
+          this.$refs.sidebar.show = false
         }
       }
     },
-
-    send() {
-      if (this.isCreating) return
-      const text = this.text.trim()
-      if (!text) {
-        return
-      }
-      this.text = ''
-      const historyUserMsgList = this.chatList
-        .filter(item => {
-          return item.type === 'user'
-        })
-        .map(item => {
-          return item.content
-        })
-      this.chatList.push({
-        id: createUid(),
-        type: 'user',
-        content: text
-      })
-      this.chatList.push({
-        id: createUid(),
-        type: 'ai',
-        content: ''
-      })
-      this.isCreating = true
-      const textList = [...historyUserMsgList, text]
-      this.$bus.$emit(
-        'ai_chat',
-        textList,
-        res => {
-          if (!md) {
-            md = new MarkdownIt()
+    created() {},
+    beforeDestroy() {},
+    methods: {
+      onKeydown(e) {
+        if (e.keyCode === 13) {
+          if (!e.shiftKey) {
+            e.preventDefault()
+            this.send()
+          } else {
           }
-          this.chatList[this.chatList.length - 1].content = md.render(res)
-          this.$refs.chatResBoxRef.scrollTop = this.$refs.chatResBoxRef.scrollHeight
-        },
-        () => {
-          this.isCreating = false
-        },
-        () => {
-          this.isCreating = false
-          this.$message.error(this.$t('ai.generationFailed'))
         }
-      )
-    },
+      },
 
-    stop() {
-      this.$bus.$emit('ai_chat_stop')
-      this.isCreating = false
-    },
+      send() {
+        if (this.isCreating) return
+        const text = this.text.trim()
+        if (!text) {
+          return
+        }
+        this.text = ''
+        const historyUserMsgList = this.chatList
+          .filter(item => {
+            return item.type === 'user'
+          })
+          .map(item => {
+            return item.content
+          })
+        this.chatList.push({
+          id: createUid(),
+          type: 'user',
+          content: text
+        })
+        this.chatList.push({
+          id: createUid(),
+          type: 'ai',
+          content: ''
+        })
+        this.isCreating = true
+        const textList = [...historyUserMsgList, text]
+        this.$bus.$emit(
+          'ai_chat',
+          textList,
+          res => {
+            if (!md) {
+              md = new MarkdownIt()
+            }
+            this.chatList[this.chatList.length - 1].content = md.render(res)
+            this.$refs.chatResBoxRef.scrollTop =
+              this.$refs.chatResBoxRef.scrollHeight
+          },
+          () => {
+            this.isCreating = false
+          },
+          () => {
+            this.isCreating = false
+            this.$message.error(this.$t('ai.generationFailed'))
+          }
+        )
+      },
 
-    clear() {
-      this.chatList = []
-    },
+      stop() {
+        this.$bus.$emit('ai_chat_stop')
+        this.isCreating = false
+      },
 
-    modifyAiConfig() {
-      this.aiSelectionDialogVisible = true
-    },
-    
-    showAiSelectionDialog() {
-      this.aiSelectionDialogVisible = true
+      clear() {
+        this.chatList = []
+      },
+
+      modifyAiConfig() {
+        this.aiSelectionDialogVisible = true
+      },
+
+      showAiSelectionDialog() {
+        this.aiSelectionDialogVisible = true
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.aiChatBox {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  &.isDark {
-  }
-
-  .chatHeader {
-    height: 50px;
-    border-bottom: 1px solid #e8e8e8;
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-  }
-
-  .chatResBox {
+  .aiChatBox {
     width: 100%;
     height: 100%;
-    padding: 0 12px;
-    margin: 12px 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 
-    .chatItem {
-      margin-bottom: 20px;
-      border: 1px solid;
-      position: relative;
-      border-radius: 10px;
-
-      &:last-of-type {
-        margin-bottom: 0;
-      }
-
-      &.ai {
-        border-color: #409eff;
-
-        .chatItemInner {
-          .avatar {
-            border-color: #409eff;
-            left: -12px;
-            top: -12px;
-
-            .icon {
-              color: #409eff;
-            }
-          }
-        }
-      }
-
-      &.user {
-        border-color: #f56c6c;
-
-        .chatItemInner {
-          .avatar {
-            border-color: #f56c6c;
-            right: -12px;
-            top: -12px;
-
-            .icon {
-              color: #f56c6c;
-            }
-          }
-        }
-      }
-
-      .chatItemInner {
-        width: 100%;
-        padding: 12px;
-
-        .avatar {
-          width: 30px;
-          height: 30px;
-          border: 1px solid;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          position: absolute;
-          background-color: #fff;
-
-          .icon {
-            font-size: 18px;
-            font-weight: bold;
-          }
-        }
-
-        /deep/ .content {
-          width: 100%;
-          overflow: hidden;
-          color: #3f4a54;
-          font-size: 14px;
-          line-height: 1.5;
-
-          p {
-            margin-bottom: 12px;
-
-            &:last-of-type {
-              margin-bottom: 0;
-            }
-          }
-
-          h1,
-          h2,
-          h3,
-          h4,
-          h5,
-          h6 {
-            margin-top: 24px;
-            margin-bottom: 16px;
-          }
-
-          code {
-            padding: 0.2em 0.4em;
-            margin: 0;
-            font-size: 85%;
-            white-space: break-spaces;
-            background-color: rgba(175, 184, 193, 0.2);
-            border-radius: 6px;
-            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
-              Liberation Mono, monospace;
-          }
-
-          pre {
-            padding: 12px;
-            background-color: rgba(175, 184, 193, 0.2);
-
-            code {
-              background-color: transparent;
-              padding: 0;
-              overflow: hidden;
-            }
-          }
-        }
-      }
+    &.isDark {
     }
-  }
 
-  .chatInputBox {
-    flex-shrink: 0;
-    width: 100%;
-    height: 150px;
-    border-top: 1px solid #e8e8e8;
-    position: relative;
+    .chatHeader {
+      height: 50px;
+      border-bottom: 1px solid #e8e8e8;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+    }
 
-    textarea {
+    .chatResBox {
       width: 100%;
       height: 100%;
-      outline: none;
-      padding: 12px;
-      border: none;
+      padding: 0 12px;
+      margin: 12px 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+
+      .chatItem {
+        margin-bottom: 20px;
+        border: 1px solid;
+        position: relative;
+        border-radius: 10px;
+
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+
+        &.ai {
+          border-color: #409eff;
+
+          .chatItemInner {
+            .avatar {
+              border-color: #409eff;
+              left: -12px;
+              top: -12px;
+
+              .icon {
+                color: #409eff;
+              }
+            }
+          }
+        }
+
+        &.user {
+          border-color: #f56c6c;
+
+          .chatItemInner {
+            .avatar {
+              border-color: #f56c6c;
+              right: -12px;
+              top: -12px;
+
+              .icon {
+                color: #f56c6c;
+              }
+            }
+          }
+        }
+
+        .chatItemInner {
+          width: 100%;
+          padding: 12px;
+
+          .avatar {
+            width: 30px;
+            height: 30px;
+            border: 1px solid;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: absolute;
+            background-color: #fff;
+
+            .icon {
+              font-size: 18px;
+              font-weight: bold;
+            }
+          }
+
+          /deep/ .content {
+            width: 100%;
+            overflow: hidden;
+            color: #3f4a54;
+            font-size: 14px;
+            line-height: 1.5;
+
+            p {
+              margin-bottom: 12px;
+
+              &:last-of-type {
+                margin-bottom: 0;
+              }
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+              margin-top: 24px;
+              margin-bottom: 16px;
+            }
+
+            code {
+              padding: 0.2em 0.4em;
+              margin: 0;
+              font-size: 85%;
+              white-space: break-spaces;
+              background-color: rgba(175, 184, 193, 0.2);
+              border-radius: 6px;
+              font-family:
+                ui-monospace,
+                SFMono-Regular,
+                SF Mono,
+                Menlo,
+                Consolas,
+                Liberation Mono,
+                monospace;
+            }
+
+            pre {
+              padding: 12px;
+              background-color: rgba(175, 184, 193, 0.2);
+
+              code {
+                background-color: transparent;
+                padding: 0;
+                overflow: hidden;
+              }
+            }
+          }
+        }
+      }
     }
 
-    .btn {
-      position: absolute;
-      right: 12px;
-      bottom: 12px;
-    }
+    .chatInputBox {
+      flex-shrink: 0;
+      width: 100%;
+      height: 150px;
+      border-top: 1px solid #e8e8e8;
+      position: relative;
 
-    .stop {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      top: -30px;
+      textarea {
+        width: 100%;
+        height: 100%;
+        outline: none;
+        padding: 12px;
+        border: none;
+      }
+
+      .btn {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+      }
+
+      .stop {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: -30px;
+      }
     }
   }
-}
 </style>

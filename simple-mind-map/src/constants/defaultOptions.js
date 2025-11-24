@@ -307,7 +307,7 @@ export const defaultOpt = {
   /*
     {
       // 返回要添加的DOM元素详细
-      create: (node) => { 
+      create: (node) => {
         return {
           el, // DOM节点
           width: 20, // 宽高
@@ -316,7 +316,7 @@ export const defaultOpt = {
       },
       // 处理生成的@svgdotjs/svg.js库的ForeignObject节点实例，可以设置其在节点内的位置
       handle: ({ content, element, node }) => {
-        
+
       }
     }
   */

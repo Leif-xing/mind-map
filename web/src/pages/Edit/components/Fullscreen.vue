@@ -20,63 +20,63 @@
 </template>
 
 <script>
-import { fullscrrenEvent, fullScreen } from '@/utils'
+  import { fullscrrenEvent, fullScreen } from '@/utils'
 
-// 全屏
-export default {
-  props: {
-    mindMap: {
-      type: Object
+  // 全屏
+  export default {
+    props: {
+      mindMap: {
+        type: Object
+      },
+      isDark: {
+        type: Boolean
+      }
     },
-    isDark: {
-      type: Boolean
-    }
-  },
-  data() {
-    return {}
-  },
-  created() {
-    document[fullscrrenEvent] = () => {
-      setTimeout(() => {
-        this.mindMap.resize()
-      }, 1000)
-    }
-  },
-  methods: {
-    // 全屏查看
-    toFullscreenShow() {
-      fullScreen(this.mindMap.el)
+    data() {
+      return {}
     },
+    created() {
+      document[fullscrrenEvent] = () => {
+        setTimeout(() => {
+          this.mindMap.resize()
+        }, 1000)
+      }
+    },
+    methods: {
+      // 全屏查看
+      toFullscreenShow() {
+        fullScreen(this.mindMap.el)
+      },
 
-    // 全屏编辑
-    toFullscreenEdit() {
-      fullScreen(document.body)
+      // 全屏编辑
+      toFullscreenEdit() {
+        fullScreen(document.body)
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.fullscreenContainer {
-  display: flex;
-  align-items: center;
+  .fullscreenContainer {
+    display: flex;
+    align-items: center;
 
-  &.isDark {
+    &.isDark {
+      .btn {
+        color: hsla(0, 0%, 100%, 0.6);
+      }
+    }
+
+    .item {
+      margin-right: 12px;
+
+      &:last-of-type {
+        margin-right: 0;
+      }
+    }
+
     .btn {
-      color: hsla(0,0%,100%,.6);
+      cursor: pointer;
     }
   }
-
-  .item {
-    margin-right: 12px;
-
-    &:last-of-type {
-      margin-right: 0;
-    }
-  }
-
-  .btn {
-    cursor: pointer;
-  }
-}
 </style>

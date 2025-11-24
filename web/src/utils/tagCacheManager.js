@@ -40,7 +40,9 @@ class TagCacheManager {
    */
   static getMindMapTagIds() {
     try {
-      return JSON.parse(localStorage.getItem(this.CACHE_KEYS.MINDMAP_TAG_IDS)) || {}
+      return (
+        JSON.parse(localStorage.getItem(this.CACHE_KEYS.MINDMAP_TAG_IDS)) || {}
+      )
     } catch (error) {
       console.warn('获取思维导图标签映射缓存失败:', error)
       return {}
@@ -53,7 +55,10 @@ class TagCacheManager {
    */
   static setMindMapTagIds(mappings) {
     try {
-      localStorage.setItem(this.CACHE_KEYS.MINDMAP_TAG_IDS, JSON.stringify(mappings))
+      localStorage.setItem(
+        this.CACHE_KEYS.MINDMAP_TAG_IDS,
+        JSON.stringify(mappings)
+      )
     } catch (error) {
       console.warn('设置思维导图标签映射缓存失败:', error)
     }
@@ -68,11 +73,13 @@ class TagCacheManager {
     const userTags = this.getUserTags()
     const mindMapTagIds = this.getMindMapTagIds()
     const tagIds = mindMapTagIds[mindMapId] || []
-    
-    return tagIds.map(tagId => ({
-      id: tagId,
-      ...userTags[tagId]
-    })).filter(tag => tag && tag.name) // 过滤无效标签
+
+    return tagIds
+      .map(tagId => ({
+        id: tagId,
+        ...userTags[tagId]
+      }))
+      .filter(tag => tag && tag.name) // 过滤无效标签
   }
 
   /**
@@ -152,7 +159,7 @@ class TagCacheManager {
     const userTags = this.getUserTags()
     delete userTags[tagId]
     this.setUserTags(userTags)
-    
+
     // 清理所有思维导图映射
     const mappings = this.getMindMapTagIds()
     Object.keys(mappings).forEach(mindMapId => {
@@ -194,7 +201,8 @@ class TagCacheManager {
    * @returns {string} 新标签的ID
    */
   static createTag(tagData) {
-    const tagId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    const tagId =
+      Date.now().toString() + Math.random().toString(36).substr(2, 9)
     const userTags = this.getUserTags()
     userTags[tagId] = {
       name: tagData.name || '新标签',

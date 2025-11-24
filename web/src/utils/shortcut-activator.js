@@ -11,7 +11,7 @@ class SuperShortcutFixer {
     this.strategies = [
       'directVueInstance',
       'eventBusComponent',
-      'domTraversal', 
+      'domTraversal',
       'globalSearch',
       'windowMethods',
       'vueDevtools'
@@ -22,20 +22,21 @@ class SuperShortcutFixer {
     // 静默查找组件，只在必要时输出日志
     for (const strategy of this.strategies) {
       this.attempts++
-      
+
       const component = await this.tryStrategy(strategy)
       if (component) {
         this.editComponent = component
         this.setupShortcuts()
         return true
       }
-      
+
       // 每次策略间等待200ms（优化性能）
       await this.sleep(200)
     }
-    
+
     // 静默重试，减少日志输出
-    if (this.attempts < 20) { // 限制重试次数
+    if (this.attempts < 20) {
+      // 限制重试次数
       setTimeout(() => this.start(), 3000)
     }
     return false
@@ -83,15 +84,27 @@ class SuperShortcutFixer {
 
   // 策略2: 事件总线组件查找
   findByEventBusComponent() {
-    if (window.Vue && window.Vue.prototype.$eventBus && window.Vue.prototype.$eventBus._events) {
+    if (
+      window.Vue &&
+      window.Vue.prototype.$eventBus &&
+      window.Vue.prototype.$eventBus._events
+    ) {
       // 查找监听了相关事件的组件
       const events = window.Vue.prototype.$eventBus._events
-      const relevantEvents = ['manual-save', 'toggle-numbering', 'toggle-todo-checkbox']
-      
+      const relevantEvents = [
+        'manual-save',
+        'toggle-numbering',
+        'toggle-todo-checkbox'
+      ]
+
       for (const eventName of relevantEvents) {
         if (events[eventName]) {
           for (const handler of events[eventName]) {
-            if (handler.fn && handler.fn.constructor && handler.fn.constructor.name === 'BoundFunction') {
+            if (
+              handler.fn &&
+              handler.fn.constructor &&
+              handler.fn.constructor.name === 'BoundFunction'
+            ) {
               // 尝试获取绑定的组件实例
               const vm = handler.vm || handler.context
               if (vm && this.isEditComponent(vm)) {
@@ -124,7 +137,11 @@ class SuperShortcutFixer {
       for (const prop of globalProps) {
         try {
           const value = window[prop]
-          if (value && typeof value === 'object' && this.isEditComponent(value)) {
+          if (
+            value &&
+            typeof value === 'object' &&
+            this.isEditComponent(value)
+          ) {
             return value
           }
         } catch (e) {
@@ -156,7 +173,10 @@ class SuperShortcutFixer {
 
   // 策略6: Vue开发工具查找
   findByVueDevtools() {
-    if (window.__VUE_DEVTOOLS_GLOBAL_HOOK__ && window.__VUE_DEVTOOLS_GLOBAL_HOOK__.Vue) {
+    if (
+      window.__VUE_DEVTOOLS_GLOBAL_HOOK__ &&
+      window.__VUE_DEVTOOLS_GLOBAL_HOOK__.Vue
+    ) {
       try {
         const Vue = window.__VUE_DEVTOOLS_GLOBAL_HOOK__.Vue
         if (Vue.prototype._rootInstances) {
@@ -177,11 +197,11 @@ class SuperShortcutFixer {
   // 递归搜索Vue组件树
   searchVueTree(vm) {
     if (!vm) return null
-    
+
     if (this.isEditComponent(vm)) {
       return vm
     }
-    
+
     // 搜索子组件
     if (vm.$children) {
       for (const child of vm.$children) {
@@ -189,16 +209,18 @@ class SuperShortcutFixer {
         if (result) return result
       }
     }
-    
+
     return null
   }
 
   // 判断是否是Edit组件
   isEditComponent(vm) {
-    return vm && 
-           typeof vm.handleToggleNumbering === 'function' &&
-           typeof vm.handleToggleTodoCheckbox === 'function' &&
-           typeof vm.handleToggleTodoStatus === 'function'
+    return (
+      vm &&
+      typeof vm.handleToggleNumbering === 'function' &&
+      typeof vm.handleToggleTodoCheckbox === 'function' &&
+      typeof vm.handleToggleTodoStatus === 'function'
+    )
   }
 
   // 设置快捷键
@@ -208,7 +230,7 @@ class SuperShortcutFixer {
       document.removeEventListener('keydown', window.superShortcutHandler, true)
     }
 
-    window.superShortcutHandler = (e) => {
+    window.superShortcutHandler = e => {
       // 检查是否在文本编辑状态
       if (this.isTextEditing()) {
         return
@@ -217,25 +239,25 @@ class SuperShortcutFixer {
       // 检查快捷键
       if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
         let handled = false
-        
+
         try {
           switch (e.code) {
             case 'KeyA':
               this.editComponent.handleToggleNumbering()
               handled = true
               break
-              
+
             case 'KeyW':
               this.editComponent.handleToggleTodoCheckbox()
               handled = true
               break
-              
+
             case 'KeyS':
               this.editComponent.handleToggleTodoStatus()
               handled = true
               break
           }
-          
+
           if (handled) {
             e.preventDefault()
             e.stopPropagation()
@@ -247,7 +269,7 @@ class SuperShortcutFixer {
     }
 
     document.addEventListener('keydown', window.superShortcutHandler, true)
-    
+
     // 添加测试方法（仅在需要时启用）
     if (window.location.href.includes('debug')) {
       window.testSuperShortcuts = () => {
@@ -259,12 +281,13 @@ class SuperShortcutFixer {
   // 检查是否在文本编辑状态
   isTextEditing() {
     const activeElement = document.activeElement
-    return activeElement && (
-      activeElement.tagName === 'INPUT' ||
-      activeElement.tagName === 'TEXTAREA' ||
-      activeElement.contentEditable === 'true' ||
-      activeElement.classList.contains('mindMapNodeText') ||
-      activeElement.closest('.node-text-edit')
+    return (
+      activeElement &&
+      (activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.contentEditable === 'true' ||
+        activeElement.classList.contains('mindMapNodeText') ||
+        activeElement.closest('.node-text-edit'))
     )
   }
 

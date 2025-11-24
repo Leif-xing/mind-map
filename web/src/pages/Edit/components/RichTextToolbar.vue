@@ -138,212 +138,218 @@
 </template>
 
 <script>
-import { fontFamilyList, fontSizeList, alignList } from '@/config'
-import Color from './Color.vue'
-import { mapState } from 'vuex'
+  import { fontFamilyList, fontSizeList, alignList } from '@/config'
+  import Color from './Color.vue'
+  import { mapState } from 'vuex'
 
-export default {
-  components: {
-    Color
-  },
-  props: {
-    mindMap: {
-      type: Object
-    }
-  },
-  data() {
-    return {
-      fontSizeList,
-      showRichTextToolbar: false,
-      style: {
-        left: 0,
-        top: 0
-      },
-      fontColor: '',
-      fontBackgroundColor: '',
-      formatInfo: {}
-    }
-  },
-  computed: {
-    ...mapState({
-      isDark: state => state.localConfig.isDark
-    }),
-
-    fontFamilyList() {
-      return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
+  export default {
+    components: {
+      Color
     },
-
-    alignList() {
-      return alignList[this.$i18n.locale] || alignList.zh
-    }
-  },
-  created() {
-    this.$bus.$on('rich_text_selection_change', this.onRichTextSelectionChange)
-  },
-  mounted() {
-    document.body.append(this.$refs.richTextToolbar)
-  },
-  beforeDestroy() {
-    this.$bus.$off('rich_text_selection_change', this.onRichTextSelectionChange)
-  },
-  methods: {
-    onRichTextSelectionChange(hasRange, rect, formatInfo) {
-      if (hasRange) {
-        this.style.left = rect.left + rect.width / 2 + 'px'
-        this.style.top = rect.top - 60 + 'px'
-        this.formatInfo = { ...(formatInfo || {}) }
+    props: {
+      mindMap: {
+        type: Object
       }
-      this.showRichTextToolbar = hasRange
     },
-
-    toggleBold() {
-      this.formatInfo.bold = !this.formatInfo.bold
-      this.mindMap.richText.formatText({
-        bold: this.formatInfo.bold
-      })
+    data() {
+      return {
+        fontSizeList,
+        showRichTextToolbar: false,
+        style: {
+          left: 0,
+          top: 0
+        },
+        fontColor: '',
+        fontBackgroundColor: '',
+        formatInfo: {}
+      }
     },
+    computed: {
+      ...mapState({
+        isDark: state => state.localConfig.isDark
+      }),
 
-    toggleItalic() {
-      this.formatInfo.italic = !this.formatInfo.italic
-      this.mindMap.richText.formatText({
-        italic: this.formatInfo.italic
-      })
+      fontFamilyList() {
+        return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
+      },
+
+      alignList() {
+        return alignList[this.$i18n.locale] || alignList.zh
+      }
     },
-
-    toggleUnderline() {
-      this.formatInfo.underline = !this.formatInfo.underline
-      this.mindMap.richText.formatText({
-        underline: this.formatInfo.underline
-      })
+    created() {
+      this.$bus.$on(
+        'rich_text_selection_change',
+        this.onRichTextSelectionChange
+      )
     },
-
-    toggleStrike() {
-      this.formatInfo.strike = !this.formatInfo.strike
-      this.mindMap.richText.formatText({
-        strike: this.formatInfo.strike
-      })
+    mounted() {
+      document.body.append(this.$refs.richTextToolbar)
     },
-
-    changeFontFamily(font) {
-      this.formatInfo.font = font
-      this.mindMap.richText.formatText({
-        font
-      })
+    beforeDestroy() {
+      this.$bus.$off(
+        'rich_text_selection_change',
+        this.onRichTextSelectionChange
+      )
     },
+    methods: {
+      onRichTextSelectionChange(hasRange, rect, formatInfo) {
+        if (hasRange) {
+          this.style.left = rect.left + rect.width / 2 + 'px'
+          this.style.top = rect.top - 60 + 'px'
+          this.formatInfo = { ...(formatInfo || {}) }
+        }
+        this.showRichTextToolbar = hasRange
+      },
 
-    changeFontSize(size) {
-      this.formatInfo.size = size
-      this.mindMap.richText.formatText({
-        size: size + 'px'
-      })
-    },
+      toggleBold() {
+        this.formatInfo.bold = !this.formatInfo.bold
+        this.mindMap.richText.formatText({
+          bold: this.formatInfo.bold
+        })
+      },
 
-    changeFontColor(color) {
-      this.formatInfo.color = color
-      this.mindMap.richText.formatText({
-        color
-      })
-    },
+      toggleItalic() {
+        this.formatInfo.italic = !this.formatInfo.italic
+        this.mindMap.richText.formatText({
+          italic: this.formatInfo.italic
+        })
+      },
 
-    changeFontBackgroundColor(background) {
-      this.formatInfo.background = background
-      this.mindMap.richText.formatText({
-        background
-      })
-    },
+      toggleUnderline() {
+        this.formatInfo.underline = !this.formatInfo.underline
+        this.mindMap.richText.formatText({
+          underline: this.formatInfo.underline
+        })
+      },
 
-    changeTextAlign(align) {
-      this.formatInfo.align = align
-      this.mindMap.richText.formatText({
-        align
-      })
-    },
+      toggleStrike() {
+        this.formatInfo.strike = !this.formatInfo.strike
+        this.mindMap.richText.formatText({
+          strike: this.formatInfo.strike
+        })
+      },
 
-    removeFormat() {
-      this.mindMap.richText.removeFormat()
+      changeFontFamily(font) {
+        this.formatInfo.font = font
+        this.mindMap.richText.formatText({
+          font
+        })
+      },
+
+      changeFontSize(size) {
+        this.formatInfo.size = size
+        this.mindMap.richText.formatText({
+          size: size + 'px'
+        })
+      },
+
+      changeFontColor(color) {
+        this.formatInfo.color = color
+        this.mindMap.richText.formatText({
+          color
+        })
+      },
+
+      changeFontBackgroundColor(background) {
+        this.formatInfo.background = background
+        this.mindMap.richText.formatText({
+          background
+        })
+      },
+
+      changeTextAlign(align) {
+        this.formatInfo.align = align
+        this.mindMap.richText.formatText({
+          align
+        })
+      },
+
+      removeFormat() {
+        this.mindMap.richText.removeFormat()
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.richTextToolbar {
-  position: fixed;
-  z-index: 2000;
-  height: 55px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 8px;
-  box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
-  display: flex;
-  align-items: center;
-  transform: translateX(-50%);
+  .richTextToolbar {
+    position: fixed;
+    z-index: 2000;
+    height: 55px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    transform: translateX(-50%);
 
-  &.isDark {
-    background: #363b3f;
+    &.isDark {
+      background: #363b3f;
+
+      .btn {
+        color: #fff;
+
+        &:hover {
+          background: hsla(0, 0%, 100%, 0.05);
+        }
+      }
+    }
 
     .btn {
-      color: #fff;
+      width: 55px;
+      height: 55px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
 
       &:hover {
-        background: hsla(0, 0%, 100%, 0.05);
+        background-color: #eefbed;
+      }
+
+      &.active {
+        color: #12bb37;
+      }
+
+      .icon {
+        font-size: 20px;
+
+        &.fontColor {
+          font-size: 26px;
+        }
       }
     }
   }
 
-  .btn {
-    width: 55px;
-    height: 55px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
+  .fontOptionsList {
+    width: 150px;
 
-    &:hover {
-      background-color: #eefbed;
-    }
+    &.isDark {
+      .fontOptionItem {
+        color: #fff;
 
-    &.active {
-      color: #12bb37;
-    }
-
-    .icon {
-      font-size: 20px;
-
-      &.fontColor {
-        font-size: 26px;
+        &:hover {
+          background-color: hsla(0, 0%, 100%, 0.05);
+        }
       }
     }
-  }
-}
 
-.fontOptionsList {
-  width: 150px;
-
-  &.isDark {
     .fontOptionItem {
-      color: #fff;
+      height: 30px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
 
       &:hover {
-        background-color: hsla(0, 0%, 100%, 0.05);
+        background-color: #f7f7f7;
+      }
+
+      &.active {
+        color: #12bb37;
       }
     }
   }
-
-  .fontOptionItem {
-    height: 30px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-
-    &:hover {
-      background-color: #f7f7f7;
-    }
-
-    &.active {
-      color: #12bb37;
-    }
-  }
-}
 </style>

@@ -1151,12 +1151,12 @@ class Drag extends Base {
   handleMindMap(node) {
     const checkList = node.parent
       ? node.parent.children.filter(item => {
-          let sameDir = true
-          if (node.layerIndex === 1) {
-            sameDir = item.dir === node.dir
-          }
-          return sameDir && !this.checkIsInBeingDragNodeList(item)
-        })
+        let sameDir = true
+        if (node.layerIndex === 1) {
+          sameDir = item.dir === node.dir
+        }
+        return sameDir && !this.checkIsInBeingDragNodeList(item)
+      })
       : []
     this.handleVerticalCheck(node, checkList)
   }
@@ -1206,8 +1206,8 @@ class Drag extends Base {
   handleFishbone(node) {
     let checkList = node.parent
       ? node.parent.children.filter(item => {
-          return item.layerIndex > 1 && !this.checkIsInBeingDragNodeList(item)
-        })
+        return item.layerIndex > 1 && !this.checkIsInBeingDragNodeList(item)
+      })
       : []
     if (node.layerIndex === 1) {
       this.handleHorizontalCheck(node, checkList)
@@ -1229,8 +1229,8 @@ class Drag extends Base {
   commonGetNodeCheckList(node) {
     return node.parent
       ? [...node.parent.children].filter(item => {
-          return !this.checkIsInBeingDragNodeList(item)
-        })
+        return !this.checkIsInBeingDragNodeList(item)
+      })
       : []
   }
 

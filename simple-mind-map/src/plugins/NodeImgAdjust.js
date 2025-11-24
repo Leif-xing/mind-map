@@ -108,7 +108,7 @@ class NodeImgAdjust {
     if (!this.isShowHandleEl) return
     this.isShowHandleEl = false
     this.handleEl.style.display = 'none'
-    this.handleEl.style.backgroundImage = ``
+    this.handleEl.style.backgroundImage = ''
     this.handleEl.style.width = 0
     this.handleEl.style.height = 0
     this.handleEl.style.left = 0

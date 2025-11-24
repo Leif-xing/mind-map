@@ -239,10 +239,10 @@ class RichText {
         position:fixed;
         box-sizing: border-box;
         ${
-          openRealtimeRenderOnNodeTextEdit
-            ? ''
-            : 'box-shadow: 0 0 20px rgba(0,0,0,.5);'
-        }
+  openRealtimeRenderOnNodeTextEdit
+    ? ''
+    : 'box-shadow: 0 0 20px rgba(0,0,0,.5);'
+}
         outline: none;
         word-break: break-all;
         padding: ${paddingY}px ${paddingX}px;
@@ -317,8 +317,8 @@ class RichText {
     this.textEditNode.style.background = openRealtimeRenderOnNodeTextEdit
       ? 'transparent'
       : this.node
-      ? this.mindMap.renderer.textEdit.getBackground(this.node)
-      : ''
+        ? this.mindMap.renderer.textEdit.getBackground(this.node)
+        : ''
     this.textEditNode.style.boxShadow = openRealtimeRenderOnNodeTextEdit
       ? 'none'
       : '0 0 20px rgba(0,0,0,.5)'
@@ -414,15 +414,15 @@ class RichText {
               handler: (range, context) => {
                 // 设置一个标志，阻止其他快捷键处理器处理这个Enter事件
                 this.mindMap._isProcessingRichTextEnter = true
-                
+
                 // 覆盖默认的回车键，禁止换行，并退出编辑模式
                 this.hideEditText()
-                
+
                 // 延迟清除标志，确保其他处理器已经检查过
                 setTimeout(() => {
                   this.mindMap._isProcessingRichTextEnter = false
                 }, 100)
-                
+
                 // 返回false阻止默认行为和事件冒泡
                 return false
               }
@@ -475,12 +475,12 @@ class RichText {
                 // RichText编辑模式下，Backspace应该只删除文字，不删除节点
                 // 设置标志表示RichText正在处理Backspace，防止外部删除节点
                 this.mindMap._isProcessingRichTextBackspace = true
-                
+
                 // 延迟清除标志
                 setTimeout(() => {
                   this.mindMap._isProcessingRichTextBackspace = false
                 }, 50)
-                
+
                 // 返回true允许默认的文字删除行为
                 return true
               }

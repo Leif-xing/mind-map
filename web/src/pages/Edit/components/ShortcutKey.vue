@@ -20,100 +20,100 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import { shortcutKeyList } from '@/config'
-import { mapState } from 'vuex'
+  import Sidebar from './Sidebar.vue'
+  import { shortcutKeyList } from '@/config'
+  import { mapState } from 'vuex'
 
-// 快捷键
-export default {
-  components: {
-    Sidebar
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    ...mapState({
-      isDark: state => state.localConfig.isDark,
-      activeSidebar: state => state.activeSidebar
-    }),
+  // 快捷键
+  export default {
+    components: {
+      Sidebar
+    },
+    data() {
+      return {}
+    },
+    computed: {
+      ...mapState({
+        isDark: state => state.localConfig.isDark,
+        activeSidebar: state => state.activeSidebar
+      }),
 
-    shortcutKeyList() {
-      return shortcutKeyList[this.$i18n.locale] || shortcutKeyList.zh
-    }
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'shortcutKey') {
-        this.$refs.sidebar.show = true
-      } else {
-        this.$refs.sidebar.show = false
+      shortcutKeyList() {
+        return shortcutKeyList[this.$i18n.locale] || shortcutKeyList.zh
+      }
+    },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'shortcutKey') {
+          this.$refs.sidebar.show = true
+        } else {
+          this.$refs.sidebar.show = false
+        }
       }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.box {
-  padding: 0 20px;
+  .box {
+    padding: 0 20px;
 
-  &.isDark {
+    &.isDark {
+      .title {
+        color: #fff;
+      }
+
+      .list {
+        .item {
+          .icon {
+            color: hsla(0, 0%, 100%, 0.6);
+          }
+          .name {
+            color: hsla(0, 0%, 100%, 0.6);
+          }
+
+          .value {
+            color: hsla(0, 0%, 100%, 0.3);
+          }
+        }
+      }
+    }
+
     .title {
-      color: #fff;
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+      margin: 26px 0 20px;
     }
 
     .list {
+      font-size: 14px;
+
       .item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+
         .icon {
-          color: hsla(0, 0%, 100%, 0.6);
+          font-size: 16px;
+          margin-right: 16px;
         }
+
         .name {
-          color: hsla(0, 0%, 100%, 0.6);
+          color: #333;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .value {
-          color: hsla(0, 0%, 100%, 0.3);
+          color: #909090;
+          margin-left: auto;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
     }
   }
-
-  .title {
-    font-size: 16px;
-    font-weight: 500;
-    color: #333;
-    margin: 26px 0 20px;
-  }
-
-  .list {
-    font-size: 14px;
-
-    .item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 15px;
-
-      .icon {
-        font-size: 16px;
-        margin-right: 16px;
-      }
-
-      .name {
-        color: #333;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .value {
-        color: #909090;
-        margin-left: auto;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    }
-  }
-}
 </style>

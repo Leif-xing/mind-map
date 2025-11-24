@@ -3,7 +3,11 @@
  * 提供 Vue 组件级别的快捷键管理集成
  */
 
-import { UnifiedShortcutManager, CONTEXTS, LAYERS } from '../utils/unified-shortcut-manager.js'
+import {
+  UnifiedShortcutManager,
+  CONTEXTS,
+  LAYERS
+} from '../utils/unified-shortcut-manager.js'
 
 const ShortcutPlugin = {
   install(Vue, options = {}) {
@@ -19,7 +23,7 @@ const ShortcutPlugin = {
         }
         return shortcutManager
       },
-      
+
       // 提供临时访问方法
       register: (...args) => {
         if (shortcutManager) {
@@ -29,7 +33,7 @@ const ShortcutPlugin = {
           return null
         }
       },
-      
+
       unregister: (...args) => {
         if (shortcutManager) {
           return shortcutManager.unregister(...args)
@@ -56,7 +60,10 @@ const ShortcutPlugin = {
          * @param {object} options - 选项配置
          */
         $registerShortcut(shortcut, action, options = {}) {
-          if (!this.$shortcuts || typeof this.$shortcuts.register !== 'function') {
+          if (
+            !this.$shortcuts ||
+            typeof this.$shortcuts.register !== 'function'
+          ) {
             console.warn('ShortcutPlugin: Manager not available')
             return null
           }
@@ -66,13 +73,14 @@ const ShortcutPlugin = {
             action: action.bind ? action.bind(this) : action,
             layer: options.layer || LAYERS.COMPONENT,
             context: options.context || CONTEXTS.NORMAL,
-            component: options.component || this.$options.name || this.$vnode?.tag,
+            component:
+              options.component || this.$options.name || this.$vnode?.tag,
             description: options.description || '',
             priority: options.priority
           }
 
           const key = this.$shortcuts.register(config)
-          
+
           if (key) {
             this._shortcutKeys.push({
               key,
@@ -92,17 +100,23 @@ const ShortcutPlugin = {
          * @param {string} context - 上下文
          */
         $unregisterShortcut(shortcut, layer, context) {
-          if (!this.$shortcuts || typeof this.$shortcuts.unregister !== 'function') {
+          if (
+            !this.$shortcuts ||
+            typeof this.$shortcuts.unregister !== 'function'
+          ) {
             return false
           }
 
           const result = this.$shortcuts.unregister(shortcut, layer, context)
-          
+
           // 从组件记录中移除
-          this._shortcutKeys = this._shortcutKeys.filter(item => 
-            !(item.shortcut === shortcut && 
-              item.layer === layer && 
-              item.context === context)
+          this._shortcutKeys = this._shortcutKeys.filter(
+            item =>
+              !(
+                item.shortcut === shortcut &&
+                item.layer === layer &&
+                item.context === context
+              )
           )
 
           return result
@@ -114,7 +128,10 @@ const ShortcutPlugin = {
          * @param {object} options - 选项
          */
         $switchShortcutContext(newContext, options = {}) {
-          if (!this.$shortcuts || typeof this.$shortcuts.switchContext !== 'function') {
+          if (
+            !this.$shortcuts ||
+            typeof this.$shortcuts.switchContext !== 'function'
+          ) {
             return null
           }
 
@@ -126,7 +143,10 @@ const ShortcutPlugin = {
          * @param {string} context - 上下文
          */
         $getShortcutHints(context) {
-          if (!this.$shortcuts || typeof this.$shortcuts.getHints !== 'function') {
+          if (
+            !this.$shortcuts ||
+            typeof this.$shortcuts.getHints !== 'function'
+          ) {
             return []
           }
 
@@ -140,12 +160,15 @@ const ShortcutPlugin = {
           this._shortcutKeys.forEach(item => {
             this.$unregisterShortcut(item.shortcut, item.layer, item.context)
           })
-          
+
           this._shortcutKeys = []
         }
 
         // 组件级清理
-        if (this.$shortcuts && typeof this.$shortcuts.cleanupComponent === 'function') {
+        if (
+          this.$shortcuts &&
+          typeof this.$shortcuts.cleanupComponent === 'function'
+        ) {
           const componentName = this.$options.name || this.$vnode?.tag
           if (componentName) {
             this.$shortcuts.cleanupComponent(componentName)
@@ -161,7 +184,9 @@ const ShortcutPlugin = {
         const vm = vnode.context
 
         if (!arg) {
-          console.warn('v-shortcut directive requires a shortcut key as argument')
+          console.warn(
+            'v-shortcut directive requires a shortcut key as argument'
+          )
           return
         }
 
@@ -171,20 +196,29 @@ const ShortcutPlugin = {
         } else if (typeof value === 'string' && vm[value]) {
           action = vm[value].bind(vm)
         } else {
-          console.warn('v-shortcut directive requires a function or method name')
+          console.warn(
+            'v-shortcut directive requires a function or method name'
+          )
           return
         }
 
         const options = {
-          layer: modifiers.system ? LAYERS.SYSTEM : 
-                 modifiers.application ? LAYERS.APPLICATION :
-                 modifiers.context ? LAYERS.CONTEXT :
-                 modifiers.temporary ? LAYERS.TEMPORARY :
-                 LAYERS.COMPONENT,
-          context: modifiers.textEdit ? CONTEXTS.TEXT_EDITING :
-                  modifiers.search ? CONTEXTS.SEARCH_MODE :
-                  modifiers.dialog ? CONTEXTS.DIALOG_OPEN :
-                  CONTEXTS.NORMAL
+          layer: modifiers.system
+            ? LAYERS.SYSTEM
+            : modifiers.application
+              ? LAYERS.APPLICATION
+              : modifiers.context
+                ? LAYERS.CONTEXT
+                : modifiers.temporary
+                  ? LAYERS.TEMPORARY
+                  : LAYERS.COMPONENT,
+          context: modifiers.textEdit
+            ? CONTEXTS.TEXT_EDITING
+            : modifiers.search
+              ? CONTEXTS.SEARCH_MODE
+              : modifiers.dialog
+                ? CONTEXTS.DIALOG_OPEN
+                : CONTEXTS.NORMAL
         }
 
         // 存储到元素上，用于解绑

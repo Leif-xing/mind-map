@@ -111,8 +111,8 @@ class TouchEvent {
         scale < minTouchZoomScale
           ? minTouchZoomScale
           : scale > maxTouchZoomScale
-          ? maxTouchZoomScale
-          : scale
+            ? maxTouchZoomScale
+            : scale
       const ratio = 1 - scale / viewBefore.scale
       view.scale = scale
       view.x =

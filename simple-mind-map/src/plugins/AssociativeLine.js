@@ -680,8 +680,8 @@ class AssociativeLine {
       // 偏移量
       associativeLineTargetControlOffsets: associativeLineTargetControlOffsets
         ? associativeLineTargetControlOffsets.filter((_, index) => {
-            return index !== targetIndex
-          })
+          return index !== targetIndex
+        })
         : [],
       // 文本
       associativeLineText: newAssociativeLineText,

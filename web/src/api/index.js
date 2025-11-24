@@ -141,8 +141,8 @@ export const storeUserData = (users, userIdCounter) => {
     const userData = {
       users: users,
       userIdCounter: userIdCounter
-    };
-    localStorage.setItem('SIMPLE_MIND_MAP_USER_DATA', JSON.stringify(userData));
+    }
+    localStorage.setItem('SIMPLE_MIND_MAP_USER_DATA', JSON.stringify(userData))
   } catch (error) {
     // console.error('存储用户数据失败:', error);
   }
@@ -151,13 +151,13 @@ export const storeUserData = (users, userIdCounter) => {
 // 获取用户数据
 export const getUserData = () => {
   try {
-    const userData = localStorage.getItem('SIMPLE_MIND_MAP_USER_DATA');
+    const userData = localStorage.getItem('SIMPLE_MIND_MAP_USER_DATA')
     if (userData) {
-      return JSON.parse(userData);
+      return JSON.parse(userData)
     }
-    return null;
+    return null
   } catch (error) {
     // console.error('获取用户数据失败:', error);
-    return null;
+    return null
   }
 }

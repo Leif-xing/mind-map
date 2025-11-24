@@ -468,7 +468,7 @@ export const sidebarTriggerList = [
     name: 'Setting',
     value: 'setting',
     icon: 'iconshezhi'
-  },
+  }
   // {
   //   name: 'ShortcutKey',
   //   value: 'shortcutKey',
@@ -482,8 +482,7 @@ export const downTypeList = [
     name: '思绪 file',
     type: 'smm',
     icon: 'iconwenjian',
-    desc:
-      'SimpleMindMap private format, can be used for re import, and the client can directly edit it'
+    desc: 'SimpleMindMap private format, can be used for re import, and the client can directly edit it'
   },
   {
     name: 'Image',
@@ -538,7 +537,7 @@ export const downTypeList = [
     type: 'json',
     icon: 'iconjson',
     desc: 'Popular data exchange format that can be used for re importing'
-  },
+  }
 ]
 
 // 编号类型列表
@@ -689,11 +688,7 @@ export const layoutGroupList = [
   },
   {
     name: 'Timeline',
-    list: [
-      'timeline',
-      'timeline2',
-      'verticalTimeline'
-    ]
+    list: ['timeline', 'timeline2', 'verticalTimeline']
   },
   {
     name: 'Fishbone',

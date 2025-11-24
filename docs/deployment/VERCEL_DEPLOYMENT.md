@@ -5,6 +5,7 @@
 ### 方法1：GitHub 自动部署（推荐）
 
 #### 1. 推送代码到GitHub
+
 ```bash
 git add .
 git commit -m "添加Vercel部署配置"
@@ -12,6 +13,7 @@ git push origin main
 ```
 
 #### 2. 在Vercel中导入项目
+
 1. 访问 [Vercel Dashboard](https://vercel.com/)
 2. 点击 **"Add New..."** → **"Project"**
 3. 选择 **"Import Git Repository"**
@@ -19,6 +21,7 @@ git push origin main
 5. 点击 **"Import"**
 
 #### 3. 项目配置（Vercel会自动检测）
+
 - **Framework Preset**: `Other`
 - **Root Directory**: `./` (默认)
 - **Build Command**: 自动检测（使用vercel.json配置）
@@ -26,11 +29,13 @@ git push origin main
 - **Install Command**: `cd web && npm install`
 
 #### 4. 环境变量（可选）
+
 ```
 NODE_VERSION=18
 ```
 
 #### 5. 部署
+
 - 点击 **"Deploy"**
 - 等待构建完成（约2-3分钟）
 - 获得部署URL：`https://your-project-name.vercel.app`
@@ -38,22 +43,27 @@ NODE_VERSION=18
 ### 方法2：Vercel CLI 部署
 
 #### 1. 安装Vercel CLI
+
 ```bash
 npm install -g vercel
 ```
 
 #### 2. 登录Vercel
+
 ```bash
 vercel login
 ```
 
 #### 3. 初始化项目
+
 ```bash
 vercel
 ```
+
 按提示配置项目设置
 
 #### 4. 部署
+
 ```bash
 # 自动化部署脚本
 node deploy-vercel.js
@@ -65,6 +75,7 @@ cd web && npm run vercel-build && cd .. && vercel --prod
 ## ⚙️ 配置文件说明
 
 ### vercel.json
+
 ```json
 {
   "version": 2,
@@ -88,6 +99,7 @@ cd web && npm run vercel-build && cd .. && vercel --prod
 ```
 
 ### 构建流程
+
 1. `web/npm install` - 安装依赖
 2. `web/npm run vercel-build` - 执行构建
 3. `vue-cli-service build` - Vue应用构建
@@ -98,6 +110,7 @@ cd web && npm run vercel-build && cd .. && vercel --prod
 ## 🎯 项目结构
 
 ### 构建后的目录结构：
+
 ```
 vercel-build/
 ├── index.html          # 主页面
@@ -112,16 +125,20 @@ vercel-build/
 ## 🔧 高级配置
 
 ### 1. 自定义域名
+
 1. 在Vercel项目设置中点击 **"Domains"**
 2. 添加你的自定义域名
 3. 配置DNS记录指向Vercel
 
 ### 2. 环境变量
+
 在Vercel项目设置中的 **"Environment Variables"** 部分添加：
+
 - `NODE_VERSION`: `18`
 - 其他需要的环境变量
 
 ### 3. 构建优化
+
 ```json
 {
   "builds": [
@@ -140,11 +157,13 @@ vercel-build/
 ## 🚀 自动化部署
 
 ### GitHub集成
+
 - 每次推送到 `main` 分支时自动部署
 - Pull Request 预览部署
 - 部署状态检查
 
 ### 部署钩子
+
 ```bash
 # 本地测试构建
 npm run vercel-build
@@ -161,27 +180,34 @@ vercel --prod
 ### 常见问题
 
 #### 1. 构建失败
+
 **错误**: Build failed
 **解决方案**:
+
 - 检查 `web/package.json` 中的 `vercel-build` 脚本
 - 确保 Node.js 版本兼容（推荐18+）
 - 查看Vercel构建日志
 
 #### 2. 路由404错误
+
 **错误**: Page not found
 **解决方案**:
+
 - 确保 `vercel.json` 中配置了正确的路由规则
 - 检查SPA路由配置
 
 #### 3. 静态资源加载失败
+
 **错误**: CSS/JS files not loading
 **解决方案**:
+
 - 检查 `index.html` 中的资源路径
 - 确保构建输出目录正确
 
 ## 📊 性能优化
 
 ### 1. 缓存策略
+
 ```json
 {
   "headers": [
@@ -199,7 +225,9 @@ vercel --prod
 ```
 
 ### 2. 压缩优化
+
 Vercel自动提供：
+
 - Gzip/Brotli压缩
 - 图片优化
 - CDN加速
@@ -207,6 +235,7 @@ Vercel自动提供：
 ## 🎉 部署后验证
 
 部署成功后，检查以下项目：
+
 - ✅ 应用正常加载
 - ✅ 思维导图功能正常
 - ✅ 路由跳转正常
@@ -217,13 +246,16 @@ Vercel自动提供：
 ## 🔄 更新部署
 
 ### 自动更新
+
 每次推送代码到GitHub时，Vercel会自动：
+
 1. 检测到新提交
 2. 运行构建
 3. 部署新版本
 4. 发送部署通知
 
 ### 手动更新
+
 ```bash
 git add .
 git commit -m "更新内容"

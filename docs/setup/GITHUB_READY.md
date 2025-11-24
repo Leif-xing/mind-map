@@ -3,6 +3,7 @@
 ## 📋 清理完成的内容
 
 ### ✅ 已删除的文件和目录
+
 - `dist/` - 构建输出目录（可重新生成）
 - `cloudflare-build/` - Cloudflare 部署临时目录
 - `web/node_modules/` - Node.js 依赖（可重新安装）
@@ -14,11 +15,13 @@
 - `package-lock.json` - 根目录的lock文件（不需要）
 
 ### ✅ 已优化的文件
+
 - `.gitignore` - 更新了忽略规则，包含所有构建文件和依赖
 - `README.md` - 创建了适合GitHub的简洁版本
 - `web/vue.config.js` - 修复了Node.js兼容性问题
 
 ### ✅ 新增的部署文件
+
 - `build-for-cloudflare.js` - Cloudflare 部署准备脚本
 - `deploy.js` - 自动化部署脚本
 - `CLOUDFLARE_DEPLOYMENT.md` - 详细部署指南
@@ -54,6 +57,7 @@ mind-map/
 ## 🚀 下一步操作
 
 ### 1. 提交到本地 Git
+
 ```bash
 git commit -m "feat: 优化项目结构，添加 Cloudflare 部署支持
 
@@ -65,6 +69,7 @@ git commit -m "feat: 优化项目结构，添加 Cloudflare 部署支持
 ```
 
 ### 2. 推送到 GitHub
+
 ```bash
 # 如果是新仓库
 git remote add origin https://github.com/your-username/mind-map.git
@@ -76,12 +81,14 @@ git push origin main
 ```
 
 ### 3. 设置 GitHub Pages 或 Cloudflare Pages
+
 - **GitHub Pages**: 在仓库设置中启用 Pages，选择源为 GitHub Actions
 - **Cloudflare Pages**: 连接 GitHub 仓库，设置构建命令和输出目录
 
 ## 🔧 开发和部署流程
 
 ### 本地开发
+
 ```bash
 cd web
 npm install
@@ -89,12 +96,14 @@ npm run serve
 ```
 
 ### 构建项目
+
 ```bash
 cd web
 npm run build
 ```
 
 ### Cloudflare 部署
+
 ```bash
 # 自动化部署
 node deploy.js

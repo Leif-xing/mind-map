@@ -51,151 +51,151 @@
 </template>
 
 <script>
-export default {
-  props: {
-    mindMap: {
-      type: Object
+  export default {
+    props: {
+      mindMap: {
+        type: Object
+      },
+      isDark: {
+        type: Boolean
+      }
     },
-    isDark: {
-      type: Boolean
-    }
-  },
-  data() {
-    return {
-      isEnterDemonstrate: false,
-      curStepIndex: 0,
-      totalStep: 0,
-      inputStep: ''
-    }
-  },
-  created() {
-    this.$bus.$on('demonstrate_jump', this.onJump)
-    this.$bus.$on('exit_demonstrate', this.onExit)
-  },
-  methods: {
-    enterDemoMode() {
-      this.isEnterDemonstrate = true
-      this.$nextTick(() => {
-        const el = document.querySelector('#mindMapContainer')
-        el.appendChild(this.$refs.exitDemonstrateBtnRef)
-        el.appendChild(this.$refs.stepBoxRef)
-      })
-      this.mindMap.demonstrate.enter()
+    data() {
+      return {
+        isEnterDemonstrate: false,
+        curStepIndex: 0,
+        totalStep: 0,
+        inputStep: ''
+      }
     },
+    created() {
+      this.$bus.$on('demonstrate_jump', this.onJump)
+      this.$bus.$on('exit_demonstrate', this.onExit)
+    },
+    methods: {
+      enterDemoMode() {
+        this.isEnterDemonstrate = true
+        this.$nextTick(() => {
+          const el = document.querySelector('#mindMapContainer')
+          el.appendChild(this.$refs.exitDemonstrateBtnRef)
+          el.appendChild(this.$refs.stepBoxRef)
+        })
+        this.mindMap.demonstrate.enter()
+      },
 
-    exit() {
-      this.mindMap.demonstrate.exit()
-    },
+      exit() {
+        this.mindMap.demonstrate.exit()
+      },
 
-    onExit() {
-      this.isEnterDemonstrate = false
-      this.curStepIndex = 0
-      this.totalStep = 0
-    },
+      onExit() {
+        this.isEnterDemonstrate = false
+        this.curStepIndex = 0
+        this.totalStep = 0
+      },
 
-    onJump(index, total) {
-      this.curStepIndex = index
-      this.totalStep = total
-    },
+      onJump(index, total) {
+        this.curStepIndex = index
+        this.totalStep = total
+      },
 
-    prev() {
-      this.mindMap.demonstrate.prev()
-    },
+      prev() {
+        this.mindMap.demonstrate.prev()
+      },
 
-    next() {
-      this.mindMap.demonstrate.next()
-    },
+      next() {
+        this.mindMap.demonstrate.next()
+      },
 
-    onEnter() {
-      const num = Number(this.inputStep)
-      if (Number.isNaN(num)) {
-        this.inputStep = ''
-      } else if (num >= 1 && num <= this.totalStep) {
-        this.mindMap.demonstrate.jump(num - 1)
+      onEnter() {
+        const num = Number(this.inputStep)
+        if (Number.isNaN(num)) {
+          this.inputStep = ''
+        } else if (num >= 1 && num <= this.totalStep) {
+          this.mindMap.demonstrate.jump(num - 1)
+        }
       }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.demonstrateContainer {
-  display: flex;
-  align-items: center;
-
-  &.isDark {
-    .btn {
-      color: hsla(0, 0%, 100%, 0.6);
-    }
-  }
-
-  .item {
-    margin-right: 12px;
-
-    &:last-of-type {
-      margin-right: 0;
-    }
-  }
-
-  .btn {
-    cursor: pointer;
-    font-size: 24px;
-  }
-}
-
-.exitDemonstrateBtn {
-  position: absolute;
-  right: 40px;
-  top: 20px;
-  cursor: pointer;
-  z-index: 10001;
-  pointer-events: all;
-
-  .icon {
-    font-size: 28px;
-    color: #fff;
-  }
-}
-
-.stepBox {
-  position: absolute;
-  right: 40px;
-  bottom: 20px;
-  pointer-events: all;
-
-  z-index: 10001;
-  display: flex;
-  align-items: center;
-
-  .step {
-    color: #fff;
-    margin: 0 12px;
-  }
-
-  .jump {
-    color: #fff;
-    cursor: pointer;
-
-    &.disabled {
-      cursor: not-allowed;
-      color: #999;
-    }
-  }
-
-  .input {
-    margin-left: 12px;
+  .demonstrateContainer {
     display: flex;
     align-items: center;
 
-    input {
-      width: 50px;
-      height: 30px;
-      text-align: center;
-      background-color: transparent;
-      border: 1px solid #999;
-      outline: none;
+    &.isDark {
+      .btn {
+        color: hsla(0, 0%, 100%, 0.6);
+      }
+    }
+
+    .item {
+      margin-right: 12px;
+
+      &:last-of-type {
+        margin-right: 0;
+      }
+    }
+
+    .btn {
+      cursor: pointer;
+      font-size: 24px;
+    }
+  }
+
+  .exitDemonstrateBtn {
+    position: absolute;
+    right: 40px;
+    top: 20px;
+    cursor: pointer;
+    z-index: 10001;
+    pointer-events: all;
+
+    .icon {
+      font-size: 28px;
       color: #fff;
     }
   }
-}
+
+  .stepBox {
+    position: absolute;
+    right: 40px;
+    bottom: 20px;
+    pointer-events: all;
+
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+
+    .step {
+      color: #fff;
+      margin: 0 12px;
+    }
+
+    .jump {
+      color: #fff;
+      cursor: pointer;
+
+      &.disabled {
+        cursor: not-allowed;
+        color: #999;
+      }
+    }
+
+    .input {
+      margin-left: 12px;
+      display: flex;
+      align-items: center;
+
+      input {
+        width: 50px;
+        height: 30px;
+        text-align: center;
+        background-color: transparent;
+        border: 1px solid #999;
+        outline: none;
+        color: #fff;
+      }
+    }
+  }
 </style>

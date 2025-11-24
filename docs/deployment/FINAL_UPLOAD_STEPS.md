@@ -42,6 +42,7 @@ git push -u origin main
 如果遇到认证问题，可能需要：
 
 1. **使用GitHub CLI登录**：
+
    ```bash
    gh auth login
    ```
@@ -55,6 +56,7 @@ git push -u origin main
 上传成功后，访问：https://github.com/Leif-xing/mind-map
 
 应该能看到：
+
 - ✅ 完整的项目文件
 - ✅ 更新的README.md
 - ✅ 提交历史
@@ -63,14 +65,17 @@ git push -u origin main
 ## 🎨 后续优化建议
 
 ### 1. 设置仓库属性
+
 - 在About部分添加描述和topics
 - 设置网站链接（部署后）
 
 ### 2. 启用GitHub Pages或Cloudflare Pages
+
 - 使用 `node deploy.js` 部署到Cloudflare
 - 或在GitHub Actions中设置自动化部署
 
 ### 3. 自定义项目
+
 - 修改应用标题（在 `index.html` 中）
 - 更换logo和favicon
 - 添加你的联系方式

@@ -36,7 +36,14 @@ class LogicalStructure extends Base {
       this.renderer.renderTree,
       null,
       (cur, parent, isRoot, layerIndex, index, ancestors) => {
-        let newNode = this.createNode(cur, parent, isRoot, layerIndex, index, ancestors)
+        let newNode = this.createNode(
+          cur,
+          parent,
+          isRoot,
+          layerIndex,
+          index,
+          ancestors
+        )
         newNode.sortIndex = sortIndex
         sortIndex++
         // 根节点定位在画布中心位置
@@ -64,8 +71,8 @@ class LogicalStructure extends Base {
         let len = cur.data.expand === false ? 0 : cur._node.children.length
         cur._node.childrenAreaHeight = len
           ? cur._node.children.reduce((h, item) => {
-              return h + item.height
-            }, 0) +
+            return h + item.height
+          }, 0) +
             (len + 1) * this.getMarginY(layerIndex + 1)
           : 0
         // 如果存在概要，则和概要的高度取最大值

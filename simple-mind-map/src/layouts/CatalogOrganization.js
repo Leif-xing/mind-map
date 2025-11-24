@@ -33,7 +33,14 @@ class CatalogOrganization extends Base {
       this.renderer.renderTree,
       null,
       (cur, parent, isRoot, layerIndex, index, ancestors) => {
-        let newNode = this.createNode(cur, parent, isRoot, layerIndex, index, ancestors)
+        let newNode = this.createNode(
+          cur,
+          parent,
+          isRoot,
+          layerIndex,
+          index,
+          ancestors
+        )
         // 根节点定位在画布中心位置
         if (isRoot) {
           this.setNodeCenter(newNode)
@@ -55,8 +62,8 @@ class CatalogOrganization extends Base {
           let len = cur.data.expand === false ? 0 : cur._node.children.length
           cur._node.childrenAreaWidth = len
             ? cur._node.children.reduce((h, item) => {
-                return h + item.width
-              }, 0) +
+              return h + item.width
+            }, 0) +
               (len + 1) * this.getMarginX(layerIndex + 1)
             : 0
         }
@@ -248,7 +255,9 @@ class CatalogOrganization extends Base {
       if (len > 0) {
         let lin2 = this.lineDraw.path()
         node.style.line(lin2)
-        lin2.plot(this.transformPath(`M ${minx},${y1 + s1} L ${maxx},${y1 + s1}`))
+        lin2.plot(
+          this.transformPath(`M ${minx},${y1 + s1} L ${maxx},${y1 + s1}`)
+        )
         node._lines.push(lin2)
         style && style(lin2, node)
       }
@@ -298,8 +307,8 @@ class CatalogOrganization extends Base {
         // 节点使用横线风格，需要额外渲染横线
         let nodeUseLineStylePath = this.mindMap.themeConfig.nodeUseLineStyle
           ? ` L ${_left},${y2 - item.height / 2} L ${_left},${
-              y2 + item.height / 2
-            }`
+            y2 + item.height / 2
+          }`
           : ''
         path += nodeUseLineStylePath
         this.setLineStyle(style, lines[index], path, item)

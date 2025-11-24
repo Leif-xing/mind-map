@@ -44,7 +44,7 @@ const router = new VueRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
-  
+
   // 检查是否需要认证
   if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!currentUser) {
@@ -53,11 +53,18 @@ router.beforeEach((to, from, next) => {
         path: '/login',
         query: { redirect: to.fullPath }
       })
-    } else if (to.path === '/' && !currentUser.isAdmin && currentUser.mindMapPermission !== 1) {
+    } else if (
+      to.path === '/' &&
+      !currentUser.isAdmin &&
+      currentUser.mindMapPermission !== 1
+    ) {
       // 普通用户没有导图权限，不能访问思维导图页面
       alert('您没有导图权限，请联系管理员开通')
       next('/login')
-    } else if (to.matched.some(record => record.meta.requiresAdmin) && !currentUser.isAdmin) {
+    } else if (
+      to.matched.some(record => record.meta.requiresAdmin) &&
+      !currentUser.isAdmin
+    ) {
       // 需要管理员权限但用户不是管理员
       next('/')
     } else {

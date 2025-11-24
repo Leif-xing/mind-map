@@ -163,8 +163,8 @@ export default class Shape {
       C${width - borderRadius},0 ${width},${0} ${width},${borderRadius}
       L${width},${height - borderRadius}
       C${width},${height - borderRadius} ${width},${height} ${
-      width - borderRadius
-    },${height}
+  width - borderRadius
+},${height}
       L${borderRadius},${height}
       C${borderRadius},${height} ${0},${height} ${0},${height - borderRadius}
       L${0},${borderRadius}

@@ -55,14 +55,14 @@ END;
 $ LANGUAGE 'plpgsql';
 
 -- 为表添加更新时间戳触发器
-CREATE TRIGGER update_users_updated_at 
-  BEFORE UPDATE ON users 
-  FOR EACH ROW 
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_mind_maps_updated_at 
-  BEFORE UPDATE ON mind_maps 
-  FOR EACH ROW 
+CREATE TRIGGER update_mind_maps_updated_at
+  BEFORE UPDATE ON mind_maps
+  FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
 -- 创建索引

@@ -52,9 +52,9 @@
       </div>
       <div class="row">
         <div class="rowItem">
-          <span class="name">{{
-            $t('baseStyle.associativeLineActiveColor')
-          }}</span>
+          <span class="name">
+            {{ $t('baseStyle.associativeLineActiveColor') }}
+          </span>
           <span
             class="block"
             v-popover:popover5
@@ -72,9 +72,9 @@
           </el-popover>
         </div>
         <div class="rowItem">
-          <span class="name">{{
-            $t('baseStyle.associativeLineActiveWidth')
-          }}</span>
+          <span class="name">
+            {{ $t('baseStyle.associativeLineActiveWidth') }}
+          </span>
           <el-select
             size="mini"
             style="width: 80px"
@@ -133,8 +133,8 @@
                     style.associativeLineDasharray === item.value
                       ? '#409eff'
                       : isDark
-                      ? '#fff'
-                      : '#000'
+                        ? '#fff'
+                        : '#000'
                   "
                   :stroke-dasharray="item.value"
                 ></line>
@@ -160,8 +160,7 @@
               :label="item.name"
               :value="item.value"
               :style="{ fontFamily: item.value }"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
       </div>
@@ -199,8 +198,7 @@
               :label="item"
               :value="item"
               :style="{ fontSize: item + 'px' }"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
       </div>
@@ -209,200 +207,202 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import Color from './Color.vue'
-import {
-  lineWidthList,
-  fontFamilyList,
-  fontSizeList,
-  borderDasharrayList
-} from '@/config'
-import { mapState, mapMutations } from 'vuex'
+  import Sidebar from './Sidebar.vue'
+  import Color from './Color.vue'
+  import {
+    lineWidthList,
+    fontFamilyList,
+    fontSizeList,
+    borderDasharrayList
+  } from '@/config'
+  import { mapState, mapMutations } from 'vuex'
 
-const defaultStyle = {
-  associativeLineColor: '',
-  associativeLineWidth: 0,
-  associativeLineActiveWidth: 0,
-  associativeLineDasharray: '',
-  associativeLineActiveColor: '',
-  associativeLineTextFontSize: 0,
-  associativeLineTextColor: '',
-  associativeLineTextFontFamily: ''
-}
+  const defaultStyle = {
+    associativeLineColor: '',
+    associativeLineWidth: 0,
+    associativeLineActiveWidth: 0,
+    associativeLineDasharray: '',
+    associativeLineActiveColor: '',
+    associativeLineTextFontSize: 0,
+    associativeLineTextColor: '',
+    associativeLineTextFontFamily: ''
+  }
 
-export default {
-  components: {
-    Sidebar,
-    Color
-  },
-  props: {
-    mindMap: {
-      type: Object
-    }
-  },
-  data() {
-    return {
-      lineWidthList,
-      fontSizeList,
-      activeLineNode: null,
-      activeLineToNode: null,
-      style: {
-        ...defaultStyle
-      }
-    }
-  },
-  computed: {
-    ...mapState({
-      activeSidebar: state => state.activeSidebar,
-      isDark: state => state.localConfig.isDark
-    }),
-
-    fontFamilyList() {
-      return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
+  export default {
+    components: {
+      Sidebar,
+      Color
     },
-
-    borderDasharrayList() {
-      return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
-    }
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'associativeLineStyle') {
-        this.$refs.sidebar.show = true
-      } else {
-        this.$refs.sidebar.show = false
-      }
-    }
-  },
-  created() {
-    this.mindMap.on('associative_line_click', this.onAssociativeLineClick)
-    this.mindMap.on(
-      'associative_line_deactivate',
-      this.associativeLineDeactivate
-    )
-  },
-  methods: {
-    ...mapMutations(['setActiveSidebar']),
-
-    onAssociativeLineClick(a, b, node, toNode) {
-      this.activeLineNode = node
-      this.activeLineToNode = toNode
-      const styleConfig = this.mindMap.associativeLine.getStyleConfig(
-        node,
-        toNode
-      )
-      Object.keys(this.style).forEach(item => {
-        this.style[item] = styleConfig[item]
-      })
-      this.setActiveSidebar('associativeLineStyle')
-    },
-
-    associativeLineDeactivate() {
-      if (this.activeSidebar === 'associativeLineStyle') {
-        this.setActiveSidebar(null)
-      }
-      this.activeLineNode = null
-      this.activeLineToNode = null
-      this.style = {
-        ...defaultStyle
+    props: {
+      mindMap: {
+        type: Object
       }
     },
-
-    update(prop, value) {
-      this.style[prop] = value
-      const associativeLineStyle =
-        this.activeLineNode.getData('associativeLineStyle') || {}
-      const toNodeUid = this.activeLineToNode.getData('uid')
-      const lineStyle = associativeLineStyle[toNodeUid] || {}
-      this.activeLineNode.setData({
-        associativeLineStyle: {
-          ...associativeLineStyle,
-          [toNodeUid]: {
-            ...lineStyle,
-            ...this.style
-          }
+    data() {
+      return {
+        lineWidthList,
+        fontSizeList,
+        activeLineNode: null,
+        activeLineToNode: null,
+        style: {
+          ...defaultStyle
         }
-      })
-      this.mindMap.associativeLine.updateActiveLineStyle()
+      }
+    },
+    computed: {
+      ...mapState({
+        activeSidebar: state => state.activeSidebar,
+        isDark: state => state.localConfig.isDark
+      }),
+
+      fontFamilyList() {
+        return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
+      },
+
+      borderDasharrayList() {
+        return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
+      }
+    },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'associativeLineStyle') {
+          this.$refs.sidebar.show = true
+        } else {
+          this.$refs.sidebar.show = false
+        }
+      }
+    },
+    created() {
+      this.mindMap.on('associative_line_click', this.onAssociativeLineClick)
+      this.mindMap.on(
+        'associative_line_deactivate',
+        this.associativeLineDeactivate
+      )
+    },
+    methods: {
+      ...mapMutations(['setActiveSidebar']),
+
+      onAssociativeLineClick(a, b, node, toNode) {
+        this.activeLineNode = node
+        this.activeLineToNode = toNode
+        const styleConfig = this.mindMap.associativeLine.getStyleConfig(
+          node,
+          toNode
+        )
+        Object.keys(this.style).forEach(item => {
+          this.style[item] = styleConfig[item]
+        })
+        this.setActiveSidebar('associativeLineStyle')
+      },
+
+      associativeLineDeactivate() {
+        if (this.activeSidebar === 'associativeLineStyle') {
+          this.setActiveSidebar(null)
+        }
+        this.activeLineNode = null
+        this.activeLineToNode = null
+        this.style = {
+          ...defaultStyle
+        }
+      },
+
+      update(prop, value) {
+        this.style[prop] = value
+        const associativeLineStyle =
+          this.activeLineNode.getData('associativeLineStyle') || {}
+        const toNodeUid = this.activeLineToNode.getData('uid')
+        const lineStyle = associativeLineStyle[toNodeUid] || {}
+        this.activeLineNode.setData({
+          associativeLineStyle: {
+            ...associativeLineStyle,
+            [toNodeUid]: {
+              ...lineStyle,
+              ...this.style
+            }
+          }
+        })
+        this.mindMap.associativeLine.updateActiveLineStyle()
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.sidebarContent {
-  padding: 20px;
-  padding-top: 10px;
+  .sidebarContent {
+    padding: 20px;
+    padding-top: 10px;
 
-  &.isDark {
+    &.isDark {
+      .title {
+        color: #fff;
+      }
+
+      .row {
+        .rowItem {
+          .name {
+            color: hsla(0, 0%, 100%, 0.6);
+          }
+        }
+      }
+    }
+
     .title {
-      color: #fff;
+      font-size: 16px;
+      font-family:
+        PingFangSC-Medium,
+        PingFang SC;
+      font-weight: 500;
+      color: rgba(26, 26, 26, 0.9);
+      margin-bottom: 10px;
+      margin-top: 20px;
+
+      &.noTop {
+        margin-top: 0;
+      }
     }
 
     .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+
       .rowItem {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+
         .name {
-          color: hsla(0, 0%, 100%, 0.6);
+          font-size: 12px;
+          margin-right: 10px;
+          white-space: nowrap;
+        }
+
+        .block {
+          display: inline-block;
+          width: 30px;
+          height: 30px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          cursor: pointer;
         }
       }
     }
   }
 
-  .title {
-    font-size: 16px;
-    font-family: PingFangSC-Medium, PingFang SC;
-    font-weight: 500;
-    color: rgba(26, 26, 26, 0.9);
-    margin-bottom: 10px;
-    margin-top: 20px;
+  .borderLine {
+    display: inline-block;
+    width: 100%;
+    background-color: #000;
 
-    &.noTop {
-      margin-top: 0;
+    &.isDark {
+      background-color: #fff;
     }
   }
-
-  .row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-
-    .rowItem {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
-
-      .name {
-        font-size: 12px;
-        margin-right: 10px;
-        white-space: nowrap;
-      }
-
-      .block {
-        display: inline-block;
-        width: 30px;
-        height: 30px;
-        border: 1px solid #dcdfe6;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-    }
-  }
-}
-
-.borderLine {
-  display: inline-block;
-  width: 100%;
-  background-color: #000;
-
-  &.isDark {
-    background-color: #fff;
-  }
-}
 </style>
 <style lang="less">
-.el-select-dropdown__item.selected {
-  .borderLine {
-    background-color: #409eff;
+  .el-select-dropdown__item.selected {
+    .borderLine {
+      background-color: #409eff;
+    }
   }
-}
 </style>

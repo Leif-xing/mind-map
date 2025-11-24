@@ -271,8 +271,8 @@ export default class TextEdit {
     this.textEditNode.style.background = openRealtimeRenderOnNodeTextEdit
       ? 'transparent'
       : this.currentNode
-      ? this.getBackground(this.currentNode)
-      : ''
+        ? this.getBackground(this.currentNode)
+        : ''
     this.textEditNode.style.boxShadow = openRealtimeRenderOnNodeTextEdit
       ? 'none'
       : '0 0 20px rgba(0,0,0,.5)'
@@ -317,10 +317,10 @@ export default class TextEdit {
         position: fixed;
         box-sizing: border-box;
         ${
-          openRealtimeRenderOnNodeTextEdit
-            ? ''
-            : `box-shadow: 0 0 20px rgba(0,0,0,.5);`
-        }
+  openRealtimeRenderOnNodeTextEdit
+    ? ''
+    : 'box-shadow: 0 0 20px rgba(0,0,0,.5);'
+}
         padding: ${this.textNodePaddingY}px ${this.textNodePaddingX}px;
         margin-left: -${this.textNodePaddingX}px;
         margin-top: -${this.textNodePaddingY}px;

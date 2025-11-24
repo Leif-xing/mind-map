@@ -30,14 +30,21 @@ class SecureAi {
         throw new Error('缺少store上下文')
       }
 
-      const response = await this.storeContext.$store.dispatch('callAiThroughProxy', {
-        userId: this.userId,
-        aiPayload: data
-      })
+      const response = await this.storeContext.$store.dispatch(
+        'callAiThroughProxy',
+        {
+          userId: this.userId,
+          aiPayload: data
+        }
+      )
 
       // 处理响应
       clearTimeout(timeout)
-      end(response.content || response.choices?.[0]?.message?.content || JSON.stringify(response))
+      end(
+        response.content ||
+          response.choices?.[0]?.message?.content ||
+          JSON.stringify(response)
+      )
     } catch (error) {
       clearTimeout(timeout)
       console.error('安全AI请求失败:', error)

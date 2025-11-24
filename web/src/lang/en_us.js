@@ -378,10 +378,8 @@ export default {
     downGithub: 'Download from Github'
   },
   mouseAction: {
-    tip1:
-      'Current: Left click to drag the canvas, right click to box select nodes',
-    tip2:
-      'Current: Left click to box select nodes, right click to drag the canvas'
+    tip1: 'Current: Left click to drag the canvas, right click to box select nodes',
+    tip2: 'Current: Left click to box select nodes, right click to drag the canvas'
   },
   search: {
     searchPlaceholder: 'Enter the search content and press Enter',

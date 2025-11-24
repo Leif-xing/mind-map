@@ -323,8 +323,8 @@ class MindMap extends Base {
         node.layerIndex === 0 && !rootLineStartPositionKeepSameInCurve
           ? left + width / 2
           : item.dir === CONSTANTS.LAYOUT_GROW_DIR.LEFT
-          ? left - expandBtnSize
-          : left + width + expandBtnSize
+            ? left - expandBtnSize
+            : left + width + expandBtnSize
       let y1 = top + height / 2
       let x2 =
         item.dir === CONSTANTS.LAYOUT_GROW_DIR.LEFT

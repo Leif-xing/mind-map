@@ -13,7 +13,8 @@
 ## 🚀 快速开始
 
 ### 环境要求
-- Node.js 16+ 
+
+- Node.js 16+
 - npm 或 yarn
 
 ### 本地开发
@@ -76,7 +77,7 @@ mind-map/
 支持多种部署方式：
 
 - **Vercel** (推荐) - 详见 [部署文档](./VERCEL_DEPLOYMENT.md)
-- **Cloudflare Pages** - 详见 [部署文档](./CLOUDFLARE_DEPLOYMENT.md)  
+- **Cloudflare Pages** - 详见 [部署文档](./CLOUDFLARE_DEPLOYMENT.md)
 - **Netlify**
 - **GitHub Pages**
 

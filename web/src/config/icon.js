@@ -130,19 +130,19 @@ const weatherList = [
 import { checkboxIcons } from './checkboxIcons.js'
 
 // 计算颜色亮度（0-255）
-const getLuminance = (hex) => {
+const getLuminance = hex => {
   // 移除 # 符号
   const rgb = hex.replace('#', '')
   const r = parseInt(rgb.substr(0, 2), 16)
-  const g = parseInt(rgb.substr(2, 2), 16) 
+  const g = parseInt(rgb.substr(2, 2), 16)
   const b = parseInt(rgb.substr(4, 2), 16)
-  
+
   // 使用 ITU-R BT.709 标准计算亮度
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
 // 根据背景色选择最佳文本颜色
-const getTextColor = (backgroundColor) => {
+const getTextColor = backgroundColor => {
   const luminance = getLuminance(backgroundColor)
   // 如果背景色较亮，使用黑色文字；否则使用白色文字
   return luminance > 128 ? '#000000' : '#FFFFFF'
@@ -154,7 +154,7 @@ const generateNumberIcon = (text, color) => {
   const fontSize = text.length > 2 ? 6 : text.length > 1 ? 8 : 10
   // 根据背景色选择最佳文本颜色
   const textColor = getTextColor(color)
-  
+
   return `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 20 20" width="20" height="20">
     <circle cx="10" cy="10" r="10" fill="${color}"/>
     <text x="10" y="10" text-anchor="middle" dominant-baseline="central" fill="${textColor}" font-size="${fontSize}" font-weight="bold" font-family="Arial, sans-serif">${text}</text>
@@ -162,10 +162,21 @@ const generateNumberIcon = (text, color) => {
 }
 
 // 中文数字转换函数
-const toChineseNumber = (num) => {
-  const chineseDigits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+const toChineseNumber = num => {
+  const chineseDigits = [
+    '',
+    '一',
+    '二',
+    '三',
+    '四',
+    '五',
+    '六',
+    '七',
+    '八',
+    '九'
+  ]
   const chineseUnits = ['', '十', '百', '千']
-  
+
   if (num === 0) return '零'
   if (num <= 10) return chineseDigits[num] || '十'
   if (num < 20) return '十' + (num === 10 ? '' : chineseDigits[num - 10])
@@ -174,24 +185,43 @@ const toChineseNumber = (num) => {
     const ones = num % 10
     return chineseDigits[tens] + '十' + (ones === 0 ? '' : chineseDigits[ones])
   }
-  
+
   // 处理更大的数字（虽然不太可能用到）
   return num.toString()
 }
 
 // 19种彩虹色系颜色
 const numberingColors = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-  '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#F4D03F',
-  '#AED6F1', '#A9DFBF', '#F9E79F', '#D2B4DE', '#AEB6BF'
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#96CEB4',
+  '#FFEAA7',
+  '#DDA0DD',
+  '#98D8C8',
+  '#F7DC6F',
+  '#BB8FCE',
+  '#85C1E9',
+  '#F8C471',
+  '#82E0AA',
+  '#F1948A',
+  '#85C1E9',
+  '#F4D03F',
+  '#AED6F1',
+  '#A9DFBF',
+  '#F9E79F',
+  '#D2B4DE',
+  '#AEB6BF'
 ]
 
 // 生成编号图标列表
 const generateNumberingIcons = (type, textGenerator, count = 20) => {
   return Array.from({ length: count }, (_, index) => ({
     name: textGenerator(index),
-    icon: generateNumberIcon(textGenerator(index), numberingColors[index % numberingColors.length])
+    icon: generateNumberIcon(
+      textGenerator(index),
+      numberingColors[index % numberingColors.length]
+    )
   }))
 }
 
@@ -199,22 +229,34 @@ export default [
   {
     name: '一级编号（中文数字）',
     type: 'number-1',
-    list: generateNumberingIcons('number-1', (index) => toChineseNumber(index + 1), 20)
+    list: generateNumberingIcons(
+      'number-1',
+      index => toChineseNumber(index + 1),
+      20
+    )
   },
   {
     name: '二级编号（阿拉伯数字）',
     type: 'number-2',
-    list: generateNumberingIcons('number-2', (index) => `${index + 1}`, 30)
+    list: generateNumberingIcons('number-2', index => `${index + 1}`, 30)
   },
   {
     name: '三级编号（大写字母）',
     type: 'number-3',
-    list: generateNumberingIcons('number-3', (index) => String.fromCharCode(65 + index), 26)
+    list: generateNumberingIcons(
+      'number-3',
+      index => String.fromCharCode(65 + index),
+      26
+    )
   },
   {
     name: '四级编号（小写字母）',
     type: 'number-4',
-    list: generateNumberingIcons('number-4', (index) => String.fromCharCode(97 + index), 26)
+    list: generateNumberingIcons(
+      'number-4',
+      index => String.fromCharCode(97 + index),
+      26
+    )
   },
   {
     name: '多彩标记图标', // 分组名称

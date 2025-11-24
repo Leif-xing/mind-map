@@ -20,65 +20,65 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from 'vuex'
+  import { mapState, mapMutations } from 'vuex'
 
-// 鼠标操作设置
-export default {
-  props: {
-    mindMap: {
-      type: Object
+  // 鼠标操作设置
+  export default {
+    props: {
+      mindMap: {
+        type: Object
+      },
+      isDark: {
+        type: Boolean
+      }
     },
-    isDark: {
-      type: Boolean
-    }
-  },
-  data() {
-    return {}
-  },
-  computed: {
-    ...mapState({
-      useLeftKeySelectionRightKeyDrag: state =>
-        state.localConfig.useLeftKeySelectionRightKeyDrag
-    })
-  },
-  methods: {
-    ...mapMutations(['setLocalConfig']),
+    data() {
+      return {}
+    },
+    computed: {
+      ...mapState({
+        useLeftKeySelectionRightKeyDrag: state =>
+          state.localConfig.useLeftKeySelectionRightKeyDrag
+      })
+    },
+    methods: {
+      ...mapMutations(['setLocalConfig']),
 
-    toggleAction() {
-      let val = !this.useLeftKeySelectionRightKeyDrag
-      this.mindMap.updateConfig({
-        useLeftKeySelectionRightKeyDrag: val
-      })
-      this.setLocalConfig({
-        useLeftKeySelectionRightKeyDrag: val
-      })
+      toggleAction() {
+        let val = !this.useLeftKeySelectionRightKeyDrag
+        this.mindMap.updateConfig({
+          useLeftKeySelectionRightKeyDrag: val
+        })
+        this.setLocalConfig({
+          useLeftKeySelectionRightKeyDrag: val
+        })
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.mouseActionContainer {
-  display: flex;
-  align-items: center;
+  .mouseActionContainer {
+    display: flex;
+    align-items: center;
 
-  &.isDark{
+    &.isDark {
+      .btn {
+        color: hsla(0, 0%, 100%, 0.6);
+      }
+    }
+
+    .item {
+      margin-right: 12px;
+
+      &:last-of-type {
+        margin-right: 0;
+      }
+    }
+
     .btn {
-      color: hsla(0,0%,100%,.6);
+      cursor: pointer;
+      font-size: 18px;
     }
   }
-
-  .item {
-    margin-right: 12px;
-
-    &:last-of-type {
-      margin-right: 0;
-    }
-  }
-
-  .btn {
-    cursor: pointer;
-    font-size: 18px;
-  }
-}
 </style>

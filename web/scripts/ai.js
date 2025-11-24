@@ -6,7 +6,8 @@ const { createClient } = require('@supabase/supabase-js')
 // 加载环境变量
 require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 // Supabase 配置 - 需要根据实际环境变量配置
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://your-project.supabase.co'
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || 'https://your-project.supabase.co'
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'your-anon-key'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -23,7 +24,7 @@ function decryptApiKey(encryptedKey) {
         return decoded
       }
     }
-    
+
     // 如果不是Base64，直接返回（假设是明文存储）
     return encryptedKey
   } catch (error) {
@@ -107,7 +108,7 @@ const createServe = () => {
 
       // 验证用户身份
       if (!requestUserId) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: '未提供用户身份认证',
           details: '请求必须包含有效的用户ID'
         })
@@ -121,20 +122,20 @@ const createServe = () => {
           .select('id, mind_map_permission, current_ai_config_id, is_admin')
           .eq('id', requestUserId)
           .single()
-        
+
         user = result.data
         userError = result.error
-        
+
         if (userError || !user) {
           console.error('用户验证失败:', userError)
-          return res.status(401).json({ 
+          return res.status(401).json({
             error: '用户验证失败',
             details: userError?.message || '用户不存在'
           })
         }
       } catch (supabaseError) {
         console.error('Supabase连接错误:', supabaseError.message)
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'Supabase连接失败',
           details: supabaseError.message
         })
@@ -142,14 +143,14 @@ const createServe = () => {
 
       // 检查AI使用权限
       if (!user.is_admin && user.mind_map_permission !== 1) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: '无AI使用权限',
           details: '当前用户没有AI功能使用权限'
         })
       }
 
       if (!user.current_ai_config_id) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: '未选择AI配置',
           details: '请先选择AI服务配置'
         })
@@ -162,10 +163,10 @@ const createServe = () => {
         .eq('id', user.current_ai_config_id)
         .eq('is_active', true)
         .single()
-      
+
       if (configError || !config) {
         console.error('AI配置获取失败:', configError)
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'AI配置无效或不可用',
           details: configError?.message || 'AI配置不存在或已禁用'
         })
@@ -177,7 +178,7 @@ const createServe = () => {
         apiKey = decryptApiKey(config.api_key_encrypted)
       } catch (error) {
         console.error('API密钥解密失败:', error)
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'API密钥解密失败',
           details: '服务器配置错误'
         })
@@ -191,7 +192,7 @@ const createServe = () => {
       }
 
       const requestHeaders = {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       }
 
@@ -206,7 +207,6 @@ const createServe = () => {
 
       // 返回AI服务的响应
       res.json(response.data)
-
     } catch (error) {
       console.error('AI代理请求失败:', {
         message: error.message,
@@ -219,7 +219,7 @@ const createServe = () => {
         // AI服务返回的错误
         const statusCode = error.response.status
         const errorData = error.response.data
-        
+
         res.status(statusCode).json({
           error: `AI服务错误 (${statusCode})`,
           details: errorData,

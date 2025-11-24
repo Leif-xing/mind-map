@@ -376,10 +376,8 @@ export default {
     downGithub: 'Tải xuống Github'
   },
   mouseAction: {
-    tip1:
-      'Hiện tại: Nhấp chuột trái để kéo canvas, nhấp chuột phải để chọn nút theo hộp',
-    tip2:
-      'Hiện tại: Nhấp chuột trái để chọn nút theo hộp, nhấp chuột phải để kéo canvas'
+    tip1: 'Hiện tại: Nhấp chuột trái để kéo canvas, nhấp chuột phải để chọn nút theo hộp',
+    tip2: 'Hiện tại: Nhấp chuột trái để chọn nút theo hộp, nhấp chuột phải để kéo canvas'
   },
   search: {
     searchPlaceholder: 'Nhập nội dung tìm kiếm và nhấn Enter',

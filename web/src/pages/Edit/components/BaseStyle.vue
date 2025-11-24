@@ -48,8 +48,7 @@
                   :key="item.value"
                   :label="item.name"
                   :value="item.value"
-                >
-                </el-option>
+                ></el-option>
               </el-select>
             </div>
             <!-- 图片位置 -->
@@ -71,8 +70,7 @@
                   :key="item.value"
                   :label="item.name"
                   :value="item.value"
-                >
-                </el-option>
+                ></el-option>
               </el-select>
             </div>
             <!-- 图片大小 -->
@@ -94,17 +92,18 @@
                   :key="item.value"
                   :label="item.name"
                   :value="item.value"
-                >
-                </el-option>
+                ></el-option>
               </el-select>
             </div>
             <!-- 内置背景图片 -->
             <div
               class="rowItem spaceBetween"
-              style="margin-top: 8px; margin-bottom: 8px;"
+              style="margin-top: 8px; margin-bottom: 8px"
               v-if="bgList.length > 0"
             >
-              <div class="name">{{ $t('baseStyle.builtInBackgroundImage') }}</div>
+              <div class="name">
+                {{ $t('baseStyle.builtInBackgroundImage') }}
+              </div>
               <div
                 class="iconBtn el-icon-arrow-down"
                 :class="{ top: !bgListExpand }"
@@ -116,7 +115,7 @@
                 class="bgItem"
                 v-for="(item, index) in bgList"
                 :key="index"
-                :class="{active: style.backgroundImage === item}"
+                :class="{ active: style.backgroundImage === item }"
                 @click="useBg(item)"
               >
                 <img :src="item" alt="" />
@@ -201,8 +200,7 @@
                 isSelected: style.lineStyle === item.value
               }"
               v-html="lineStyleMap[item.value]"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
         <!-- 根节点连线样式 -->
@@ -229,8 +227,7 @@
               :key="item.value"
               :label="item.name"
               :value="item.value"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
         <div class="rowItem" v-if="showLineRadius">
@@ -252,8 +249,7 @@
               :key="item"
               :label="item"
               :value="item"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
       </div>
@@ -281,10 +277,12 @@
               key="center"
               :label="$t('baseStyle.center')"
               :value="false"
-            >
-            </el-option>
-            <el-option key="right" :label="$t('baseStyle.edge')" :value="true">
-            </el-option>
+            ></el-option>
+            <el-option
+              key="right"
+              :label="$t('baseStyle.edge')"
+              :value="true"
+            ></el-option>
           </el-select>
         </div>
       </div>
@@ -297,8 +295,9 @@
                 update('showLineMarker', value)
               }
             "
-            >{{ $t('baseStyle.showArrow') }}</el-checkbox
           >
+            {{ $t('baseStyle.showArrow') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 彩虹线条 -->
@@ -327,9 +326,9 @@
                     :style="{ backgroundColor: color }"
                   ></span>
                 </div>
-                <span v-else @click="updateRainbowLinesConfig(item)">{{
-                  $t('baseStyle.notUseRainbowLines')
-                }}</span>
+                <span v-else @click="updateRainbowLinesConfig(item)">
+                  {{ $t('baseStyle.notUseRainbowLines') }}
+                </span>
               </div>
             </div>
             <div slot="reference" class="curRainbowLine">
@@ -447,9 +446,9 @@
       </div>
       <div class="row">
         <div class="rowItem">
-          <span class="name">{{
-            $t('baseStyle.associativeLineActiveColor')
-          }}</span>
+          <span class="name">
+            {{ $t('baseStyle.associativeLineActiveColor') }}
+          </span>
           <span
             class="block"
             v-popover:popover5
@@ -467,9 +466,9 @@
           </el-popover>
         </div>
         <div class="rowItem">
-          <span class="name">{{
-            $t('baseStyle.associativeLineActiveWidth')
-          }}</span>
+          <span class="name">
+            {{ $t('baseStyle.associativeLineActiveWidth') }}
+          </span>
           <el-select
             size="mini"
             style="width: 80px"
@@ -528,8 +527,8 @@
                     style.associativeLineDasharray === item.value
                       ? '#409eff'
                       : isDark
-                      ? '#fff'
-                      : '#000'
+                        ? '#fff'
+                        : '#000'
                   "
                   :stroke-dasharray="item.value"
                 ></line>
@@ -555,8 +554,7 @@
               :label="item.name"
               :value="item.value"
               :style="{ fontFamily: item.value }"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
       </div>
@@ -594,8 +592,7 @@
               :label="item"
               :value="item"
               :style="{ fontSize: item + 'px' }"
-            >
-            </el-option>
+            ></el-option>
           </el-select>
         </div>
       </div>
@@ -611,8 +608,9 @@
                   update('nodeUseLineStyle', value)
                 }
               "
-              >{{ $t('baseStyle.nodeUseLineStyle') }}</el-checkbox
             >
+              {{ $t('baseStyle.nodeUseLineStyle') }}
+            </el-checkbox>
           </div>
         </div>
       </template>
@@ -777,556 +775,559 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import Color from './Color.vue'
-import {
-  lineWidthList,
-  lineStyleList,
-  backgroundRepeatList,
-  backgroundPositionList,
-  backgroundSizeList,
-  fontFamilyList,
-  fontSizeList,
-  rootLineKeepSameInCurveList,
-  lineStyleMap,
-  borderDasharrayList
-} from '@/config'
-import ImgUpload from '@/components/ImgUpload/index.vue'
-import { storeData, storeConfig } from '@/api'
-import { mapState } from 'vuex'
-import {
-  supportLineStyleLayoutsMap,
-  supportLineRadiusLayouts,
-  supportNodeUseLineStyleLayouts,
-  supportRootLineKeepSameInCurveLayouts,
-  rainbowLinesOptions
-} from '@/config/constant'
+  import Sidebar from './Sidebar.vue'
+  import Color from './Color.vue'
+  import {
+    lineWidthList,
+    lineStyleList,
+    backgroundRepeatList,
+    backgroundPositionList,
+    backgroundSizeList,
+    fontFamilyList,
+    fontSizeList,
+    rootLineKeepSameInCurveList,
+    lineStyleMap,
+    borderDasharrayList
+  } from '@/config'
+  import ImgUpload from '@/components/ImgUpload/index.vue'
+  import { storeData, storeConfig } from '@/api'
+  import { mapState } from 'vuex'
+  import {
+    supportLineStyleLayoutsMap,
+    supportLineRadiusLayouts,
+    supportNodeUseLineStyleLayouts,
+    supportRootLineKeepSameInCurveLayouts,
+    rainbowLinesOptions
+  } from '@/config/constant'
 
-// 基础样式
-export default {
-  components: {
-    Sidebar,
-    Color,
-    ImgUpload
-  },
-  props: {
-    data: {
-      type: [Object, null]
+  // 基础样式
+  export default {
+    components: {
+      Sidebar,
+      Color,
+      ImgUpload
     },
-    configData: {
-      type: Object
-    },
-    mindMap: {
-      type: Object
-    }
-  },
-  data() {
-    return {
-      rainbowLinesOptions,
-      lineWidthList,
-      fontSizeList,
-      lineStyleMap,
-      activeTab: 'color',
-      marginActiveTab: 'second',
-      style: {
-        backgroundColor: '',
-        lineColor: '',
-        lineWidth: '',
-        lineStyle: '',
-        showLineMarker: '',
-        rootLineKeepSameInCurve: '',
-        rootLineStartPositionKeepSameInCurve: '',
-        lineRadius: 0,
-        lineFlow: false,
-        lineFlowForward: true,
-        lineFlowDuration: 1,
-        generalizationLineWidth: '',
-        generalizationLineColor: '',
-        associativeLineColor: '',
-        associativeLineWidth: 0,
-        associativeLineActiveWidth: 0,
-        associativeLineDasharray: '',
-        associativeLineActiveColor: '',
-        associativeLineTextFontSize: 0,
-        associativeLineTextColor: '',
-        associativeLineTextFontFamily: '',
-        paddingX: 0,
-        paddingY: 0,
-        imgMaxWidth: 0,
-        imgMaxHeight: 0,
-        iconSize: 0,
-        backgroundImage: '',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: '',
-        backgroundSize: '',
-        marginX: 0,
-        marginY: 0,
-        nodeUseLineStyle: false
+    props: {
+      data: {
+        type: [Object, null]
       },
-      rainbowLinesPopoverVisible: false,
-      curRainbowLineColorList: null,
-      currentLayout: '', // 当前结构
-      outerFramePadding: {
-        outerFramePaddingX: 0,
-        outerFramePaddingY: 0
+      configData: {
+        type: Object
       },
-      bgListExpand: true
-    }
-  },
-  computed: {
-    ...mapState({
-      activeSidebar: state => state.activeSidebar,
-      localConfig: state => state.localConfig,
-      isDark: state => state.localConfig.isDark,
-      bgList: state => state.bgList
-    }),
-    lineStyleList() {
-      return lineStyleList[this.$i18n.locale] || lineStyleList.zh
+      mindMap: {
+        type: Object
+      }
     },
-    rootLineKeepSameInCurveList() {
-      return (
-        rootLineKeepSameInCurveList[this.$i18n.locale] ||
-        rootLineKeepSameInCurveList.zh
-      )
+    data() {
+      return {
+        rainbowLinesOptions,
+        lineWidthList,
+        fontSizeList,
+        lineStyleMap,
+        activeTab: 'color',
+        marginActiveTab: 'second',
+        style: {
+          backgroundColor: '',
+          lineColor: '',
+          lineWidth: '',
+          lineStyle: '',
+          showLineMarker: '',
+          rootLineKeepSameInCurve: '',
+          rootLineStartPositionKeepSameInCurve: '',
+          lineRadius: 0,
+          lineFlow: false,
+          lineFlowForward: true,
+          lineFlowDuration: 1,
+          generalizationLineWidth: '',
+          generalizationLineColor: '',
+          associativeLineColor: '',
+          associativeLineWidth: 0,
+          associativeLineActiveWidth: 0,
+          associativeLineDasharray: '',
+          associativeLineActiveColor: '',
+          associativeLineTextFontSize: 0,
+          associativeLineTextColor: '',
+          associativeLineTextFontFamily: '',
+          paddingX: 0,
+          paddingY: 0,
+          imgMaxWidth: 0,
+          imgMaxHeight: 0,
+          iconSize: 0,
+          backgroundImage: '',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: '',
+          backgroundSize: '',
+          marginX: 0,
+          marginY: 0,
+          nodeUseLineStyle: false
+        },
+        rainbowLinesPopoverVisible: false,
+        curRainbowLineColorList: null,
+        currentLayout: '', // 当前结构
+        outerFramePadding: {
+          outerFramePaddingX: 0,
+          outerFramePaddingY: 0
+        },
+        bgListExpand: true
+      }
     },
-    backgroundRepeatList() {
-      return backgroundRepeatList[this.$i18n.locale] || backgroundRepeatList.zh
-    },
-    backgroundPositionList() {
-      return (
-        backgroundPositionList[this.$i18n.locale] || backgroundPositionList.zh
-      )
-    },
-    backgroundSizeList() {
-      return backgroundSizeList[this.$i18n.locale] || backgroundSizeList.zh
-    },
-    fontFamilyList() {
-      return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
-    },
-    showNodeUseLineStyle() {
-      return supportNodeUseLineStyleLayouts.includes(this.currentLayout)
-    },
-    showLineRadius() {
-      return (
-        this.style.lineStyle === 'straight' &&
-        supportLineRadiusLayouts.includes(this.currentLayout)
-      )
-    },
-    lineStyleListShow() {
-      const res = []
-      this.lineStyleList.forEach(item => {
-        const list = supportLineStyleLayoutsMap[item.value]
-        if (list) {
-          if (list.includes(this.currentLayout)) {
+    computed: {
+      ...mapState({
+        activeSidebar: state => state.activeSidebar,
+        localConfig: state => state.localConfig,
+        isDark: state => state.localConfig.isDark,
+        bgList: state => state.bgList
+      }),
+      lineStyleList() {
+        return lineStyleList[this.$i18n.locale] || lineStyleList.zh
+      },
+      rootLineKeepSameInCurveList() {
+        return (
+          rootLineKeepSameInCurveList[this.$i18n.locale] ||
+          rootLineKeepSameInCurveList.zh
+        )
+      },
+      backgroundRepeatList() {
+        return (
+          backgroundRepeatList[this.$i18n.locale] || backgroundRepeatList.zh
+        )
+      },
+      backgroundPositionList() {
+        return (
+          backgroundPositionList[this.$i18n.locale] || backgroundPositionList.zh
+        )
+      },
+      backgroundSizeList() {
+        return backgroundSizeList[this.$i18n.locale] || backgroundSizeList.zh
+      },
+      fontFamilyList() {
+        return fontFamilyList[this.$i18n.locale] || fontFamilyList.zh
+      },
+      showNodeUseLineStyle() {
+        return supportNodeUseLineStyleLayouts.includes(this.currentLayout)
+      },
+      showLineRadius() {
+        return (
+          this.style.lineStyle === 'straight' &&
+          supportLineRadiusLayouts.includes(this.currentLayout)
+        )
+      },
+      lineStyleListShow() {
+        const res = []
+        this.lineStyleList.forEach(item => {
+          const list = supportLineStyleLayoutsMap[item.value]
+          if (list) {
+            if (list.includes(this.currentLayout)) {
+              res.push(item)
+            }
+          } else {
             res.push(item)
           }
-        } else {
-          res.push(item)
-        }
-      })
-      return res
-    },
-    showRootLineKeepSameInCurveLayouts() {
-      return supportRootLineKeepSameInCurveLayouts.includes(this.currentLayout)
-    },
-    borderDasharrayList() {
-      return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
-    }
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'baseStyle') {
-        this.$refs.sidebar.show = true
-        this.initStyle()
-        this.initRainbowLines()
-        this.initOuterFramePadding()
-        this.currentLayout = this.mindMap.getLayout()
-      } else {
-        this.$refs.sidebar.show = false
-      }
-    },
-    lineStyleListShow: {
-      deep: true,
-      handler() {
-        const has = this.lineStyleListShow.find(item => {
-          return item.value === this.style.lineStyle
         })
-        if (!has) {
-          this.style.lineStyle = this.lineStyleListShow[0].value
+        return res
+      },
+      showRootLineKeepSameInCurveLayouts() {
+        return supportRootLineKeepSameInCurveLayouts.includes(
+          this.currentLayout
+        )
+      },
+      borderDasharrayList() {
+        return borderDasharrayList[this.$i18n.locale] || borderDasharrayList.zh
+      }
+    },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'baseStyle') {
+          this.$refs.sidebar.show = true
+          this.initStyle()
+          this.initRainbowLines()
+          this.initOuterFramePadding()
+          this.currentLayout = this.mindMap.getLayout()
+        } else {
+          this.$refs.sidebar.show = false
+        }
+      },
+      lineStyleListShow: {
+        deep: true,
+        handler() {
+          const has = this.lineStyleListShow.find(item => {
+            return item.value === this.style.lineStyle
+          })
+          if (!has) {
+            this.style.lineStyle = this.lineStyleListShow[0].value
+          }
         }
       }
-    }
-  },
-  created() {
-    this.$bus.$on('setData', this.onSetData)
-  },
-  beforeDestroy() {
-    this.$bus.$off('setData', this.onSetData)
-  },
-  methods: {
-    onSetData() {
-      if (this.activeSidebar !== 'baseStyle') return
-      setTimeout(() => {
-        this.initStyle()
-      }, 0)
     },
-
-    // 初始样式
-    initStyle() {
-      Object.keys(this.style).forEach(key => {
-        this.style[key] = this.mindMap.getThemeConfig(key)
-        if (key === 'backgroundImage' && this.style[key] === 'none') {
-          this.style[key] = ''
-        }
-      })
-      this.initMarginStyle()
+    created() {
+      this.$bus.$on('setData', this.onSetData)
     },
+    beforeDestroy() {
+      this.$bus.$off('setData', this.onSetData)
+    },
+    methods: {
+      onSetData() {
+        if (this.activeSidebar !== 'baseStyle') return
+        setTimeout(() => {
+          this.initStyle()
+        }, 0)
+      },
 
-    // 初始化彩虹线条配置
-    initRainbowLines() {
-      const config = this.mindMap.getConfig('rainbowLinesConfig') || {}
-      this.curRainbowLineColorList = config.open
-        ? this.mindMap.rainbowLines
-          ? this.mindMap.rainbowLines.getColorsList()
+      // 初始样式
+      initStyle() {
+        Object.keys(this.style).forEach(key => {
+          this.style[key] = this.mindMap.getThemeConfig(key)
+          if (key === 'backgroundImage' && this.style[key] === 'none') {
+            this.style[key] = ''
+          }
+        })
+        this.initMarginStyle()
+      },
+
+      // 初始化彩虹线条配置
+      initRainbowLines() {
+        const config = this.mindMap.getConfig('rainbowLinesConfig') || {}
+        this.curRainbowLineColorList = config.open
+          ? this.mindMap.rainbowLines
+            ? this.mindMap.rainbowLines.getColorsList()
+            : null
           : null
-        : null
-    },
+      },
 
-    // 外框
-    initOuterFramePadding() {
-      this.outerFramePadding.outerFramePaddingX = this.mindMap.getConfig(
-        'outerFramePaddingX'
-      )
-      this.outerFramePadding.outerFramePaddingY = this.mindMap.getConfig(
-        'outerFramePaddingX'
-      )
-    },
+      // 外框
+      initOuterFramePadding() {
+        this.outerFramePadding.outerFramePaddingX =
+          this.mindMap.getConfig('outerFramePaddingX')
+        this.outerFramePadding.outerFramePaddingY =
+          this.mindMap.getConfig('outerFramePaddingX')
+      },
 
-    // margin初始值
-    initMarginStyle() {
-      ;['marginX', 'marginY'].forEach(key => {
-        this.style[key] = this.mindMap.getThemeConfig()[this.marginActiveTab][
-          key
-        ]
-      })
-    },
+      // margin初始值
+      initMarginStyle() {
+        ['marginX', 'marginY'].forEach(key => {
+          this.style[key] =
+            this.mindMap.getThemeConfig()[this.marginActiveTab][key]
+        })
+      },
 
-    // 更新配置
-    update(key, value) {
-      if (key === 'backgroundImage' && value === 'none') {
-        this.style[key] = ''
-      } else {
-        this.style[key] = value
+      // 更新配置
+      update(key, value) {
+        if (key === 'backgroundImage' && value === 'none') {
+          this.style[key] = ''
+        } else {
+          this.style[key] = value
+        }
+        this.data.theme.config[key] = value
+        this.$bus.$emit('showLoading')
+        this.mindMap.setThemeConfig(this.data.theme.config)
+        storeData({
+          theme: {
+            template: this.mindMap.getTheme(),
+            config: this.data.theme.config
+          }
+        })
+      },
+
+      // 更新彩虹线条配置
+      updateRainbowLinesConfig(item) {
+        this.rainbowLinesPopoverVisible = false
+        this.curRainbowLineColorList = item.list || null
+        let newConfig = null
+        if (item.list) {
+          newConfig = {
+            open: true,
+            colorsList: item.list
+          }
+        } else {
+          newConfig = {
+            open: false
+          }
+        }
+        this.configData.rainbowLinesConfig = newConfig
+        this.mindMap.rainbowLines.updateRainLinesConfig(newConfig)
+        storeConfig(this.configData)
+      },
+
+      // 更新外框
+      updateOuterFramePadding(prop, value) {
+        this.outerFramePadding[prop] = value
+        this.configData[prop] = value
+        this.mindMap.updateConfig({
+          [prop]: value
+        })
+        storeConfig(this.configData)
+        this.mindMap.render()
+      },
+
+      // 设置margin
+      updateMargin(type, value) {
+        this.style[type] = value
+        if (!this.data.theme.config[this.marginActiveTab]) {
+          this.data.theme.config[this.marginActiveTab] = {}
+        }
+        this.data.theme.config[this.marginActiveTab][type] = value
+        this.mindMap.setThemeConfig(this.data.theme.config)
+        storeData({
+          theme: {
+            template: this.mindMap.getTheme(),
+            config: this.data.theme.config
+          }
+        })
+      },
+
+      useBg(bg) {
+        this.update('backgroundImage', bg)
       }
-      this.data.theme.config[key] = value
-      this.$bus.$emit('showLoading')
-      this.mindMap.setThemeConfig(this.data.theme.config)
-      storeData({
-        theme: {
-          template: this.mindMap.getTheme(),
-          config: this.data.theme.config
-        }
-      })
-    },
-
-    // 更新彩虹线条配置
-    updateRainbowLinesConfig(item) {
-      this.rainbowLinesPopoverVisible = false
-      this.curRainbowLineColorList = item.list || null
-      let newConfig = null
-      if (item.list) {
-        newConfig = {
-          open: true,
-          colorsList: item.list
-        }
-      } else {
-        newConfig = {
-          open: false
-        }
-      }
-      this.configData.rainbowLinesConfig = newConfig
-      this.mindMap.rainbowLines.updateRainLinesConfig(newConfig)
-      storeConfig(this.configData)
-    },
-
-    // 更新外框
-    updateOuterFramePadding(prop, value) {
-      this.outerFramePadding[prop] = value
-      this.configData[prop] = value
-      this.mindMap.updateConfig({
-        [prop]: value
-      })
-      storeConfig(this.configData)
-      this.mindMap.render()
-    },
-
-    // 设置margin
-    updateMargin(type, value) {
-      this.style[type] = value
-      if (!this.data.theme.config[this.marginActiveTab]) {
-        this.data.theme.config[this.marginActiveTab] = {}
-      }
-      this.data.theme.config[this.marginActiveTab][type] = value
-      this.mindMap.setThemeConfig(this.data.theme.config)
-      storeData({
-        theme: {
-          template: this.mindMap.getTheme(),
-          config: this.data.theme.config
-        }
-      })
-    },
-
-    useBg(bg) {
-      this.update('backgroundImage', bg)
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.sidebarContent {
-  padding: 20px;
-  padding-top: 10px;
+  .sidebarContent {
+    padding: 20px;
+    padding-top: 10px;
 
-  &.isDark {
+    &.isDark {
+      .title {
+        color: #fff;
+      }
+
+      .row {
+        .rowItem {
+          .name,
+          .curRainbowLine {
+            color: hsla(0, 0%, 100%, 0.6);
+          }
+        }
+      }
+    }
+
     .title {
-      color: #fff;
+      font-size: 16px;
+      font-family:
+        PingFangSC-Medium,
+        PingFang SC;
+      font-weight: 500;
+      color: rgba(26, 26, 26, 0.9);
+      margin-bottom: 10px;
+      margin-top: 35px;
+
+      &.noTop {
+        margin-top: 0;
+      }
     }
 
     .row {
-      .rowItem {
-        .name,
-        .curRainbowLine {
-          color: hsla(0, 0%, 100%, 0.6);
-        }
-      }
-    }
-  }
-
-  .title {
-    font-size: 16px;
-    font-family: PingFangSC-Medium, PingFang SC;
-    font-weight: 500;
-    color: rgba(26, 26, 26, 0.9);
-    margin-bottom: 10px;
-    margin-top: 35px;
-
-    &.noTop {
-      margin-top: 0;
-    }
-  }
-
-  .row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-
-    &.noBottom {
-      margin-bottom: 0;
-    }
-
-    &.column {
-      flex-direction: column;
-    }
-
-    .tab {
-      width: 100%;
-    }
-
-    .imgUpload {
-      margin-bottom: 5px;
-    }
-
-    .btnGroup {
-      width: 100%;
       display: flex;
       justify-content: space-between;
-    }
+      margin-bottom: 10px;
 
-    .rowItem {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
+      &.noBottom {
+        margin-bottom: 0;
+      }
 
-      &.spaceBetween {
+      &.column {
+        flex-direction: column;
+      }
+
+      .tab {
+        width: 100%;
+      }
+
+      .imgUpload {
+        margin-bottom: 5px;
+      }
+
+      .btnGroup {
+        width: 100%;
+        display: flex;
         justify-content: space-between;
       }
 
-      .name {
-        font-size: 12px;
-        margin-right: 10px;
-        white-space: nowrap;
-      }
-
-      .block {
-        display: inline-block;
-        width: 30px;
-        height: 30px;
-        border: 1px solid #dcdfe6;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-
-      .curRainbowLine {
-        height: 24px;
-        border: 1px solid #dcdfe6;
-        font-size: 12px;
-        width: 240px;
+      .rowItem {
         display: flex;
         align-items: center;
+        margin-bottom: 5px;
+
+        &.spaceBetween {
+          justify-content: space-between;
+        }
+
+        .name {
+          font-size: 12px;
+          margin-right: 10px;
+          white-space: nowrap;
+        }
+
+        .block {
+          display: inline-block;
+          width: 30px;
+          height: 30px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .curRainbowLine {
+          height: 24px;
+          border: 1px solid #dcdfe6;
+          font-size: 12px;
+          width: 240px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .iconBtn {
+          cursor: pointer;
+          transition: all 0.3s;
+
+          &.top {
+            transform: rotateZ(-180deg);
+          }
+        }
+      }
+
+      .styleBtn {
+        position: relative;
+        width: 50px;
+        height: 30px;
+        background: #fff;
+        border: 1px solid #eee;
+        display: flex;
         justify-content: center;
+        align-items: center;
+        font-weight: bold;
         cursor: pointer;
-      }
+        border-radius: 4px;
 
-      .iconBtn {
-        cursor: pointer;
-        transition: all 0.3s;
-
-        &.top {
-          transform: rotateZ(-180deg);
-        }
-      }
-    }
-
-    .styleBtn {
-      position: relative;
-      width: 50px;
-      height: 30px;
-      background: #fff;
-      border: 1px solid #eee;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 4px;
-
-      &.actived {
-        background-color: #eee;
-      }
-
-      .colorShow {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 2px;
-      }
-    }
-
-    .bgList {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      height: 75px;
-
-      &.expand {
-        height: max-content;
-      }
-
-      .bgItem {
-        width: 120px;
-        height: 73px;
-        border: 1px solid #e9e9e9;
-        border-radius: 5px;
-        overflow: hidden;
-        padding: 5px;
-        margin-bottom: 8px;
-        cursor: pointer;
-
-        &.active {
-          border-color: #409eff;
+        &.actived {
+          background-color: #eee;
         }
 
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        .colorShow {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 2px;
+        }
+      }
+
+      .bgList {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        height: 75px;
+
+        &.expand {
+          height: max-content;
+        }
+
+        .bgItem {
+          width: 120px;
+          height: 73px;
+          border: 1px solid #e9e9e9;
+          border-radius: 5px;
+          overflow: hidden;
+          padding: 5px;
+          margin-bottom: 8px;
+          cursor: pointer;
+
+          &.active {
+            border-color: #409eff;
+          }
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
         }
       }
     }
   }
-}
 
-.borderLine {
-  display: inline-block;
-  width: 100%;
-  background-color: #000;
+  .borderLine {
+    display: inline-block;
+    width: 100%;
+    background-color: #000;
 
-  &.isDark {
-    background-color: #fff;
+    &.isDark {
+      background-color: #fff;
+    }
   }
-}
 </style>
 <style lang="less">
-.el-select-dropdown__item.selected {
-  .borderLine {
-    background-color: #409eff;
+  .el-select-dropdown__item.selected {
+    .borderLine {
+      background-color: #409eff;
+    }
   }
-}
 
-.lineStyleOption {
-  &.isDark {
+  .lineStyleOption {
+    &.isDark {
+      svg {
+        path {
+          stroke: #fff;
+        }
+      }
+    }
+
+    &.isSelected {
+      svg {
+        path {
+          stroke: #409eff;
+        }
+      }
+    }
+
     svg {
+      margin-top: 4px;
+
       path {
-        stroke: #fff;
+        stroke: #000;
       }
     }
   }
 
-  &.isSelected {
-    svg {
-      path {
-        stroke: #409eff;
+  .rainbowLinesOptionsBox {
+    width: 200px;
+
+    &.isDark {
+      .optionItem {
+        color: hsla(0, 0%, 100%, 0.6);
+
+        &:hover {
+          background-color: hsla(0, 0%, 100%, 0.05);
+        }
       }
     }
-  }
 
-  svg {
-    margin-top: 4px;
-
-    path {
-      stroke: #000;
-    }
-  }
-}
-
-.rainbowLinesOptionsBox {
-  width: 200px;
-
-  &.isDark {
     .optionItem {
-      color: hsla(0, 0%, 100%, 0.6);
+      width: 100%;
+      height: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       &:hover {
-        background-color: hsla(0, 0%, 100%, 0.05);
+        background-color: #f5f7fa;
       }
     }
   }
 
-  .optionItem {
-    width: 100%;
-    height: 30px;
-    cursor: pointer;
+  .colorsBar {
     display: flex;
+    width: 100%;
+    height: 100%;
     align-items: center;
-    justify-content: center;
 
-    &:hover {
-      background-color: #f5f7fa;
+    .colorItem {
+      flex: 1;
+      height: 15px;
     }
   }
-}
-
-.colorsBar {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-
-  .colorItem {
-    flex: 1;
-    height: 15px;
-  }
-}
 </style>

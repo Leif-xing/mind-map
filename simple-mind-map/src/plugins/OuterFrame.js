@@ -171,8 +171,8 @@ class OuterFrame {
   getActiveOuterFrame() {
     return this.activeOuterFrame
       ? {
-          ...this.activeOuterFrame
-        }
+        ...this.activeOuterFrame
+      }
       : null
   }
 

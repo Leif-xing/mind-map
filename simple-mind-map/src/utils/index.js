@@ -1041,8 +1041,8 @@ export const formatDataToArray = data => {
 export const getNodeDataIndex = node => {
   return node.parent
     ? node.parent.nodeData.children.findIndex(item => {
-        return item.data.uid === node.uid
-      })
+      return item.data.uid === node.uid
+    })
     : 0
 }
 

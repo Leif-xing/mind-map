@@ -12,8 +12,9 @@
           <el-checkbox
             v-model="watermarkConfig.show"
             @change="watermarkShowChange"
-            >{{ $t('setting.showWatermark') }}</el-checkbox
           >
+            {{ $t('setting.showWatermark') }}
+          </el-checkbox>
         </div>
       </div>
       <template v-if="watermarkConfig.show">
@@ -23,8 +24,9 @@
             <el-checkbox
               v-model="watermarkConfig.onlyExport"
               @change="updateWatermarkConfig"
-              >{{ $t('setting.onlyExport') }}</el-checkbox
             >
+              {{ $t('setting.onlyExport') }}
+            </el-checkbox>
           </div>
         </div>
         <!-- 是否在节点下方 -->
@@ -33,8 +35,9 @@
             <el-checkbox
               v-model="watermarkConfig.belowNode"
               @change="updateWatermarkConfig"
-              >{{ $t('setting.belowNode') }}</el-checkbox
             >
+              {{ $t('setting.belowNode') }}
+            </el-checkbox>
           </div>
         </div>
         <!-- 水印文字 -->
@@ -152,8 +155,9 @@
                 updateOtherConfig('openPerformance', value)
               }
             "
-            >{{ $t('setting.openPerformance') }}</el-checkbox
           >
+            {{ $t('setting.openPerformance') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 配置开启自由拖拽 -->
@@ -166,8 +170,9 @@
                 updateOtherConfig('enableFreeDrag', value)
               }
             "
-            >{{ $t('setting.enableFreeDrag') }}</el-checkbox
           >
+            {{ $t('setting.enableFreeDrag') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 配置是否启用富文本编辑 -->
@@ -176,8 +181,9 @@
           <el-checkbox
             v-model="enableNodeRichText"
             @change="enableNodeRichTextChange"
-            >{{ $t('setting.isEnableNodeRichText') }}</el-checkbox
           >
+            {{ $t('setting.isEnableNodeRichText') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 是否开启文本编辑时实时更新节点大小 -->
@@ -188,8 +194,9 @@
             @change="
               updateOtherConfig('openRealtimeRenderOnNodeTextEdit', $event)
             "
-            >{{ $t('setting.openRealtimeRenderOnNodeTextEdit') }}</el-checkbox
           >
+            {{ $t('setting.openRealtimeRenderOnNodeTextEdit') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 是否显示滚动条 -->
@@ -198,8 +205,9 @@
           <el-checkbox
             v-model="localConfigs.isShowScrollbar"
             @change="updateLocalConfig('isShowScrollbar', $event)"
-            >{{ $t('setting.isShowScrollbar') }}</el-checkbox
           >
+            {{ $t('setting.isShowScrollbar') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 是否一直显示展开收起按钮 -->
@@ -208,8 +216,9 @@
           <el-checkbox
             v-model="config.alwaysShowExpandBtn"
             @change="updateOtherConfig('alwaysShowExpandBtn', $event)"
-            >{{ $t('setting.alwaysShowExpandBtn') }}</el-checkbox
           >
+            {{ $t('setting.alwaysShowExpandBtn') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 是否在键盘输入时自动进入节点文本编辑模式 -->
@@ -220,8 +229,9 @@
             @change="
               updateOtherConfig('enableAutoEnterTextEditWhenKeydown', $event)
             "
-            >{{ $t('setting.enableAutoEnterTextEditWhenKeydown') }}</el-checkbox
           >
+            {{ $t('setting.enableAutoEnterTextEditWhenKeydown') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 是否开启文件拖入页面导入的方式 -->
@@ -230,8 +240,9 @@
           <el-checkbox
             v-model="localConfigs.enableDragImport"
             @change="updateLocalConfig('enableDragImport', $event)"
-            >{{ $t('setting.enableDragImport') }}</el-checkbox
           >
+            {{ $t('setting.enableDragImport') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 节点连线样式是否允许继承祖先的连线样式 -->
@@ -242,8 +253,9 @@
             @change="
               updateOtherConfig('enableInheritAncestorLineStyle', $event)
             "
-            >{{ $t('setting.enableInheritAncestorLineStyle') }}</el-checkbox
           >
+            {{ $t('setting.enableInheritAncestorLineStyle') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 是否开启ai功能 -->
@@ -252,8 +264,9 @@
           <el-checkbox
             v-model="localConfigs.enableAi"
             @change="updateLocalConfig('enableAi', $event)"
-            >{{ $t('setting.enableAi') }}</el-checkbox
           >
+            {{ $t('setting.enableAi') }}
+          </el-checkbox>
         </div>
       </div>
       <!-- 配置鼠标滚轮行为 -->
@@ -282,9 +295,9 @@
       <!-- 配置鼠标缩放行为 -->
       <div class="row" v-if="config.mousewheelAction === 'zoom'">
         <div class="rowItem">
-          <span class="name">{{
-            $t('setting.mousewheelZoomActionReverse')
-          }}</span>
+          <span class="name">
+            {{ $t('setting.mousewheelZoomActionReverse') }}
+          </span>
           <el-select
             size="mini"
             style="width: 120px"
@@ -372,269 +385,271 @@
 </template>
 
 <script>
-import Sidebar from './Sidebar.vue'
-import { storeConfig } from '@/api'
-import { mapState, mapMutations } from 'vuex'
-import Color from './Color.vue'
+  import Sidebar from './Sidebar.vue'
+  import { storeConfig } from '@/api'
+  import { mapState, mapMutations } from 'vuex'
+  import Color from './Color.vue'
 
-export default {
-  components: {
-    Sidebar,
-    Color
-  },
-  props: {
-    configData: {
-      type: Object,
-      default: null
+  export default {
+    components: {
+      Sidebar,
+      Color
     },
-    mindMap: {
-      type: Object
-    }
-  },
-  data() {
-    return {
-      config: {
-        openPerformance: false,
-        enableFreeDrag: false,
-        mousewheelAction: 'zoom',
-        mousewheelZoomActionReverse: false,
-        createNewNodeBehavior: 'default',
-        openRealtimeRenderOnNodeTextEdit: true,
-        alwaysShowExpandBtn: false,
-        enableAutoEnterTextEditWhenKeydown: true,
-        imgTextMargin: 0,
-        textContentMargin: 0,
-        enableInheritAncestorLineStyle: false
+    props: {
+      configData: {
+        type: Object,
+        default: null
       },
-      watermarkConfig: {
-        show: false,
-        onlyExport: false,
-        text: '',
-        lineSpacing: 100,
-        textSpacing: 100,
-        angle: 30,
-        textStyle: {
-          color: '',
-          opacity: 0,
-          fontSize: 1
-        }
-      },
-      updateWatermarkTimer: null,
-      enableNodeRichText: true,
-      localConfigs: {
-        isShowScrollbar: false,
-        enableDragImport: false,
-        enableAi: false
+      mindMap: {
+        type: Object
       }
-    }
-  },
-  computed: {
-    ...mapState({
-      activeSidebar: state => state.activeSidebar,
-      localConfig: state => state.localConfig,
-      isDark: state => state.localConfig.isDark
-    })
-  },
-  watch: {
-    activeSidebar(val) {
-      if (val === 'setting') {
-        this.$refs.sidebar.show = true
-        this.initConfig()
-        this.initWatermark()
-      } else {
-        this.$refs.sidebar.show = false
-      }
-    }
-  },
-  created() {
-    this.initLoacalConfig()
-    this.$bus.$on('toggleOpenNodeRichText', this.onToggleOpenNodeRichText)
-  },
-  beforeDestroy() {
-    this.$bus.$off('toggleOpenNodeRichText', this.onToggleOpenNodeRichText)
-  },
-  methods: {
-    ...mapMutations(['setLocalConfig']),
-
-    // 初始化其他配置
-    initConfig() {
-      Object.keys(this.config).forEach(key => {
-        if (typeof this.config[key] === 'object') {
-          this.config[key] = {
-            ...(this.mindMap.getConfig(key) || {})
+    },
+    data() {
+      return {
+        config: {
+          openPerformance: false,
+          enableFreeDrag: false,
+          mousewheelAction: 'zoom',
+          mousewheelZoomActionReverse: false,
+          createNewNodeBehavior: 'default',
+          openRealtimeRenderOnNodeTextEdit: true,
+          alwaysShowExpandBtn: false,
+          enableAutoEnterTextEditWhenKeydown: true,
+          imgTextMargin: 0,
+          textContentMargin: 0,
+          enableInheritAncestorLineStyle: false
+        },
+        watermarkConfig: {
+          show: false,
+          onlyExport: false,
+          text: '',
+          lineSpacing: 100,
+          textSpacing: 100,
+          angle: 30,
+          textStyle: {
+            color: '',
+            opacity: 0,
+            fontSize: 1
           }
+        },
+        updateWatermarkTimer: null,
+        enableNodeRichText: true,
+        localConfigs: {
+          isShowScrollbar: false,
+          enableDragImport: false,
+          enableAi: false
+        }
+      }
+    },
+    computed: {
+      ...mapState({
+        activeSidebar: state => state.activeSidebar,
+        localConfig: state => state.localConfig,
+        isDark: state => state.localConfig.isDark
+      })
+    },
+    watch: {
+      activeSidebar(val) {
+        if (val === 'setting') {
+          this.$refs.sidebar.show = true
+          this.initConfig()
+          this.initWatermark()
         } else {
-          this.config[key] = this.mindMap.getConfig(key)
+          this.$refs.sidebar.show = false
         }
-      })
-    },
-
-    // 初始化本地配置
-    initLoacalConfig() {
-      this.enableNodeRichText = this.localConfig.openNodeRichText
-      this.mousewheelAction = this.localConfig.mousewheelAction
-      this.mousewheelZoomActionReverse = this.localConfig.mousewheelZoomActionReverse
-      Object.keys(this.localConfigs).forEach(key => {
-        this.localConfigs[key] = this.localConfig[key]
-      })
-    },
-
-    // 初始化水印配置
-    initWatermark() {
-      const config = this.mindMap.getConfig('watermarkConfig')
-      ;['text', 'lineSpacing', 'textSpacing', 'angle', 'onlyExport'].forEach(
-        key => {
-          this.watermarkConfig[key] = config[key]
-        }
-      )
-      this.watermarkConfig.show = !!config.text
-      this.watermarkConfig.textStyle = { ...config.textStyle }
-    },
-
-    // 更新其他配置
-    updateOtherConfig(key, value) {
-      this.mindMap.updateConfig({
-        [key]: value
-      })
-      this.configData[key] = value
-      storeConfig(this.configData)
-      if (
-        [
-          'alwaysShowExpandBtn',
-          'imgTextMargin',
-          'textContentMargin',
-          'enableInheritAncestorLineStyle'
-        ].includes(key)
-      ) {
-        this.mindMap.reRender()
       }
     },
+    created() {
+      this.initLoacalConfig()
+      this.$bus.$on('toggleOpenNodeRichText', this.onToggleOpenNodeRichText)
+    },
+    beforeDestroy() {
+      this.$bus.$off('toggleOpenNodeRichText', this.onToggleOpenNodeRichText)
+    },
+    methods: {
+      ...mapMutations(['setLocalConfig']),
 
-    // 更新水印配置
-    updateWatermarkConfig() {
-      clearTimeout(this.updateWatermarkTimer)
-      this.updateWatermarkTimer = setTimeout(() => {
-        let { show, ...config } = this.watermarkConfig
-        this.mindMap.watermark.updateWatermark({
-          ...config
+      // 初始化其他配置
+      initConfig() {
+        Object.keys(this.config).forEach(key => {
+          if (typeof this.config[key] === 'object') {
+            this.config[key] = {
+              ...(this.mindMap.getConfig(key) || {})
+            }
+          } else {
+            this.config[key] = this.mindMap.getConfig(key)
+          }
         })
-        this.configData.watermarkConfig = this.mindMap.getConfig(
-          'watermarkConfig'
+      },
+
+      // 初始化本地配置
+      initLoacalConfig() {
+        this.enableNodeRichText = this.localConfig.openNodeRichText
+        this.mousewheelAction = this.localConfig.mousewheelAction
+        this.mousewheelZoomActionReverse =
+          this.localConfig.mousewheelZoomActionReverse
+        Object.keys(this.localConfigs).forEach(key => {
+          this.localConfigs[key] = this.localConfig[key]
+        })
+      },
+
+      // 初始化水印配置
+      initWatermark() {
+        const config = this.mindMap.getConfig('watermarkConfig')
+        ;['text', 'lineSpacing', 'textSpacing', 'angle', 'onlyExport'].forEach(
+          key => {
+            this.watermarkConfig[key] = config[key]
+          }
         )
+        this.watermarkConfig.show = !!config.text
+        this.watermarkConfig.textStyle = { ...config.textStyle }
+      },
+
+      // 更新其他配置
+      updateOtherConfig(key, value) {
+        this.mindMap.updateConfig({
+          [key]: value
+        })
+        this.configData[key] = value
         storeConfig(this.configData)
-      }, 300)
-    },
-
-    // 切换显示水印与否
-    watermarkShowChange(value) {
-      if (value) {
-        let text =
-          this.watermarkConfig.text || this.$t('setting.watermarkDefaultText')
-        this.watermarkConfig.text = text
-      } else {
-        this.watermarkConfig.text = ''
-      }
-      this.updateWatermarkConfig()
-    },
-
-    // 切换是否开启节点富文本编辑
-    enableNodeRichTextChange(e) {
-      this.$confirm(
-        this.$t('setting.changeRichTextTip'),
-        e
-          ? this.$t('setting.changeRichTextTip2')
-          : this.$t('setting.changeRichTextTip3'),
-        {
-          confirmButtonText: this.$t('setting.confirm'),
-          cancelButtonText: this.$t('setting.cancel'),
-          type: 'warning'
+        if (
+          [
+            'alwaysShowExpandBtn',
+            'imgTextMargin',
+            'textContentMargin',
+            'enableInheritAncestorLineStyle'
+          ].includes(key)
+        ) {
+          this.mindMap.reRender()
         }
-      )
-        .then(() => {
-          this.mindMap.renderer.textEdit.hideEditTextBox()
-          this.setLocalConfig({
-            openNodeRichText: e
+      },
+
+      // 更新水印配置
+      updateWatermarkConfig() {
+        clearTimeout(this.updateWatermarkTimer)
+        this.updateWatermarkTimer = setTimeout(() => {
+          let { show, ...config } = this.watermarkConfig
+          this.mindMap.watermark.updateWatermark({
+            ...config
           })
-        })
-        .catch(() => {
-          this.enableNodeRichText = !this.enableNodeRichText
-        })
-    },
+          this.configData.watermarkConfig =
+            this.mindMap.getConfig('watermarkConfig')
+          storeConfig(this.configData)
+        }, 300)
+      },
 
-    onToggleOpenNodeRichText(val) {
-      this.setLocalConfig({
-        openNodeRichText: val
-      })
-      this.enableNodeRichText = val
-    },
+      // 切换显示水印与否
+      watermarkShowChange(value) {
+        if (value) {
+          let text =
+            this.watermarkConfig.text || this.$t('setting.watermarkDefaultText')
+          this.watermarkConfig.text = text
+        } else {
+          this.watermarkConfig.text = ''
+        }
+        this.updateWatermarkConfig()
+      },
 
-    // 本地配置
-    updateLocalConfig(key, value) {
-      this.setLocalConfig({
-        [key]: value
-      })
+      // 切换是否开启节点富文本编辑
+      enableNodeRichTextChange(e) {
+        this.$confirm(
+          this.$t('setting.changeRichTextTip'),
+          e
+            ? this.$t('setting.changeRichTextTip2')
+            : this.$t('setting.changeRichTextTip3'),
+          {
+            confirmButtonText: this.$t('setting.confirm'),
+            cancelButtonText: this.$t('setting.cancel'),
+            type: 'warning'
+          }
+        )
+          .then(() => {
+            this.mindMap.renderer.textEdit.hideEditTextBox()
+            this.setLocalConfig({
+              openNodeRichText: e
+            })
+          })
+          .catch(() => {
+            this.enableNodeRichText = !this.enableNodeRichText
+          })
+      },
+
+      onToggleOpenNodeRichText(val) {
+        this.setLocalConfig({
+          openNodeRichText: val
+        })
+        this.enableNodeRichText = val
+      },
+
+      // 本地配置
+      updateLocalConfig(key, value) {
+        this.setLocalConfig({
+          [key]: value
+        })
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped>
-.sidebarContent {
-  padding: 20px;
-  padding-top: 10px;
+  .sidebarContent {
+    padding: 20px;
+    padding-top: 10px;
 
-  &.isDark {
+    &.isDark {
+      .title {
+        color: #fff;
+      }
+
+      .row {
+        .rowItem {
+          .name {
+            color: hsla(0, 0%, 100%, 0.6);
+          }
+        }
+      }
+    }
+
     .title {
-      color: #fff;
+      font-size: 16px;
+      font-family:
+        PingFangSC-Medium,
+        PingFang SC;
+      font-weight: 500;
+      color: rgba(26, 26, 26, 0.9);
+      margin-bottom: 10px;
+      margin-top: 20px;
+
+      &.noTop {
+        margin-top: 0;
+      }
     }
 
     .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+
       .rowItem {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+
         .name {
-          color: hsla(0, 0%, 100%, 0.6);
+          font-size: 12px;
+          margin-right: 10px;
+          white-space: nowrap;
+        }
+
+        .block {
+          display: inline-block;
+          width: 30px;
+          height: 30px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          cursor: pointer;
         }
       }
     }
   }
-
-  .title {
-    font-size: 16px;
-    font-family: PingFangSC-Medium, PingFang SC;
-    font-weight: 500;
-    color: rgba(26, 26, 26, 0.9);
-    margin-bottom: 10px;
-    margin-top: 20px;
-
-    &.noTop {
-      margin-top: 0;
-    }
-  }
-
-  .row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-
-    .rowItem {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
-
-      .name {
-        font-size: 12px;
-        margin-right: 10px;
-        white-space: nowrap;
-      }
-
-      .block {
-        display: inline-block;
-        width: 30px;
-        height: 30px;
-        border: 1px solid #dcdfe6;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-    }
-  }
-}
 </style>

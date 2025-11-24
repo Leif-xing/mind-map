@@ -27,11 +27,11 @@
 
 - 一个 `js` 思维导图库，不依赖任何框架，可以用来快速完成 Web 思维导图产品的开发。
 
->  开发文档：[https://wanglin2.github.io/mind-map-docs/](https://wanglin2.github.io/mind-map-docs/)
+> 开发文档：[https://wanglin2.github.io/mind-map-docs/](https://wanglin2.github.io/mind-map-docs/)
 
 - 一个 Web 思维导图，基于思维导图库、`Vue2.x`、`ElementUI` 开发，支持操作电脑本地文件，可以当做一个在线版思维导图应用使用，也可以自部署和二次开发。
 
->  在线地址：[https://wanglin2.github.io/mind-map/](https://wanglin2.github.io/mind-map/)
+> 在线地址：[https://wanglin2.github.io/mind-map/](https://wanglin2.github.io/mind-map/)
 
 - 云存储版本，如果你需要带后端的云存储版本，可以尝试我们开发的另一个项目[理想文档](https://github.com/wanglin2/lx-doc)。
 
@@ -53,13 +53,12 @@
 
 官方提供了如下插件，可根据需求按需引入（某个功能不生效大概率是因为你没有引入对应的插件），具体使用方式请查看文档：
 
-| RichText（节点富文本插件）           | Select（鼠标多选节点插件）                | Drag（节点拖拽插件）                 | AssociativeLine（关联线插件）        |
-| ------------------------------------ | ----------------------------------------- | ------------------------------------ | ------------------------------------ |
-| Export（导出插件）                   | KeyboardNavigation（键盘导航插件）        | MiniMap（小地图插件）                | Watermark（水印插件）                |
-| TouchEvent（移动端触摸事件支持插件） | NodeImgAdjust（拖拽调整节点图片大小插件） | Search（搜索插件）                   | Painter（节点格式刷插件）            |
-| Scrollbar（滚动条插件）              | Formula（数学公式插件）                   | Cooperate（协同编辑插件）            | RainbowLines（彩虹线条插件）         |
-| Demonstrate（演示模式插件）          | OuterFrame（外框插件）                    | MindMapLayoutPro（思维导图布局插件） |                                      |
-
+| RichText（节点富文本插件）           | Select（鼠标多选节点插件）                | Drag（节点拖拽插件）                 | AssociativeLine（关联线插件） |
+| ------------------------------------ | ----------------------------------------- | ------------------------------------ | ----------------------------- |
+| Export（导出插件）                   | KeyboardNavigation（键盘导航插件）        | MiniMap（小地图插件）                | Watermark（水印插件）         |
+| TouchEvent（移动端触摸事件支持插件） | NodeImgAdjust（拖拽调整节点图片大小插件） | Search（搜索插件）                   | Painter（节点格式刷插件）     |
+| Scrollbar（滚动条插件）              | Formula（数学公式插件）                   | Cooperate（协同编辑插件）            | RainbowLines（彩虹线条插件）  |
+| Demonstrate（演示模式插件）          | OuterFrame（外框插件）                    | MindMapLayoutPro（思维导图布局插件） |                               |
 
 本项目不会实现的特性：
 
