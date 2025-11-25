@@ -9,6 +9,14 @@
       <div class="header-actions">
         <el-button
           type="text"
+          icon="el-icon-plus"
+          size="mini"
+          @click="showCreateTagDialog"
+          title="添加标签"
+          class="add-tag-button"
+        ></el-button>
+        <el-button
+          type="text"
           :icon="isRefreshing ? 'el-icon-loading' : 'el-icon-refresh'"
           size="mini"
           @click="refreshTags"
@@ -461,7 +469,7 @@
       },
 
       // 拖拽离开处理
-      handleDragLeave(event, tagId) {
+      handleDragLeave(event) {
         // 使用延迟来避免子元素触发的dragLeave
         setTimeout(() => {
           // 确保event和currentTarget存在再调用contains方法
@@ -521,7 +529,7 @@
       },
 
       // 处理标签数据更新
-      handleTagDataUpdated(data) {
+      handleTagDataUpdated() {
         // 强制更新标签统计
         this.$nextTick(() => {
           this.$forceUpdate()
@@ -590,9 +598,15 @@
           // 如果是rgba格式，转换为十六进制（不考虑透明度）
           const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
           if (rgbaMatch) {
-            const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
-            const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
-            const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+            const r = parseInt(rgbaMatch[1])
+              .toString(16)
+              .padStart(2, '0')
+            const g = parseInt(rgbaMatch[2])
+              .toString(16)
+              .padStart(2, '0')
+            const b = parseInt(rgbaMatch[3])
+              .toString(16)
+              .padStart(2, '0')
             this.tagForm.color = `#${r}${g}${b}`.toUpperCase()
           }
         }
@@ -645,9 +659,15 @@
           // 如果不是十六进制格式，尝试转换
           const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
           if (rgbaMatch) {
-            const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
-            const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
-            const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+            const r = parseInt(rgbaMatch[1])
+              .toString(16)
+              .padStart(2, '0')
+            const g = parseInt(rgbaMatch[2])
+              .toString(16)
+              .padStart(2, '0')
+            const b = parseInt(rgbaMatch[3])
+              .toString(16)
+              .padStart(2, '0')
             color = `#${r}${g}${b}`.toUpperCase()
           } else {
             color = '#409EFF' // 默认颜色
@@ -678,9 +698,15 @@
               // 如果不是十六进制格式，尝试转换
               const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
               if (rgbaMatch) {
-                const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0')
-                const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0')
-                const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0')
+                const r = parseInt(rgbaMatch[1])
+                  .toString(16)
+                  .padStart(2, '0')
+                const g = parseInt(rgbaMatch[2])
+                  .toString(16)
+                  .padStart(2, '0')
+                const b = parseInt(rgbaMatch[3])
+                  .toString(16)
+                  .padStart(2, '0')
                 color = `#${r}${g}${b}`.toUpperCase()
               } else {
                 color = '#409EFF' // 默认颜色
@@ -751,14 +777,14 @@
       },
 
       // 显示标签右键菜单
-      showTagContextMenu(event, tagId, tag) {
+      showTagContextMenu() {
         // 这里可以实现自定义右键菜单
         // 暂时使用下拉菜单替代
       },
 
       // 处理标签更新事件
       handleTagUpdated(data) {
-        const { tagId, tagData } = data
+        const { tagId } = data
 
         // 如果当前组件的userTags中包含该标签，强制更新组件
         if (this.userTags[tagId]) {
@@ -841,7 +867,7 @@
       },
 
       // 更新localStorage缓存
-      updateLocalStorageCache(userTagsData, tagRelationsData, mindMapsData) {
+      updateLocalStorageCache(userTagsData, tagRelationsData) {
         // 更新标签缓存
         const TagCacheManager = require('@/utils/tagCacheManager').default
 
@@ -967,6 +993,12 @@
   .refresh-button {
     width: 60px !important;
     /* 增加一倍宽度 */
+  }
+
+  /* 添加标签按钮样式 */
+  .add-tag-button {
+    width: 60px !important;
+    /* 与刷新按钮保持一致 */
   }
 
   /* 标签统计 */
