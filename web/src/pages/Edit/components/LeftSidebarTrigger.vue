@@ -160,26 +160,15 @@
 
       // 打开思维导图管理
       openMindmapManager() {
+        // 🔧 修复:在设置新的快捷键屏蔽器之前,先清理可能存在的旧屏蔽器
+        this.restoreShortcuts()
+
         this.currentPage = 'mindmap-manager'
         this.isVisible = false
         this.cancelHideTimer()
 
         // 更新store中的activeSidebar状态
         this.$store.commit('setActiveSidebar', '')
-
-        // 屏蔽所有快捷键，但允许Alt+C通过
-        this.preventDefaultShortcuts = e => {
-          // 允许Alt+C快捷键通过，用于返回编辑器
-          if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
-            return true
-          }
-          e.preventDefault()
-          e.stopPropagation()
-          return false
-        }
-        // 将快捷键屏蔽处理器保存到全局window对象上，方便其他组件访问
-        window.preventDefaultShortcutsHandler = this.preventDefaultShortcuts
-        window.addEventListener('keydown', this.preventDefaultShortcuts, true)
 
         this.$bus.$emit('openMindmapManager')
       },
@@ -207,30 +196,15 @@
 
       // 打开关于页面
       openAbout() {
+        // 🔧 修复:在设置新的快捷键屏蔽器之前,先清理可能存在的旧屏蔽器
+        this.restoreShortcuts()
+
         this.currentPage = 'about'
         this.isVisible = false
         this.cancelHideTimer()
 
         // 更新store中的activeSidebar状态
         this.$store.commit('setActiveSidebar', '')
-
-        // 屏蔽所有快捷键，但允许Alt+C和ESC通过
-        this.preventDefaultShortcuts = e => {
-          // 允许Alt+C快捷键通过，用于返回编辑器
-          if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
-            return true
-          }
-          // 允许ESC键通过，用于返回编辑器
-          if (e.key === 'Escape') {
-            return true
-          }
-          e.preventDefault()
-          e.stopPropagation()
-          return false
-        }
-        // 将快捷键屏蔽处理器保存到全局window对象上，方便其他组件访问
-        window.preventDefaultShortcutsHandler = this.preventDefaultShortcuts
-        window.addEventListener('keydown', this.preventDefaultShortcuts, true)
 
         this.$bus.$emit('openAbout')
       },

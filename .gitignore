@@ -63,7 +63,6 @@ coverage/
 .nyc_output
 
 # Development files (not to be committed)
-console.txt
 cmd.txt
 req.txt
 rule.spec
